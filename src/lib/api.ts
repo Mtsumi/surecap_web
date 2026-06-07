@@ -12,6 +12,9 @@ export type Unit = {
   id: number;
   building_id: number;
   unit_number: string;
+  civic_number: string | null;
+  rent: number | null;
+  available_date: string | null;
 };
 
 export type Application = {
@@ -19,6 +22,12 @@ export type Application = {
   unit_id: number;
   status: string;
   created_at: string;
+};
+
+type ApiEnvelope<T> = {
+  status: "success" | "error";
+  message: string;
+  data: T | null;
 };
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
@@ -29,11 +38,23 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(text || res.statusText);
+
+  let body: ApiEnvelope<T> | null = null;
+  try {
+    body = (await res.json()) as ApiEnvelope<T>;
+  } catch {
+    body = null;
   }
-  return res.json() as Promise<T>;
+
+  if (!res.ok || body?.status === "error") {
+    throw new Error(body?.message || res.statusText);
+  }
+
+  if (!body || body.data === null || body.data === undefined) {
+    throw new Error(body?.message || "Empty API response");
+  }
+
+  return body.data;
 }
 
 export function fetchBuildings(): Promise<Building[]> {

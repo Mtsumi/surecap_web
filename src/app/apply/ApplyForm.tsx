@@ -13,6 +13,12 @@ import { Locale, detectLocale, t } from "@/lib/i18n";
 
 type Step = "building" | "unit" | "confirm" | "done";
 
+function formatRent(rent: number | null, locale: Locale): string | null {
+  if (rent == null) return null;
+  const amount = Math.round(rent).toLocaleString(locale === "fr" ? "fr-CA" : "en-CA");
+  return locale === "fr" ? `${amount} $${t(locale, "perMonth")}` : `$${amount}${t(locale, "perMonth")}`;
+}
+
 export default function ApplyForm() {
   const searchParams = useSearchParams();
   const [locale, setLocale] = useState<Locale>("fr");
@@ -154,18 +160,36 @@ export default function ApplyForm() {
           </button>
           <h2 className="mb-1 text-lg font-medium">{t(locale, "selectUnit")}</h2>
           <p className="mb-4 text-sm text-slate-600">{selectedBuilding.name}</p>
-          <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-            {units.map((u) => (
-              <li key={u.id}>
-                <button
-                  type="button"
-                  onClick={() => handleSelectUnit(u)}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-4 text-center font-medium shadow-sm hover:border-blue-400"
-                >
-                  {u.unit_number}
-                </button>
-              </li>
-            ))}
+          <ul className="space-y-3">
+            {units.map((u) => {
+              const rentLabel = formatRent(u.rent, locale);
+              return (
+                <li key={u.id}>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectUnit(u)}
+                    className="w-full rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-blue-400 hover:shadow"
+                  >
+                    <span className="block font-medium">{u.unit_number}</span>
+                    {u.civic_number && (
+                      <span className="mt-1 block text-sm text-slate-600">
+                        {u.civic_number}
+                      </span>
+                    )}
+                    {rentLabel && (
+                      <span className="mt-1 block text-sm font-medium text-slate-800">
+                        {t(locale, "rent")}: {rentLabel}
+                      </span>
+                    )}
+                    {u.available_date && (
+                      <span className="mt-0.5 block text-sm text-slate-600">
+                        {t(locale, "available")}: {u.available_date}
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
         </section>
       )}
@@ -193,6 +217,19 @@ export default function ApplyForm() {
                 {t(locale, "unit")}
               </dt>
               <dd className="font-medium">{selectedUnit.unit_number}</dd>
+              {selectedUnit.civic_number && (
+                <dd className="text-sm text-slate-600">{selectedUnit.civic_number}</dd>
+              )}
+              {formatRent(selectedUnit.rent, locale) && (
+                <dd className="text-sm text-slate-600">
+                  {t(locale, "rent")}: {formatRent(selectedUnit.rent, locale)}
+                </dd>
+              )}
+              {selectedUnit.available_date && (
+                <dd className="text-sm text-slate-600">
+                  {t(locale, "available")}: {selectedUnit.available_date}
+                </dd>
+              )}
             </div>
           </dl>
           <button
