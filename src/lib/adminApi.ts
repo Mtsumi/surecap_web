@@ -129,11 +129,16 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (res.status === 401) {
-    clearAdminToken();
-    if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
-      window.location.href = "/admin/login";
+    const message = body?.message || "Unauthorized";
+    // Expired/invalid JWT on protected routes; credential errors use specific messages.
+    if (message === "Unauthorized") {
+      clearAdminToken();
+      if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+        window.location.href = "/admin/login";
+      }
+      throw new Error("Session expired");
     }
-    throw new Error("Session expired");
+    throw new Error(message);
   }
 
   if (!res.ok || body?.status === "error") {
