@@ -3,5 +3,8 @@
 @tailwind utilities;
 
 body {
-  @apply bg-slate-50 text-slate-900 antialiased;
+  @apply min-h-screen antialiased;
+  background-color: #f4f1ec;
+  color: #292524;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
