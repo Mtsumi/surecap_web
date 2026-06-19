@@ -1,17 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { adminLogin } from "@/lib/adminApi";
-import { setAdminToken } from "@/lib/adminAuth";
+import { requestPasswordReset } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 
-export default function AdminLoginPage() {
-  const router = useRouter();
+export default function AdminForgotPasswordPage() {
   const { t, toggleLocale } = useAdminLocaleContext();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -22,14 +19,10 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setMessage(null);
     try {
-      const res = await adminLogin(email.trim(), password);
-      setAdminToken(res.access_token);
-      if (res.must_change_password) {
-        router.replace("/admin/account?required=1");
-      } else {
-        router.replace("/admin/applications");
-      }
+      await requestPasswordReset(email.trim());
+      setMessage(t("forgotSuccess"));
     } catch (err) {
       setError(err instanceof Error ? err.message : t("loginError"));
     } finally {
@@ -41,8 +34,8 @@ export default function AdminLoginPage() {
     <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-5">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-xl font-semibold text-[#292524]">{t("loginTitle")}</h1>
-          <p className="mt-1 text-sm text-[#57534e]">{t("loginSubtitle")}</p>
+          <h1 className="text-xl font-semibold text-[#292524]">{t("forgotTitle")}</h1>
+          <p className="mt-1 text-sm text-[#57534e]">{t("forgotSubtitle")}</p>
         </div>
         <button
           type="button"
@@ -52,6 +45,12 @@ export default function AdminLoginPage() {
           {t("langToggle")}
         </button>
       </div>
+
+      {message && (
+        <p className="mt-4 rounded border border-[#d6e8d6] bg-[#f6faf6] px-3 py-2 text-sm text-[#1a3d22]">
+          {message}
+        </p>
+      )}
 
       {error && (
         <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
@@ -70,29 +69,20 @@ export default function AdminLoginPage() {
             className={inputClass}
           />
         </label>
-        <label className="block text-sm text-[#57534e]">
-          {t("loginPassword")}
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
-          />
-        </label>
         <button
           type="submit"
           disabled={loading}
           className="w-full rounded bg-[#3d5a45] py-3 text-sm font-medium text-[#f4f1ec] disabled:opacity-60"
         >
-          {loading ? t("loginSubmitting") : t("loginSubmit")}
+          {loading ? t("forgotSubmitting") : t("forgotSubmit")}
         </button>
-        <p className="text-center text-sm">
-          <Link href="/admin/forgot-password" className="text-[#3d5a45] hover:underline">
-            {t("loginForgotPassword")}
-          </Link>
-        </p>
       </form>
+
+      <p className="mt-6 text-center text-sm">
+        <Link href="/admin/login" className="text-[#3d5a45] hover:underline">
+          {t("forgotBackToLogin")}
+        </Link>
+      </p>
     </main>
   );
 }

@@ -147,6 +147,30 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return body.data;
 }
 
+async function adminPublicPost(path: string, payload: object): Promise<string> {
+  const h: Record<string, string> = { "Content-Type": "application/json" };
+  if (API_URL.includes("ngrok")) h["ngrok-skip-browser-warning"] = "1";
+
+  const res = await fetch(`${API_URL}${path}`, {
+    method: "POST",
+    headers: h,
+    body: JSON.stringify(payload),
+  });
+
+  let body: ApiEnvelope<null> | null = null;
+  try {
+    body = (await res.json()) as ApiEnvelope<null>;
+  } catch {
+    body = null;
+  }
+
+  if (!res.ok || body?.status === "error") {
+    throw new Error(body?.message || res.statusText);
+  }
+
+  return body?.message || "Success";
+}
+
 export function adminLogin(email: string, password: string) {
   return adminFetch<AdminLoginResponse>("/admin/auth/login", {
     method: "POST",
@@ -163,6 +187,14 @@ export function changeAdminPassword(current_password: string, new_password: stri
     method: "POST",
     body: JSON.stringify({ current_password, new_password }),
   });
+}
+
+export function requestPasswordReset(email: string) {
+  return adminPublicPost("/admin/auth/forgot-password", { email });
+}
+
+export function resetPassword(token: string, new_password: string) {
+  return adminPublicPost("/admin/auth/reset-password", { token, new_password });
 }
 
 export function listApplications(params?: {
