@@ -5,10 +5,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AdminUser, adminMe } from "@/lib/adminApi";
 import { clearAdminToken, isAdminLoggedIn } from "@/lib/adminAuth";
+import { useAdminLocaleContext } from "./AdminLocaleContext";
 
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
+  const { t, toggleLocale } = useAdminLocaleContext();
   const [user, setUser] = useState<AdminUser | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -18,10 +20,15 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       return;
     }
     adminMe()
-      .then(setUser)
+      .then((me) => {
+        setUser(me);
+        if (me.must_change_password && !pathname.startsWith("/admin/account")) {
+          router.replace("/admin/account?required=1");
+        }
+      })
       .catch(() => router.replace("/admin/login"))
       .finally(() => setLoading(false));
-  }, [router]);
+  }, [router, pathname]);
 
   const logout = () => {
     clearAdminToken();
@@ -31,16 +38,23 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-[#78716c]">
-        Chargement…
+        {t("loading")}
       </div>
     );
   }
 
-  const nav = [
-    { href: "/admin/applications", label: "Demandes" },
-    { href: "/admin/buildings", label: "Immeubles" },
-    ...(user?.is_super_admin ? [{ href: "/admin/team", label: "Équipe" }] : []),
+  const passwordChangeRequired = user?.must_change_password ?? false;
+
+  const fullNav = [
+    { href: "/admin/applications", label: t("navApplications") },
+    { href: "/admin/buildings", label: t("navBuildings") },
+    ...(user?.is_super_admin ? [{ href: "/admin/team", label: t("navTeam") }] : []),
+    { href: "/admin/account", label: t("navAccount") },
   ];
+
+  const nav = passwordChangeRequired
+    ? [{ href: "/admin/account", label: t("navAccount") }]
+    : fullNav;
 
   return (
     <div className="min-h-screen">
@@ -48,7 +62,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#78716c]">
-              SureCap Admin
+              {t("brand")}
             </p>
             <p className="text-sm text-[#57534e]">{user?.email}</p>
           </div>
@@ -68,10 +82,17 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             ))}
             <button
               type="button"
+              onClick={toggleLocale}
+              className="text-sm text-[#78716c] hover:underline"
+            >
+              {t("langToggle")}
+            </button>
+            <button
+              type="button"
               onClick={logout}
               className="text-sm text-[#78716c] hover:underline"
             >
-              Déconnexion
+              {t("logout")}
             </button>
           </nav>
         </div>

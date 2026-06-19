@@ -14,6 +14,7 @@ export type AdminUser = {
   email: string;
   is_super_admin: boolean;
   active: boolean;
+  must_change_password: boolean;
   created_at: string;
   updated_at: string;
 };
@@ -22,6 +23,7 @@ export type AdminLoginResponse = {
   access_token: string;
   token_type: string;
   expires_in: number;
+  must_change_password: boolean;
 };
 
 export type ApplicationListItem = {
@@ -154,6 +156,13 @@ export function adminLogin(email: string, password: string) {
 
 export function adminMe() {
   return adminFetch<AdminUser>("/admin/auth/me");
+}
+
+export function changeAdminPassword(current_password: string, new_password: string) {
+  return adminFetch<AdminUser>("/admin/auth/change-password", {
+    method: "POST",
+    body: JSON.stringify({ current_password, new_password }),
+  });
 }
 
 export function listApplications(params?: {
