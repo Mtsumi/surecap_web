@@ -67,6 +67,8 @@ export type ApplicationDetail = {
   lease_in_name: boolean | null;
   move_in_date: string | null;
   renting_with_others: boolean | null;
+  landlord_phone: string | null;
+  hr_phone: string | null;
   landlord_email: string | null;
   hr_email: string | null;
   referral_source: string | null;

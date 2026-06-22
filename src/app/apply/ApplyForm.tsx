@@ -4,17 +4,20 @@ import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AddressAutocomplete from "./AddressAutocomplete";
 import {
-  ApplicationUpdate,
+  ApplicationSubmit,
   Building,
   GuarantorContact,
   RoommateContact,
   Unit,
-  createApplicationDraft,
   fetchBuildings,
   fetchUnits,
   submitApplication,
-  updateApplication,
 } from "@/lib/api";
+import {
+  clearApplyProgress,
+  loadApplyProgress,
+  saveApplyProgress,
+} from "@/lib/applyStorage";
 import { Locale, detectLocale, t } from "@/lib/i18n";
 
 type Step =
@@ -50,8 +53,8 @@ type FormFields = {
   lease_in_name: boolean | null;
   move_in_date: string;
   renting_with_others: boolean | null;
-  landlord_email: string;
-  hr_email: string;
+  landlord_phone: string;
+  hr_phone: string;
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
@@ -70,8 +73,8 @@ const emptyForm: FormFields = {
   lease_in_name: null,
   move_in_date: "",
   renting_with_others: null,
-  landlord_email: "",
-  hr_email: "",
+  landlord_phone: "",
+  hr_phone: "",
   referral_source: "",
   facebook_url: "",
   linkedin_url: "",
@@ -110,8 +113,8 @@ function formPayload(
   fields: FormFields,
   roommates: RoommateContact[],
   guarantor: GuarantorContact | null
-): ApplicationUpdate {
-  const payload: ApplicationUpdate = {
+): Omit<ApplicationSubmit, "unit_id"> {
+  const payload = {
     given_name: fields.given_name.trim(),
     family_name: fields.family_name.trim(),
     date_of_birth: fields.date_of_birth,
@@ -124,29 +127,29 @@ function formPayload(
     lease_in_name: fields.lease_in_name ?? undefined,
     move_in_date: fields.move_in_date,
     renting_with_others: fields.renting_with_others ?? undefined,
-    landlord_email: fields.landlord_email.trim(),
-    hr_email: fields.hr_email.trim(),
+    landlord_phone: fields.landlord_phone.trim(),
+    hr_phone: fields.hr_phone.trim(),
     referral_source: fields.referral_source.trim(),
     facebook_url: fields.facebook_url.trim() || undefined,
     linkedin_url: fields.linkedin_url.trim() || undefined,
-  };
-  if (fields.renting_with_others) {
-    payload.roommates = roommates
-      .map((r) => ({ name: r.name.trim(), email: r.email.trim() }))
-      .filter((r) => r.name && r.email);
-  } else {
-    payload.roommates = [];
-  }
-  if (guarantor) {
-    payload.guarantor = {
-      name: guarantor.name.trim(),
-      email: guarantor.email.trim(),
-      phone: guarantor.phone.trim(),
-    };
-  } else {
-    payload.guarantor = null;
-  }
+    roommates: fields.renting_with_others
+      ? roommates
+          .map((r) => ({ name: r.name.trim(), email: r.email.trim() }))
+          .filter((r) => r.name && r.email)
+      : [],
+    guarantor: guarantor
+      ? {
+          name: guarantor.name.trim(),
+          email: guarantor.email.trim(),
+          phone: guarantor.phone.trim(),
+        }
+      : null,
+  } satisfies Omit<ApplicationSubmit, "unit_id">;
   return payload;
+}
+
+function isFormStep(value: string): value is (typeof FORM_STEPS)[number] {
+  return (FORM_STEPS as string[]).includes(value);
 }
 
 export default function ApplyForm() {
@@ -157,7 +160,7 @@ export default function ApplyForm() {
   const [units, setUnits] = useState<Unit[]>([]);
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
-  const [applicationId, setApplicationId] = useState<number | null>(null);
+  const [submittedApplicationId, setSubmittedApplicationId] = useState<number | null>(null);
   const [form, setForm] = useState<FormFields>(emptyForm);
   const [roommates, setRoommates] = useState<RoommateContact[]>([
     { name: "", email: "" },
@@ -216,54 +219,78 @@ export default function ApplyForm() {
       .finally(() => setLoading(false));
   }, [selectedBuilding, locale]);
 
-  const patchAndContinue = async (next: Step) => {
-    if (!applicationId) {
-      setStep(next);
-      return;
-    }
-    setSubmitting(true);
-    setError(null);
-    try {
-      await updateApplication(applicationId, formPayload(form, roommates, includeGuarantor ? guarantor : null));
-      setStep(next);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t(locale, "error"));
-    } finally {
-      setSubmitting(false);
-    }
+  const persistProgress = useCallback(
+    (nextStep: Step) => {
+      if (!selectedUnit || !selectedBuilding) return;
+      saveApplyProgress({
+        unitId: selectedUnit.id,
+        buildingId: selectedBuilding.id,
+        step: nextStep,
+        form,
+        roommates,
+        includeGuarantor,
+        guarantor,
+        updatedAt: new Date().toISOString(),
+      });
+    },
+    [selectedUnit, selectedBuilding, form, roommates, includeGuarantor, guarantor]
+  );
+
+  const continueToStep = (next: Step) => {
+    persistProgress(next);
+    setStep(next);
+  };
+
+  const goToFormStep = (target: (typeof FORM_STEPS)[number]) => {
+    persistProgress(target);
+    setStep(target);
   };
 
   const handleSelectBuilding = (b: Building) => {
     setSelectedBuilding(b);
     setSelectedUnit(null);
-    setApplicationId(null);
+    setSubmittedApplicationId(null);
     setForm(emptyForm);
+    setRoommates([{ name: "", email: "" }]);
+    setIncludeGuarantor(false);
+    setGuarantor({ name: "", email: "", phone: "" });
     setStep("unit");
   };
 
-  const handleSelectUnit = async (u: Unit) => {
+  const handleSelectUnit = (u: Unit) => {
+    if (!selectedBuilding) return;
     setSelectedUnit(u);
-    setSubmitting(true);
+    setSubmittedApplicationId(null);
     setError(null);
-    try {
-      const app = await createApplicationDraft(u.id);
-      setApplicationId(app.id);
+
+    const saved = loadApplyProgress(u.id);
+    if (saved && saved.buildingId === selectedBuilding.id) {
+      setForm({ ...emptyForm, ...(saved.form as FormFields) });
+      setRoommates(saved.roommates.length ? saved.roommates : [{ name: "", email: "" }]);
+      setIncludeGuarantor(saved.includeGuarantor);
+      setGuarantor(saved.guarantor);
+      setStep(isFormStep(saved.step) ? saved.step : "personal");
+    } else {
+      setForm(emptyForm);
+      setRoommates([{ name: "", email: "" }]);
+      setIncludeGuarantor(false);
+      setGuarantor({ name: "", email: "", phone: "" });
       setStep("personal");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : t(locale, "error"));
-    } finally {
-      setSubmitting(false);
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!applicationId) return;
+    if (!selectedUnit) return;
     setSubmitting(true);
     setError(null);
     try {
-      await updateApplication(applicationId, formPayload(form, roommates, includeGuarantor ? guarantor : null));
-      await submitApplication(applicationId);
+      const app = await submitApplication({
+        unit_id: selectedUnit.id,
+        ...formPayload(form, roommates, includeGuarantor ? guarantor : null),
+      });
+      clearApplyProgress(selectedUnit.id);
+      setSubmittedApplicationId(app.id);
       setStep("done");
     } catch (err) {
       setError(err instanceof Error ? err.message : t(locale, "error"));
@@ -333,7 +360,13 @@ export default function ApplyForm() {
               const active = step === s;
               const done = formStepIndex > i || step === "done";
               return (
-                <div key={s} className="flex flex-1 flex-col gap-1.5">
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => goToFormStep(s)}
+                  aria-current={active ? "step" : undefined}
+                  className="flex flex-1 flex-col gap-1.5 rounded px-0.5 py-1 text-left transition hover:opacity-80"
+                >
                   <div
                     className={`h-1 rounded-full transition-colors ${
                       active || done ? "bg-[#3d5a45]" : "bg-[#e7e0d5]"
@@ -341,12 +374,16 @@ export default function ApplyForm() {
                   />
                   <span
                     className={`truncate text-[0.65rem] ${
-                      active ? "font-medium text-[#292524]" : "text-[#a8a29e]"
+                      active
+                        ? "font-medium text-[#292524]"
+                        : done
+                          ? "text-[#57534e] underline-offset-2 hover:underline"
+                          : "text-[#a8a29e] underline-offset-2 hover:underline"
                     }`}
                   >
                     {stepLabel(s, locale)}
                   </span>
-                </div>
+                </button>
               );
             })}
           </nav>
@@ -468,7 +505,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              patchAndContinue("addresses");
+              continueToStep("addresses");
             }}
             className="space-y-4"
           >
@@ -552,7 +589,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              patchAndContinue("housing");
+              continueToStep("housing");
             }}
             className="space-y-4"
           >
@@ -603,7 +640,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              patchAndContinue("references");
+              continueToStep("references");
             }}
             className="space-y-4"
           >
@@ -733,11 +770,11 @@ export default function ApplyForm() {
                 )}
               </div>
             )}
-            <fieldset className="rounded border border-[#e7e0d5] bg-[#fffef9] p-4">
-              <legend className="px-1 text-sm font-medium text-[#292524]">
+            <div className="rounded border border-[#e7e0d5] bg-[#fffef9] p-4">
+              <h3 className="text-sm font-medium text-[#292524]">
                 {t(locale, "guarantorOptional")}
-              </legend>
-              <label className="mt-2 flex items-center gap-2 text-sm text-[#292524]">
+              </h3>
+              <label className="mt-3 flex items-center gap-2 text-sm text-[#292524]">
                 <input
                   type="checkbox"
                   checked={includeGuarantor}
@@ -784,7 +821,7 @@ export default function ApplyForm() {
                   </label>
                 </div>
               )}
-            </fieldset>
+            </div>
             <button
               type="submit"
               disabled={submitting}
@@ -808,30 +845,33 @@ export default function ApplyForm() {
           <h2 className="mb-5 text-base font-medium text-[#292524]">
             {t(locale, "references")}
           </h2>
+          <p className="mb-5 text-sm leading-relaxed text-[#78716c]">
+            {t(locale, "referencesNote")}
+          </p>
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              patchAndContinue("other");
+              continueToStep("other");
             }}
             className="space-y-4"
           >
             <label className="block text-sm text-[#57534e]">
-              {t(locale, "landlordEmail")}
+              {t(locale, "landlordPhone")}
               <input
-                type="email"
+                type="tel"
                 required
-                value={form.landlord_email}
-                onChange={(e) => setField("landlord_email", e.target.value)}
+                value={form.landlord_phone}
+                onChange={(e) => setField("landlord_phone", e.target.value)}
                 className={inputClass}
               />
             </label>
             <label className="block text-sm text-[#57534e]">
-              {t(locale, "hrEmail")}
+              {t(locale, "hrPhone")}
               <input
-                type="email"
+                type="tel"
                 required
-                value={form.hr_email}
-                onChange={(e) => setField("hr_email", e.target.value)}
+                value={form.hr_phone}
+                onChange={(e) => setField("hr_phone", e.target.value)}
                 className={inputClass}
               />
             </label>
@@ -861,7 +901,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              patchAndContinue("review");
+              continueToStep("review");
             }}
             className="space-y-4"
           >
@@ -974,10 +1014,10 @@ export default function ApplyForm() {
               value={form.move_in_date}
             />
             <ReviewRow
-              label={t(locale, "landlordEmail")}
-              value={form.landlord_email}
+              label={t(locale, "landlordPhone")}
+              value={form.landlord_phone}
             />
-            <ReviewRow label={t(locale, "hrEmail")} value={form.hr_email} />
+            <ReviewRow label={t(locale, "hrPhone")} value={form.hr_phone} />
             <ReviewRow
               label={t(locale, "referralSource")}
               value={form.referral_source}
@@ -1012,7 +1052,7 @@ export default function ApplyForm() {
         </section>
       )}
 
-      {step === "done" && applicationId !== null && (
+      {step === "done" && submittedApplicationId !== null && (
         <section className="rounded border border-[#c9dcc9] bg-[#f6faf6] px-6 py-8 text-center">
           <h2 className="text-lg font-semibold text-[#1a3d22]">
             {t(locale, "successTitle")}
@@ -1022,7 +1062,7 @@ export default function ApplyForm() {
           </p>
           <p className="mt-5 text-sm text-[#57534e]">
             {t(locale, "applicationId")}:{" "}
-            <span className="font-medium text-[#292524]">#{applicationId}</span>
+            <span className="font-medium text-[#292524]">#{submittedApplicationId}</span>
           </p>
         </section>
       )}
