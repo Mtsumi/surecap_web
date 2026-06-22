@@ -32,6 +32,7 @@ export type ApplicationListItem = {
   given_name: string | null;
   family_name: string | null;
   email: string | null;
+  applicant_name?: string | null;
   unit_id: number;
   unit_number: string;
   building_id: number;
@@ -39,18 +40,23 @@ export type ApplicationListItem = {
   created_at: string;
 };
 
-export type ApplicationList = {
-  items: ApplicationListItem[];
-  total: number;
-  limit: number;
-  offset: number;
+export type ApplicationMember = {
+  id: number;
+  application_id: number;
+  role: string;
+  member_status: string;
+  invited_name: string | null;
+  invited_email: string | null;
+  given_name: string | null;
+  family_name: string | null;
+  email: string | null;
+  phone: string | null;
 };
 
 export type ApplicationDetail = {
   id: number;
   unit_id: number;
   status: string;
-  preferred_locale: string;
   given_name: string | null;
   family_name: string | null;
   date_of_birth: string | null;
@@ -61,7 +67,6 @@ export type ApplicationDetail = {
   lease_in_name: boolean | null;
   move_in_date: string | null;
   renting_with_others: boolean | null;
-  co_tenant_names: string | null;
   landlord_email: string | null;
   hr_email: string | null;
   referral_source: string | null;
@@ -75,11 +80,22 @@ export type ApplicationDetail = {
   building_id: number;
   building_name: string;
   building_address: string;
+  members?: ApplicationMember[];
+  roommate_count?: number;
+  has_guarantor?: boolean;
+};
+
+export type ApplicationList = {
+  items: ApplicationListItem[];
+  total: number;
+  limit: number;
+  offset: number;
 };
 
 export type ApplicationJob = {
   id: number;
-  application_id: number;
+  application_id: number | null;
+  application_member_id: number;
   job_type: string;
   status: string;
   message: string | null;

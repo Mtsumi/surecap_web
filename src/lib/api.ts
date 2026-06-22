@@ -24,7 +24,6 @@ export type Application = {
   id: number;
   unit_id: number;
   status: string;
-  preferred_locale: LocaleCode;
   given_name: string | null;
   family_name: string | null;
   date_of_birth: string | null;
@@ -37,7 +36,6 @@ export type Application = {
   lease_in_name: boolean | null;
   move_in_date: string | null;
   renting_with_others: boolean | null;
-  co_tenant_names: string | null;
   landlord_email: string | null;
   hr_email: string | null;
   referral_source: string | null;
@@ -47,8 +45,18 @@ export type Application = {
   updated_at: string;
 };
 
+export type RoommateContact = {
+  name: string;
+  email: string;
+};
+
+export type GuarantorContact = {
+  name: string;
+  email: string;
+  phone: string;
+};
+
 export type ApplicationUpdate = Partial<{
-  preferred_locale: LocaleCode;
   given_name: string;
   family_name: string;
   date_of_birth: string;
@@ -61,12 +69,13 @@ export type ApplicationUpdate = Partial<{
   lease_in_name: boolean;
   move_in_date: string;
   renting_with_others: boolean;
-  co_tenant_names: string;
   landlord_email: string;
   hr_email: string;
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
+  roommates: RoommateContact[];
+  guarantor: GuarantorContact | null;
 }>;
 
 type ApiEnvelope<T> = {
