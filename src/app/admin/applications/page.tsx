@@ -10,6 +10,7 @@ function statusBadge(status: string) {
     accepted: "bg-[#e8f5e9] text-[#1a3d22]",
     rejected: "bg-[#fdf5f5] text-[#7f1d1d]",
     submitted: "bg-[#eef2ff] text-[#3730a3]",
+    collecting: "bg-[#fff7ed] text-[#9a3412]",
     draft: "bg-[#f5f5f4] text-[#57534e]",
   };
   return (
@@ -40,7 +41,9 @@ export default function ApplicationsPage() {
   return (
     <AdminShell>
       <h1 className="text-lg font-semibold text-[#292524]">Demandes</h1>
-      <p className="mt-1 text-sm text-[#78716c]">{total} au total</p>
+      <p className="mt-1 text-sm text-[#78716c]">
+        {total} soumise{total === 1 ? "" : "s"} (brouillons exclus)
+      </p>
 
       {error && <p className="mt-4 text-sm text-[#7f1d1d]">{error}</p>}
       {loading && <p className="mt-6 text-sm text-[#78716c]">Chargement…</p>}

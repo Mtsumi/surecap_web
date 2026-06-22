@@ -36,6 +36,8 @@ export type Application = {
   lease_in_name: boolean | null;
   move_in_date: string | null;
   renting_with_others: boolean | null;
+  landlord_phone: string | null;
+  hr_phone: string | null;
   landlord_email: string | null;
   hr_email: string | null;
   referral_source: string | null;
@@ -69,8 +71,10 @@ export type ApplicationUpdate = Partial<{
   lease_in_name: boolean;
   move_in_date: string;
   renting_with_others: boolean;
-  landlord_email: string;
-  hr_email: string;
+  landlord_phone: string;
+  hr_phone: string;
+  landlord_email?: string;
+  hr_email?: string;
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
@@ -127,6 +131,20 @@ export function fetchUnits(buildingId: number): Promise<Unit[]> {
   return apiFetch<Unit[]>(`/buildings/${buildingId}/units`);
 }
 
+export type ApplicationSubmit = ApplicationUpdate & {
+  unit_id: number;
+  roommates: RoommateContact[];
+  guarantor: GuarantorContact | null;
+};
+
+export function submitApplication(payload: ApplicationSubmit): Promise<Application> {
+  return apiFetch<Application>("/applications/submit", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+/** @deprecated Use submitApplication — server drafts are not used in the apply flow. */
 export function createApplicationDraft(unitId: number): Promise<Application> {
   return apiFetch<Application>("/applications", {
     method: "POST",
@@ -144,11 +162,8 @@ export function updateApplication(
   });
 }
 
-export function getApplication(id: number): Promise<Application> {
-  return apiFetch<Application>(`/applications/${id}`);
-}
-
-export function submitApplication(id: number): Promise<Application> {
+/** @deprecated Use submitApplication — server drafts are not used in the apply flow. */
+export function submitApplicationById(id: number): Promise<Application> {
   return apiFetch<Application>(`/applications/${id}/submit`, {
     method: "POST",
   });

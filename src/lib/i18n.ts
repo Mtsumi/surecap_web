@@ -40,8 +40,9 @@ export const messages = {
     guarantorPhone: "Guarantor phone",
     includeGuarantor: "Add a guarantor",
     references: "References",
-    landlordEmail: "Current landlord email",
-    hrEmail: "HR / employer email",
+    landlordPhone: "Current landlord phone",
+    hrPhone: "HR / employer phone",
+    referencesNote: "We may call these references — we do not email landlords or employers.",
     otherInfo: "Additional information",
     referralSource:
       "How did you learn about Montreal Living and this apartment?",
@@ -50,7 +51,7 @@ export const messages = {
     review: "Review and submit",
     yourSelection: "Your selection",
     reviewNote:
-      "Your landlord and employer may be contacted. A confirmation email will be sent to you.",
+      "We may call your landlord and employer for references. A confirmation email will be sent to you.",
     building: "Building",
     unit: "Apartment",
     rent: "Rent",
@@ -110,8 +111,10 @@ export const messages = {
     guarantorPhone: "Téléphone du garant",
     includeGuarantor: "Ajouter un garant",
     references: "Références",
-    landlordEmail: "Courriel du locateur actuel",
-    hrEmail: "Courriel RH / employeur",
+    landlordPhone: "Téléphone du locateur actuel",
+    hrPhone: "Téléphone RH / employeur",
+    referencesNote:
+      "Nous pourrions appeler ces références — nous n'envoyons pas de courriel au locateur ni à l'employeur.",
     otherInfo: "Informations supplémentaires",
     referralSource:
       "Comment avez-vous entendu parler de Montreal Living et de cet appartement?",
@@ -120,7 +123,7 @@ export const messages = {
     review: "Révision et soumission",
     yourSelection: "Votre sélection",
     reviewNote:
-      "Votre locateur et votre employeur pourraient être contactés. Un courriel de confirmation vous sera envoyé.",
+      "Nous pourrions appeler votre locateur et votre employeur. Un courriel de confirmation vous sera envoyé.",
     building: "Immeuble",
     unit: "Appartement",
     rent: "Loyer",
