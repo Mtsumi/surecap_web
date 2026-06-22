@@ -6,6 +6,8 @@ import AddressAutocomplete from "./AddressAutocomplete";
 import {
   ApplicationUpdate,
   Building,
+  GuarantorContact,
+  RoommateContact,
   Unit,
   createApplicationDraft,
   fetchBuildings,
@@ -48,7 +50,6 @@ type FormFields = {
   lease_in_name: boolean | null;
   move_in_date: string;
   renting_with_others: boolean | null;
-  co_tenant_names: string;
   landlord_email: string;
   hr_email: string;
   referral_source: string;
@@ -69,7 +70,6 @@ const emptyForm: FormFields = {
   lease_in_name: null,
   move_in_date: "",
   renting_with_others: null,
-  co_tenant_names: "",
   landlord_email: "",
   hr_email: "",
   referral_source: "",
@@ -104,9 +104,14 @@ function stepLabel(step: Step, locale: Locale): string {
 
 type MessageKey = Parameters<typeof t>[1];
 
-function formPayload(fields: FormFields, locale: Locale): ApplicationUpdate {
-  return {
-    preferred_locale: locale,
+const MAX_ROOMMATES = 5;
+
+function formPayload(
+  fields: FormFields,
+  roommates: RoommateContact[],
+  guarantor: GuarantorContact | null
+): ApplicationUpdate {
+  const payload: ApplicationUpdate = {
     given_name: fields.given_name.trim(),
     family_name: fields.family_name.trim(),
     date_of_birth: fields.date_of_birth,
@@ -119,13 +124,29 @@ function formPayload(fields: FormFields, locale: Locale): ApplicationUpdate {
     lease_in_name: fields.lease_in_name ?? undefined,
     move_in_date: fields.move_in_date,
     renting_with_others: fields.renting_with_others ?? undefined,
-    co_tenant_names: fields.co_tenant_names.trim() || undefined,
     landlord_email: fields.landlord_email.trim(),
     hr_email: fields.hr_email.trim(),
     referral_source: fields.referral_source.trim(),
     facebook_url: fields.facebook_url.trim() || undefined,
     linkedin_url: fields.linkedin_url.trim() || undefined,
   };
+  if (fields.renting_with_others) {
+    payload.roommates = roommates
+      .map((r) => ({ name: r.name.trim(), email: r.email.trim() }))
+      .filter((r) => r.name && r.email);
+  } else {
+    payload.roommates = [];
+  }
+  if (guarantor) {
+    payload.guarantor = {
+      name: guarantor.name.trim(),
+      email: guarantor.email.trim(),
+      phone: guarantor.phone.trim(),
+    };
+  } else {
+    payload.guarantor = null;
+  }
+  return payload;
 }
 
 export default function ApplyForm() {
@@ -138,6 +159,15 @@ export default function ApplyForm() {
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [applicationId, setApplicationId] = useState<number | null>(null);
   const [form, setForm] = useState<FormFields>(emptyForm);
+  const [roommates, setRoommates] = useState<RoommateContact[]>([
+    { name: "", email: "" },
+  ]);
+  const [includeGuarantor, setIncludeGuarantor] = useState(false);
+  const [guarantor, setGuarantor] = useState<GuarantorContact>({
+    name: "",
+    email: "",
+    phone: "",
+  });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -194,7 +224,7 @@ export default function ApplyForm() {
     setSubmitting(true);
     setError(null);
     try {
-      await updateApplication(applicationId, formPayload(form, locale));
+      await updateApplication(applicationId, formPayload(form, roommates, includeGuarantor ? guarantor : null));
       setStep(next);
     } catch (err) {
       setError(err instanceof Error ? err.message : t(locale, "error"));
@@ -232,7 +262,7 @@ export default function ApplyForm() {
     setSubmitting(true);
     setError(null);
     try {
-      await updateApplication(applicationId, formPayload(form, locale));
+      await updateApplication(applicationId, formPayload(form, roommates, includeGuarantor ? guarantor : null));
       await submitApplication(applicationId);
       setStep("done");
     } catch (err) {
@@ -242,16 +272,8 @@ export default function ApplyForm() {
     }
   };
 
-  const toggleLocale = async () => {
-    const next = locale === "en" ? "fr" : "en";
-    setLocale(next);
-    if (applicationId) {
-      try {
-        await updateApplication(applicationId, { preferred_locale: next });
-      } catch {
-        /* non-blocking */
-      }
-    }
+  const toggleLocale = () => {
+    setLocale(locale === "en" ? "fr" : "en");
   };
 
   const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
@@ -648,17 +670,121 @@ export default function ApplyForm() {
               </div>
             </fieldset>
             {form.renting_with_others && (
-              <label className="block text-sm text-[#57534e]">
-                {t(locale, "coTenantNames")}
-                <textarea
-                  required
-                  rows={2}
-                  value={form.co_tenant_names}
-                  onChange={(e) => setField("co_tenant_names", e.target.value)}
-                  className={inputClass}
-                />
-              </label>
+              <div className="space-y-4 rounded border border-[#e7e0d5] bg-[#fffef9] p-4">
+                <p className="text-sm font-medium text-[#292524]">
+                  {t(locale, "coTenantNames")}
+                </p>
+                {roommates.map((roommate, index) => (
+                  <div key={index} className="space-y-3 border-t border-[#efe9df] pt-3 first:border-t-0 first:pt-0">
+                    <label className="block text-sm text-[#57534e]">
+                      {t(locale, "roommateName")}
+                      <input
+                        required
+                        value={roommate.name}
+                        onChange={(e) =>
+                          setRoommates((rows) =>
+                            rows.map((row, i) =>
+                              i === index ? { ...row, name: e.target.value } : row
+                            )
+                          )
+                        }
+                        className={inputClass}
+                      />
+                    </label>
+                    <label className="block text-sm text-[#57534e]">
+                      {t(locale, "roommateEmail")}
+                      <input
+                        type="email"
+                        required
+                        value={roommate.email}
+                        onChange={(e) =>
+                          setRoommates((rows) =>
+                            rows.map((row, i) =>
+                              i === index ? { ...row, email: e.target.value } : row
+                            )
+                          )
+                        }
+                        className={inputClass}
+                      />
+                    </label>
+                    {roommates.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setRoommates((rows) => rows.filter((_, i) => i !== index))
+                        }
+                        className="text-sm text-[#57534e] underline-offset-2 hover:underline"
+                      >
+                        {t(locale, "removeRoommate")}
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {roommates.length < MAX_ROOMMATES && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setRoommates((rows) => [...rows, { name: "", email: "" }])
+                    }
+                    className="text-sm font-medium text-[#3d5a45] underline-offset-2 hover:underline"
+                  >
+                    {t(locale, "addRoommate")}
+                  </button>
+                )}
+              </div>
             )}
+            <fieldset className="rounded border border-[#e7e0d5] bg-[#fffef9] p-4">
+              <legend className="px-1 text-sm font-medium text-[#292524]">
+                {t(locale, "guarantorOptional")}
+              </legend>
+              <label className="mt-2 flex items-center gap-2 text-sm text-[#292524]">
+                <input
+                  type="checkbox"
+                  checked={includeGuarantor}
+                  onChange={(e) => setIncludeGuarantor(e.target.checked)}
+                />
+                {t(locale, "includeGuarantor")}
+              </label>
+              {includeGuarantor && (
+                <div className="mt-4 space-y-3">
+                  <label className="block text-sm text-[#57534e]">
+                    {t(locale, "guarantorName")}
+                    <input
+                      required
+                      value={guarantor.name}
+                      onChange={(e) =>
+                        setGuarantor((g) => ({ ...g, name: e.target.value }))
+                      }
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block text-sm text-[#57534e]">
+                    {t(locale, "email")}
+                    <input
+                      type="email"
+                      required
+                      value={guarantor.email}
+                      onChange={(e) =>
+                        setGuarantor((g) => ({ ...g, email: e.target.value }))
+                      }
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block text-sm text-[#57534e]">
+                    {t(locale, "guarantorPhone")}
+                    <input
+                      type="tel"
+                      required
+                      value={guarantor.phone}
+                      onChange={(e) =>
+                        setGuarantor((g) => ({ ...g, phone: e.target.value }))
+                      }
+                      className={inputClass}
+                    />
+                  </label>
+                </div>
+              )}
+            </fieldset>
             <button
               type="submit"
               disabled={submitting}
@@ -856,6 +982,22 @@ export default function ApplyForm() {
               label={t(locale, "referralSource")}
               value={form.referral_source}
             />
+            {form.renting_with_others &&
+              roommates
+                .filter((r) => r.name.trim() && r.email.trim())
+                .map((roommate, index) => (
+                  <ReviewRow
+                    key={`${roommate.email}-${index}`}
+                    label={`${t(locale, "roommateName")} ${index + 1}`}
+                    value={`${roommate.name} (${roommate.email})`}
+                  />
+                ))}
+            {includeGuarantor && (
+              <ReviewRow
+                label={t(locale, "guarantorName")}
+                value={`${guarantor.name} (${guarantor.email}, ${guarantor.phone})`}
+              />
+            )}
           </dl>
 
           <form onSubmit={handleSubmit}>
