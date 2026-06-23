@@ -38,6 +38,8 @@ export type Application = {
   renting_with_others: boolean | null;
   landlord_phone: string | null;
   hr_phone: string | null;
+  landlord_name: string | null;
+  hr_name: string | null;
   landlord_email: string | null;
   hr_email: string | null;
   referral_source: string | null;
@@ -73,6 +75,8 @@ export type ApplicationUpdate = Partial<{
   renting_with_others: boolean;
   landlord_phone: string;
   hr_phone: string;
+  landlord_name: string;
+  hr_name: string;
   landlord_email?: string;
   hr_email?: string;
   referral_source: string;

@@ -76,7 +76,9 @@ type FormFields = {
   lease_in_name: boolean | null;
   move_in_date: string;
   renting_with_others: boolean | null;
+  landlord_name: string;
   landlord_phone: string;
+  hr_name: string;
   hr_phone: string;
   referral_source: string;
   facebook_url: string;
@@ -96,7 +98,9 @@ const emptyForm: FormFields = {
   lease_in_name: null,
   move_in_date: "",
   renting_with_others: null,
+  landlord_name: "",
   landlord_phone: "",
+  hr_name: "",
   hr_phone: "",
   referral_source: "",
   facebook_url: "",
@@ -148,7 +152,9 @@ function formPayload(
     lease_in_name: fields.lease_in_name ?? undefined,
     move_in_date: fields.move_in_date,
     renting_with_others: fields.renting_with_others ?? undefined,
+    landlord_name: fields.landlord_name.trim(),
     landlord_phone: fields.landlord_phone.trim(),
+    hr_name: fields.hr_name.trim(),
     hr_phone: fields.hr_phone.trim(),
     referral_source: fields.referral_source.trim(),
     facebook_url: fields.facebook_url.trim() || undefined,
@@ -1106,6 +1112,19 @@ export default function ApplyForm() {
             }}
             className="space-y-4"
           >
+            <div id="apply-field-landlord_name">
+            <label className="block text-sm text-[#57534e]">
+              {t(locale, "landlordName")}
+              <input
+                type="text"
+                required
+                autoComplete="name"
+                value={form.landlord_name}
+                onChange={(e) => setField("landlord_name", e.target.value)}
+                className={inputClassFor("landlord_name")}
+              />
+            </label>
+            </div>
             <div id="apply-field-landlord_phone">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "landlordPhone")}
@@ -1121,6 +1140,19 @@ export default function ApplyForm() {
                 className={inputClassFor("landlord_phone")}
               />
               {fieldHint("landlord_phone")}
+            </label>
+            </div>
+            <div id="apply-field-hr_name">
+            <label className="block text-sm text-[#57534e]">
+              {t(locale, "hrName")}
+              <input
+                type="text"
+                required
+                autoComplete="name"
+                value={form.hr_name}
+                onChange={(e) => setField("hr_name", e.target.value)}
+                className={inputClassFor("hr_name")}
+              />
             </label>
             </div>
             <div id="apply-field-hr_phone">
@@ -1280,9 +1312,14 @@ export default function ApplyForm() {
               value={form.move_in_date}
             />
             <ReviewRow
+              label={t(locale, "landlordName")}
+              value={form.landlord_name}
+            />
+            <ReviewRow
               label={t(locale, "landlordPhone")}
               value={form.landlord_phone}
             />
+            <ReviewRow label={t(locale, "hrName")} value={form.hr_name} />
             <ReviewRow label={t(locale, "hrPhone")} value={form.hr_phone} />
             <ReviewRow
               label={t(locale, "referralSource")}
