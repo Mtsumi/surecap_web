@@ -68,6 +68,11 @@ export const messages = {
     error: "Something went wrong. Please try again.",
     langToggle: "Français",
     addressManualHint: "Start typing to search, or enter your address manually.",
+    validationMoveInTooSoon: "Move-in date must be tomorrow or later.",
+    validationInvalidEmail: "Please enter a valid email address.",
+    validationDuplicateEmail: "Each person must have a different email address.",
+    validationLandlordHrSamePhone:
+      "Landlord and employer phone numbers must be different.",
   },
   fr: {
     title: "Demande de location",
@@ -141,6 +146,13 @@ export const messages = {
     langToggle: "English",
     addressManualHint:
       "Commencez à taper pour rechercher, ou entrez l'adresse manuellement.",
+    validationMoveInTooSoon:
+      "La date d'emménagement doit être demain ou plus tard.",
+    validationInvalidEmail: "Veuillez entrer une adresse courriel valide.",
+    validationDuplicateEmail:
+      "Chaque personne doit avoir une adresse courriel différente.",
+    validationLandlordHrSamePhone:
+      "Les numéros du locateur et de l'employeur doivent être différents.",
   },
 } as const;
 

@@ -18,7 +18,19 @@ import {
   loadApplyProgress,
   saveApplyProgress,
 } from "@/lib/applyStorage";
-import { Locale, detectLocale, t } from "@/lib/i18n";
+import { Locale, type MessageKey, detectLocale, t } from "@/lib/i18n";
+import {
+  ApplyValidationCode,
+  isMoveInDateValid,
+  validateApplyForm,
+} from "@/lib/applyValidation";
+
+const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
+  move_in_too_soon: "validationMoveInTooSoon",
+  invalid_email: "validationInvalidEmail",
+  duplicate_email: "validationDuplicateEmail",
+  landlord_hr_same_phone: "validationLandlordHrSamePhone",
+};
 
 type Step =
   | "building"
@@ -104,8 +116,6 @@ function stepLabel(step: Step, locale: Locale): string {
   const key = map[step];
   return key ? t(locale, key) : "";
 }
-
-type MessageKey = Parameters<typeof t>[1];
 
 const MAX_ROOMMATES = 5;
 
@@ -279,9 +289,28 @@ export default function ApplyForm() {
     }
   };
 
+  const validationInput = () => ({
+    move_in_date: form.move_in_date,
+    email: form.email,
+    roommates: form.renting_with_others ? roommates : [],
+    includeGuarantor,
+    guarantor: includeGuarantor ? guarantor : null,
+    landlord_phone: form.landlord_phone,
+    hr_phone: form.hr_phone,
+  });
+
+  const showValidationError = (code: ApplyValidationCode) => {
+    setError(t(locale, VALIDATION_MESSAGE[code]));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUnit) return;
+    const validationError = validateApplyForm(validationInput());
+    if (validationError) {
+      showValidationError(validationError);
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
@@ -640,6 +669,11 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              if (!isMoveInDateValid(form.move_in_date)) {
+                showValidationError("move_in_too_soon");
+                return;
+              }
+              setError(null);
               continueToStep("references");
             }}
             className="space-y-4"
