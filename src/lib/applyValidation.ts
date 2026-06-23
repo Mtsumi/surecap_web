@@ -182,3 +182,76 @@ export function findFirstValidationIssue(
 export function validateApplyForm(input: ApplyValidationInput): ApplyValidationCode | null {
   return findFirstValidationIssue(input)?.code ?? null;
 }
+
+export type ApplyFieldErrors = Partial<Record<string, ApplyValidationCode>>;
+
+/** Mark every housing field that fails validation (for Continue + mobile). */
+export function housingFieldErrors(
+  input: Pick<
+    ApplyValidationInput,
+    "move_in_date" | "email" | "roommates" | "includeGuarantor" | "guarantor"
+  >
+): ApplyFieldErrors {
+  const errors: ApplyFieldErrors = {};
+
+  if (input.move_in_date && !isMoveInDateValid(input.move_in_date)) {
+    errors.move_in_date = "move_in_too_soon";
+  }
+
+  const emailFields: { key: string; email: string }[] = [
+    { key: "email", email: input.email },
+  ];
+  input.roommates.forEach((roommate, index) => {
+    emailFields.push({ key: `roommate_email_${index}`, email: roommate.email });
+  });
+  if (input.includeGuarantor && input.guarantor) {
+    emailFields.push({ key: "guarantor_email", email: input.guarantor.email });
+  }
+
+  const seen = new Map<string, string[]>();
+  for (const { key, email } of emailFields) {
+    const trimmed = email.trim();
+    if (!trimmed) continue;
+    if (!isValidEmail(trimmed)) {
+      errors[key] = "invalid_email";
+      continue;
+    }
+    const normalized = trimmed.toLowerCase();
+    const keys = seen.get(normalized) ?? [];
+    keys.push(key);
+    seen.set(normalized, keys);
+  }
+  for (const keys of Array.from(seen.values())) {
+    if (keys.length > 1) {
+      for (const key of keys) {
+        errors[key] = "duplicate_email";
+      }
+    }
+  }
+
+  return errors;
+}
+
+export function referencesFieldErrors(
+  landlordPhone: string,
+  hrPhone: string
+): ApplyFieldErrors {
+  const code = validatePhones(landlordPhone, hrPhone);
+  if (!code) return {};
+  return { landlord_phone: code, hr_phone: code };
+}
+
+export function personalFieldErrors(email: string): ApplyFieldErrors {
+  const code = validatePersonalStep(email);
+  return code ? { email: code } : {};
+}
+
+export function firstFieldErrorKey(errors: ApplyFieldErrors): string | null {
+  const keys = Object.keys(errors);
+  return keys.length ? keys[0] : null;
+}
+
+export function firstFieldErrorCode(errors: ApplyFieldErrors): ApplyValidationCode | null {
+  const key = firstFieldErrorKey(errors);
+  return key ? errors[key] ?? null : null;
+}

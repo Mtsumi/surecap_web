@@ -20,17 +20,20 @@ import {
 } from "@/lib/applyStorage";
 import { Locale, type MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
+  ApplyFieldErrors,
   ApplyValidationCode,
   findFirstValidationIssue,
+  firstFieldErrorCode,
+  firstFieldErrorKey,
+  housingFieldErrors,
   isMoveInDateValid,
   otherEmailsForGuarantor,
   otherEmailsForPrimary,
   otherEmailsForRoommate,
+  personalFieldErrors,
+  referencesFieldErrors,
   validateEmailUniqueness,
-  validateHousingStep,
-  validatePersonalStep,
   validatePhones,
-  validateReferencesStep,
 } from "@/lib/applyValidation";
 
 const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
@@ -225,11 +228,50 @@ export default function ApplyForm() {
     const code = fieldErrors[fieldKey];
     if (!code) return null;
     return (
-      <p className="mt-1 text-xs text-[#b91c1c]" role="alert">
+      <p className="mt-1 text-sm text-[#b91c1c]" role="alert">
         {t(locale, VALIDATION_MESSAGE[code])}
       </p>
     );
   };
+
+  const scrollToField = (fieldKey: string) => {
+    requestAnimationFrame(() => {
+      document.getElementById(`apply-field-${fieldKey}`)?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    });
+  };
+
+  const applyFieldErrors = (errors: ApplyFieldErrors) => {
+    setFieldErrors(errors);
+  };
+
+  const blockWithFieldErrors = (errors: ApplyFieldErrors) => {
+    if (Object.keys(errors).length === 0) return false;
+    applyFieldErrors(errors);
+    const code = firstFieldErrorCode(errors);
+    if (code) showValidationError(code);
+    const key = firstFieldErrorKey(errors);
+    if (key) scrollToField(key);
+    return true;
+  };
+
+  const syncPhoneValidation = (landlordPhone: string, hrPhone: string) => {
+    const code = validatePhones(landlordPhone, hrPhone);
+    setFieldValidation("landlord_phone", code);
+    setFieldValidation("hr_phone", code);
+  };
+
+  const StepAlert = () =>
+    error ? (
+      <div
+        className="rounded border border-[#e7c4c4] bg-[#fdf5f5] px-4 py-3 text-sm text-[#7f1d1d]"
+        role="alert"
+      >
+        {error}
+      </div>
+    ) : null;
 
   const preselectBuildingId = searchParams.get("building");
 
@@ -289,6 +331,22 @@ export default function ApplyForm() {
     [selectedUnit, selectedBuilding, form, roommates, includeGuarantor, guarantor]
   );
 
+  const fieldErrorsForFormStep = (
+    formStep: (typeof FORM_STEPS)[number]
+  ): ApplyFieldErrors => {
+    const input = validationInput();
+    switch (formStep) {
+      case "personal":
+        return personalFieldErrors(input.email);
+      case "housing":
+        return housingFieldErrors(input);
+      case "references":
+        return referencesFieldErrors(input.landlord_phone, input.hr_phone);
+      default:
+        return {};
+    }
+  };
+
   const continueToStep = (next: Step) => {
     setError(null);
     persistProgress(next);
@@ -297,6 +355,18 @@ export default function ApplyForm() {
 
   const goToFormStep = (target: (typeof FORM_STEPS)[number]) => {
     setError(null);
+    const currentIdx = FORM_STEPS.indexOf(step as (typeof FORM_STEPS)[number]);
+    const targetIdx = FORM_STEPS.indexOf(target);
+    if (currentIdx >= 0 && targetIdx > currentIdx) {
+      for (let i = currentIdx; i < targetIdx; i++) {
+        const stepErrors = fieldErrorsForFormStep(FORM_STEPS[i]);
+        if (blockWithFieldErrors(stepErrors)) {
+          setStep(FORM_STEPS[i]);
+          persistProgress(FORM_STEPS[i]);
+          return;
+        }
+      }
+    }
     persistProgress(target);
     setStep(target);
   };
@@ -348,18 +418,19 @@ export default function ApplyForm() {
     setError(t(locale, VALIDATION_MESSAGE[code]));
   };
 
-  const blockStepContinue = (code: ApplyValidationCode, fieldKey?: string) => {
-    if (fieldKey) setFieldValidation(fieldKey, code);
-    showValidationError(code);
-    return true;
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedUnit) return;
-    const issue = findFirstValidationIssue(validationInput());
+    const input = validationInput();
+    const issue = findFirstValidationIssue(input);
     if (issue) {
-      showValidationError(issue.code);
+      const errors =
+        issue.step === "personal"
+          ? personalFieldErrors(input.email)
+          : issue.step === "housing"
+            ? housingFieldErrors(input)
+            : referencesFieldErrors(input.landlord_phone, input.hr_phone);
+      blockWithFieldErrors(errors);
       persistProgress(issue.step);
       setStep(issue.step);
       return;
@@ -593,11 +664,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const code = validatePersonalStep(form.email);
-              if (code) {
-                blockStepContinue(code, "email");
-                return;
-              }
+              if (blockWithFieldErrors(personalFieldErrors(form.email))) return;
               setError(null);
               continueToStep("addresses");
             }}
@@ -635,6 +702,7 @@ export default function ApplyForm() {
                 className={inputClass}
               />
             </label>
+            <div id="apply-field-email">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "email")}
               <input
@@ -654,6 +722,7 @@ export default function ApplyForm() {
               />
               {fieldHint("email")}
             </label>
+            </div>
             <label className="block text-sm text-[#57534e]">
               {t(locale, "phone")}
               <input
@@ -665,6 +734,7 @@ export default function ApplyForm() {
                 className={inputClass}
               />
             </label>
+            <StepAlert />
             <button
               type="submit"
               disabled={submitting}
@@ -742,17 +812,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const code = validateHousingStep(validationInput());
-              if (code) {
-                if (code === "move_in_too_soon") {
-                  blockStepContinue(code, "move_in_date");
-                } else if (code === "invalid_email" || code === "duplicate_email") {
-                  blockStepContinue(code);
-                } else {
-                  showValidationError(code);
-                }
-                return;
-              }
+              if (blockWithFieldErrors(housingFieldErrors(validationInput()))) return;
               setError(null);
               continueToStep("references");
             }}
@@ -784,13 +844,23 @@ export default function ApplyForm() {
                 </label>
               </div>
             </fieldset>
+            <div id="apply-field-move_in_date">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "moveInDate")}
               <input
                 type="date"
                 required
                 value={form.move_in_date}
-                onChange={(e) => setField("move_in_date", e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setField("move_in_date", value);
+                  if (value) {
+                    setFieldValidation(
+                      "move_in_date",
+                      isMoveInDateValid(value) ? null : "move_in_too_soon"
+                    );
+                  }
+                }}
                 onBlur={() => {
                   if (!form.move_in_date) return;
                   setFieldValidation(
@@ -802,6 +872,7 @@ export default function ApplyForm() {
               />
               {fieldHint("move_in_date")}
             </label>
+            </div>
             <fieldset>
               <legend className="text-sm text-[#57534e]">
                 {t(locale, "rentingWithOthers")}
@@ -850,6 +921,7 @@ export default function ApplyForm() {
                         className={inputClass}
                       />
                     </label>
+                    <div id={`apply-field-roommate_email_${index}`}>
                     <label className="block text-sm text-[#57534e]">
                       {t(locale, "roommateEmail")}
                       <input
@@ -857,14 +929,27 @@ export default function ApplyForm() {
                         required
                         value={roommate.email}
                         onChange={(e) => {
+                          const value = e.target.value;
                           const fieldKey = `roommate_email_${index}`;
                           clearFieldError(fieldKey);
                           setError(null);
                           setRoommates((rows) =>
                             rows.map((row, i) =>
-                              i === index ? { ...row, email: e.target.value } : row
+                              i === index ? { ...row, email: value } : row
                             )
                           );
+                          const input = validationInput();
+                          const nextRoommates = input.roommates.map((row, i) =>
+                            i === index ? { ...row, email: value } : row
+                          );
+                          const code = validateEmailUniqueness(
+                            value,
+                            otherEmailsForRoommate(
+                              { ...input, roommates: nextRoommates },
+                              index
+                            )
+                          );
+                          if (code) setFieldValidation(fieldKey, code);
                         }}
                         onBlur={() => {
                           const fieldKey = `roommate_email_${index}`;
@@ -880,6 +965,7 @@ export default function ApplyForm() {
                       />
                       {fieldHint(`roommate_email_${index}`)}
                     </label>
+                    </div>
                     {roommates.length > 1 && (
                       <button
                         type="button"
@@ -931,6 +1017,7 @@ export default function ApplyForm() {
                       className={inputClass}
                     />
                   </label>
+                  <div id="apply-field-guarantor_email">
                   <label className="block text-sm text-[#57534e]">
                     {t(locale, "email")}
                     <input
@@ -938,9 +1025,15 @@ export default function ApplyForm() {
                       required
                       value={guarantor.email}
                       onChange={(e) => {
+                        const value = e.target.value;
                         clearFieldError("guarantor_email");
                         setError(null);
-                        setGuarantor((g) => ({ ...g, email: e.target.value }));
+                        setGuarantor((g) => ({ ...g, email: value }));
+                        const code = validateEmailUniqueness(
+                          value,
+                          otherEmailsForGuarantor(validationInput())
+                        );
+                        if (code) setFieldValidation("guarantor_email", code);
                       }}
                       onBlur={() =>
                         setFieldValidation(
@@ -955,6 +1048,7 @@ export default function ApplyForm() {
                     />
                     {fieldHint("guarantor_email")}
                   </label>
+                  </div>
                   <label className="block text-sm text-[#57534e]">
                     {t(locale, "guarantorPhone")}
                     <input
@@ -970,6 +1064,7 @@ export default function ApplyForm() {
                 </div>
               )}
             </div>
+            <StepAlert />
             <button
               type="submit"
               disabled={submitting}
@@ -999,12 +1094,11 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              const code = validateReferencesStep(
-                form.landlord_phone,
-                form.hr_phone
-              );
-              if (code) {
-                blockStepContinue(code, "hr_phone");
+              if (
+                blockWithFieldErrors(
+                  referencesFieldErrors(form.landlord_phone, form.hr_phone)
+                )
+              ) {
                 return;
               }
               setError(null);
@@ -1012,39 +1106,41 @@ export default function ApplyForm() {
             }}
             className="space-y-4"
           >
+            <div id="apply-field-landlord_phone">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "landlordPhone")}
               <input
                 type="tel"
                 required
                 value={form.landlord_phone}
-                onChange={(e) => setField("landlord_phone", e.target.value)}
-                onBlur={() =>
-                  setFieldValidation(
-                    "hr_phone",
-                    validatePhones(form.landlord_phone, form.hr_phone)
-                  )
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setField("landlord_phone", value);
+                  syncPhoneValidation(value, form.hr_phone);
+                }}
                 className={inputClassFor("landlord_phone")}
               />
+              {fieldHint("landlord_phone")}
             </label>
+            </div>
+            <div id="apply-field-hr_phone">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "hrPhone")}
               <input
                 type="tel"
                 required
                 value={form.hr_phone}
-                onChange={(e) => setField("hr_phone", e.target.value)}
-                onBlur={() =>
-                  setFieldValidation(
-                    "hr_phone",
-                    validatePhones(form.landlord_phone, form.hr_phone)
-                  )
-                }
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setField("hr_phone", value);
+                  syncPhoneValidation(form.landlord_phone, value);
+                }}
                 className={inputClassFor("hr_phone")}
               />
               {fieldHint("hr_phone")}
             </label>
+            </div>
+            <StepAlert />
             <button
               type="submit"
               disabled={submitting}
