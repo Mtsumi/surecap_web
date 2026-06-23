@@ -41,7 +41,9 @@ export const messages = {
     includeGuarantor: "Add a guarantor",
     references: "References",
     landlordPhone: "Current landlord phone",
+    landlordName: "Current landlord name",
     hrPhone: "HR / employer phone",
+    hrName: "HR / employer contact name",
     referencesNote: "We may call these references — we do not email landlords or employers.",
     otherInfo: "Additional information",
     referralSource:
@@ -117,7 +119,9 @@ export const messages = {
     includeGuarantor: "Ajouter un garant",
     references: "Références",
     landlordPhone: "Téléphone du locateur actuel",
+    landlordName: "Nom du locateur actuel",
     hrPhone: "Téléphone RH / employeur",
+    hrName: "Nom du contact RH / employeur",
     referencesNote:
       "Nous pourrions appeler ces références — nous n'envoyons pas de courriel au locateur ni à l'employeur.",
     otherInfo: "Informations supplémentaires",

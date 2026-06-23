@@ -69,6 +69,8 @@ export type ApplicationDetail = {
   renting_with_others: boolean | null;
   landlord_phone: string | null;
   hr_phone: string | null;
+  landlord_name: string | null;
+  hr_name: string | null;
   landlord_email: string | null;
   hr_email: string | null;
   referral_source: string | null;

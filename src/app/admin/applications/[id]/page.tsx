@@ -135,7 +135,9 @@ export default function ApplicationDetailPage() {
         <Field label="Téléphone" value={app.phone} />
         <Field label="Adresse" value={app.current_address} />
         <Field label="Date d'emménagement" value={app.move_in_date} />
+        <Field label="Locateur" value={app.landlord_name} />
         <Field label="Tél. locateur" value={app.landlord_phone} />
+        <Field label="Contact RH" value={app.hr_name} />
         <Field label="Tél. RH" value={app.hr_phone} />
         <Field label="Raison du refus" value={app.rejection_reason} />
       </dl>
