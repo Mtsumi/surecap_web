@@ -11,6 +11,7 @@ import {
 import { Locale, MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
   ApplyValidationCode,
+  validatePhoneFormat,
   validatePhones,
 } from "@/lib/applyValidation";
 import {
@@ -42,6 +43,7 @@ const VALIDATION_MESSAGE: Record<
   invalid_email: "validationInvalidEmail",
   duplicate_email: "validationDuplicateEmail",
   landlord_hr_same_phone: "validationLandlordHrSamePhone",
+  invalid_phone: "validationInvalidPhone",
   invite_email_mismatch: "validationInviteEmailMismatch",
 };
 
@@ -210,11 +212,20 @@ export default function InviteForm({ token }: Props) {
         errors.email = "invite_email_mismatch";
       }
     }
-    if (current === "references" && role === "roommate") {
-      const phoneError = validatePhones(form.landlord_phone, form.hr_phone);
-      if (phoneError) {
-        errors.landlord_phone = phoneError;
-        errors.hr_phone = phoneError;
+    if (current === "personal") {
+      const phoneError = validatePhoneFormat(form.phone);
+      if (phoneError) errors.phone = phoneError;
+    }
+    if (current === "references") {
+      if (role === "guarantor") {
+        const hrError = validatePhoneFormat(form.hr_phone);
+        if (hrError) errors.hr_phone = hrError;
+      } else {
+        const phoneError = validatePhones(form.landlord_phone, form.hr_phone);
+        if (phoneError) {
+          errors.landlord_phone = phoneError;
+          errors.hr_phone = phoneError;
+        }
       }
     }
     if (Object.keys(errors).length) {

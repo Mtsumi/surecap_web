@@ -44,7 +44,7 @@ export const messages = {
     landlordName: "Current landlord name",
     hrPhone: "HR / employer phone",
     hrName: "HR / employer contact name",
-    referencesNote: "We may call these references — we do not email landlords or employers.",
+    referencesNote: "We may call these references.",
     otherInfo: "Additional information",
     referralSource:
       "How did you learn about Montreal Living and this apartment?",
@@ -81,6 +81,7 @@ export const messages = {
     validationDuplicateEmail: "Each person must have a different email address.",
     validationLandlordHrSamePhone:
       "Landlord and employer phone numbers must be different.",
+    validationInvalidPhone: "Please enter a valid phone number (digits only).",
     inviteTitleRoommate: "Co-tenant application",
     inviteTitleGuarantor: "Guarantor section",
     inviteSubtitle:
@@ -140,8 +141,7 @@ export const messages = {
     landlordName: "Nom du locateur actuel",
     hrPhone: "Téléphone RH / employeur",
     hrName: "Nom du contact RH / employeur",
-    referencesNote:
-      "Nous pourrions appeler ces références — nous n'envoyons pas de courriel au locateur ni à l'employeur.",
+    referencesNote: "Nous pourrions appeler ces références.",
     otherInfo: "Informations supplémentaires",
     referralSource:
       "Comment avez-vous entendu parler de Montreal Living et de cet appartement?",
@@ -181,6 +181,8 @@ export const messages = {
       "Chaque personne doit avoir une adresse courriel différente.",
     validationLandlordHrSamePhone:
       "Les numéros du locateur et de l'employeur doivent être différents.",
+    validationInvalidPhone:
+      "Veuillez entrer un numéro de téléphone valide (chiffres seulement).",
     inviteTitleRoommate: "Demande de colocation",
     inviteTitleGuarantor: "Section garant",
     inviteSubtitle:
