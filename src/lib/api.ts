@@ -149,6 +149,67 @@ export function submitApplication(payload: ApplicationSubmit): Promise<Applicati
   });
 }
 
+export type InviteContext = {
+  application_id: number;
+  member_id: number;
+  role: "roommate" | "guarantor";
+  member_status: string;
+  invited_name: string | null;
+  invited_email: string | null;
+  invited_phone: string | null;
+  primary_name: string;
+  building_name: string;
+  unit_number: string;
+  building_address: string;
+  move_in_date: string | null;
+};
+
+export type InviteeSubmitPayload = {
+  given_name: string;
+  family_name: string;
+  date_of_birth: string;
+  email: string;
+  phone: string;
+  current_address: string;
+  current_place_id?: string;
+  previous_address?: string;
+  previous_place_id?: string;
+  lease_in_name?: boolean;
+  move_in_date?: string;
+  landlord_phone?: string;
+  hr_phone?: string;
+  landlord_name?: string;
+  hr_name?: string;
+  referral_source?: string;
+  facebook_url?: string;
+  linkedin_url?: string;
+};
+
+export type InviteeSubmitResult = {
+  application_id: number;
+  member_id: number;
+  role: string;
+  member_status: string;
+  application_status: string;
+};
+
+export function fetchInvite(token: string): Promise<InviteContext> {
+  return apiFetch<InviteContext>(`/applications/invites/${encodeURIComponent(token)}`);
+}
+
+export function submitInvite(
+  token: string,
+  payload: InviteeSubmitPayload
+): Promise<InviteeSubmitResult> {
+  return apiFetch<InviteeSubmitResult>(
+    `/applications/invites/${encodeURIComponent(token)}/submit`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
 /** @deprecated Use submitApplication — server drafts are not used in the apply flow. */
 export function createApplicationDraft(unitId: number): Promise<Application> {
   return apiFetch<Application>("/applications", {
