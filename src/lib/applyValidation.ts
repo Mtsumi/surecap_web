@@ -7,6 +7,7 @@ export type ApplyValidationCode =
   | "move_in_before_available"
   | "invalid_email"
   | "duplicate_email"
+  | "invalid_phone"
   | "landlord_hr_same_phone";
 
 export type ApplyFormStep = "personal" | "housing" | "references";
@@ -18,7 +19,8 @@ export type ApplyValidationInput = {
   email: string;
   roommates: { email: string }[];
   includeGuarantor: boolean;
-  guarantor: { email: string } | null;
+  guarantor: { email: string; phone: string } | null;
+  phone: string;
   landlord_phone: string;
   hr_phone: string;
 };
@@ -124,10 +126,22 @@ export function validateEmailFormat(email: string): ApplyValidationCode | null {
   return isValidEmail(trimmed) ? null : "invalid_email";
 }
 
+export function validatePhoneFormat(phone: string): ApplyValidationCode | null {
+  const trimmed = phone.trim();
+  if (!trimmed) return null;
+  if (/[a-zA-Z]/.test(trimmed)) return "invalid_phone";
+  if (normalizePhone(trimmed).length < 7) return "invalid_phone";
+  return null;
+}
+
 export function validatePhones(
   landlordPhone: string,
   hrPhone: string
 ): ApplyValidationCode | null {
+  const landlordFormat = validatePhoneFormat(landlordPhone);
+  if (landlordFormat) return landlordFormat;
+  const hrFormat = validatePhoneFormat(hrPhone);
+  if (hrFormat) return hrFormat;
   const landlord = normalizePhone(landlordPhone);
   const hr = normalizePhone(hrPhone);
   if (landlord && hr && landlord === hr) {
@@ -281,6 +295,7 @@ export function housingFieldErrors(
     | "roommates"
     | "includeGuarantor"
     | "guarantor"
+    | "phone"
   >
 ): ApplyFieldErrors {
   const errors: ApplyFieldErrors = {};
@@ -324,6 +339,11 @@ export function housingFieldErrors(
     }
   }
 
+  if (input.includeGuarantor && input.guarantor?.phone) {
+    const guarantorPhoneError = validatePhoneFormat(input.guarantor.phone);
+    if (guarantorPhoneError) errors.guarantor_phone = guarantorPhoneError;
+  }
+
   return errors;
 }
 
@@ -331,14 +351,26 @@ export function referencesFieldErrors(
   landlordPhone: string,
   hrPhone: string
 ): ApplyFieldErrors {
-  const code = validatePhones(landlordPhone, hrPhone);
-  if (!code) return {};
-  return { landlord_phone: code, hr_phone: code };
+  const errors: ApplyFieldErrors = {};
+  const landlordFormat = validatePhoneFormat(landlordPhone);
+  if (landlordFormat) errors.landlord_phone = landlordFormat;
+  const hrFormat = validatePhoneFormat(hrPhone);
+  if (hrFormat) errors.hr_phone = hrFormat;
+  if (Object.keys(errors).length > 0) return errors;
+  const same = validatePhones(landlordPhone, hrPhone);
+  if (!same) return {};
+  return { landlord_phone: same, hr_phone: same };
 }
 
-export function personalFieldErrors(email: string): ApplyFieldErrors {
-  const code = validatePersonalStep(email);
-  return code ? { email: code } : {};
+export function personalFieldErrors(email: string, phone?: string): ApplyFieldErrors {
+  const errors: ApplyFieldErrors = {};
+  const emailCode = validatePersonalStep(email);
+  if (emailCode) errors.email = emailCode;
+  if (phone !== undefined) {
+    const phoneCode = validatePhoneFormat(phone);
+    if (phoneCode) errors.phone = phoneCode;
+  }
+  return errors;
 }
 
 export function firstFieldErrorKey(errors: ApplyFieldErrors): string | null {

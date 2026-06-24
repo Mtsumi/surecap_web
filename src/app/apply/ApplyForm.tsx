@@ -45,6 +45,7 @@ const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   invalid_email: "validationInvalidEmail",
   duplicate_email: "validationDuplicateEmail",
   landlord_hr_same_phone: "validationLandlordHrSamePhone",
+  invalid_phone: "validationInvalidPhone",
 };
 
 type Step =
@@ -347,7 +348,7 @@ export default function ApplyForm() {
     const input = validationInput();
     switch (formStep) {
       case "personal":
-        return personalFieldErrors(input.email);
+        return personalFieldErrors(input.email, form.phone);
       case "housing":
         return housingFieldErrors(input);
       case "references":
@@ -419,6 +420,7 @@ export default function ApplyForm() {
     unit_earliest_move_in: selectedUnit?.earliest_move_in_date ?? null,
     unit_available_date: selectedUnit?.available_date ?? null,
     email: form.email,
+    phone: form.phone,
     roommates: form.renting_with_others ? roommates : [],
     includeGuarantor,
     guarantor: includeGuarantor ? guarantor : null,
@@ -765,9 +767,13 @@ export default function ApplyForm() {
                 required
                 autoComplete="tel"
                 value={form.phone}
-                onChange={(e) => setField("phone", e.target.value)}
-                className={inputClass}
+                onChange={(e) => {
+                  setField("phone", e.target.value);
+                  clearFieldError("phone");
+                }}
+                className={inputClassFor("phone")}
               />
+              {fieldHint("phone")}
             </label>
             <StepAlert />
             <button
@@ -1088,18 +1094,22 @@ export default function ApplyForm() {
                     {fieldHint("guarantor_email")}
                   </label>
                   </div>
+                  <div id="apply-field-guarantor_phone">
                   <label className="block text-sm text-[#57534e]">
                     {t(locale, "guarantorPhone")}
                     <input
                       type="tel"
                       required
                       value={guarantor.phone}
-                      onChange={(e) =>
-                        setGuarantor((g) => ({ ...g, phone: e.target.value }))
-                      }
-                      className={inputClass}
+                      onChange={(e) => {
+                        clearFieldError("guarantor_phone");
+                        setGuarantor((g) => ({ ...g, phone: e.target.value }));
+                      }}
+                      className={inputClassFor("guarantor_phone")}
                     />
+                    {fieldHint("guarantor_phone")}
                   </label>
+                  </div>
                 </div>
               )}
             </div>

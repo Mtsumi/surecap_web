@@ -3,6 +3,7 @@
 import {
   ApplyValidationCode,
   validateEmailFormat,
+  validatePhoneFormat,
   validatePhones,
 } from "./applyValidation";
 
@@ -88,6 +89,15 @@ export function inviteeFieldErrors(
 
   const emailError = validateInviteeEmailMatch(invitedEmail, fields.email);
   if (emailError) errors.email = emailError;
+
+  const phoneFields: (keyof InviteeFormFields)[] =
+    role === "guarantor"
+      ? ["phone", "hr_phone"]
+      : ["phone", "landlord_phone", "hr_phone"];
+  for (const key of phoneFields) {
+    const formatError = validatePhoneFormat(String(fields[key]));
+    if (formatError) errors[key] = formatError;
+  }
 
   if (role === "roommate") {
     const phoneError = validatePhones(fields.landlord_phone, fields.hr_phone);
