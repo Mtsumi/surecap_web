@@ -16,6 +16,7 @@ export type Unit = {
   civic_number: string | null;
   rent: number | null;
   available_date: string | null;
+  earliest_move_in_date: string;
 };
 
 export type LocaleCode = "fr" | "en";

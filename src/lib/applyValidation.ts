@@ -4,6 +4,7 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export type ApplyValidationCode =
   | "move_in_too_soon"
+  | "move_in_before_available"
   | "invalid_email"
   | "duplicate_email"
   | "landlord_hr_same_phone";
@@ -12,6 +13,8 @@ export type ApplyFormStep = "personal" | "housing" | "references";
 
 export type ApplyValidationInput = {
   move_in_date: string;
+  unit_earliest_move_in?: string | null;
+  unit_available_date?: string | null;
   email: string;
   roommates: { email: string }[];
   includeGuarantor: boolean;
@@ -28,6 +31,76 @@ function localDateString(): string {
   return `${y}-${m}-${day}`;
 }
 
+function tomorrowDateString(): string {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+/** Inventory strings meaning no future availability floor (e.g. Excel “immédiatement”). */
+export function isImmediateAvailability(raw: string | null | undefined): boolean {
+  if (!raw?.trim()) return false;
+  const normalized = raw
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+  if (
+    normalized === "immediatement" ||
+    normalized === "immediately" ||
+    normalized === "immediate" ||
+    normalized === "maintenant" ||
+    normalized === "now" ||
+    normalized === "asap"
+  ) {
+    return true;
+  }
+  return normalized.includes("immediatement") || normalized.includes("immediately");
+}
+
+/** Parse inventory available_date when stored as YYYY-MM-DD. */
+export function parseUnitAvailableDate(raw: string | null | undefined): string | null {
+  if (!raw?.trim() || isImmediateAvailability(raw)) return null;
+  const text = raw.trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : null;
+}
+
+export type MoveInUnitContext = {
+  earliest_move_in_date?: string | null;
+  available_date?: string | null;
+};
+
+/** Prefer API-computed earliest_move_in_date; fall back to client parse of available_date. */
+export function unitEarliestMoveIn(unit: MoveInUnitContext | null | undefined): string {
+  if (unit?.earliest_move_in_date) return unit.earliest_move_in_date;
+  return earliestMoveInDate(unit?.available_date ?? null);
+}
+
+/** Earliest allowed move-in: max(tomorrow, unit available date). */
+export function earliestMoveInDate(availableDate?: string | null): string {
+  const tomorrow = tomorrowDateString();
+  const parsed = parseUnitAvailableDate(availableDate ?? null);
+  if (!parsed) return tomorrow;
+  return parsed > tomorrow ? parsed : tomorrow;
+}
+
+export function moveInValidationCode(
+  moveIn: string,
+  unit: MoveInUnitContext | null | undefined
+): ApplyValidationCode | null {
+  if (!moveIn) return null;
+  const earliest = unitEarliestMoveIn(unit);
+  if (moveIn >= earliest) return null;
+  const parsed = parseUnitAvailableDate(unit?.available_date ?? null);
+  if (parsed && parsed > localDateString()) {
+    return "move_in_before_available";
+  }
+  return "move_in_too_soon";
+}
+
 function normalizePhone(phone: string): string {
   return phone.replace(/\D/g, "");
 }
@@ -36,10 +109,13 @@ export function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email.trim());
 }
 
-/** Earliest allowed move-in is tomorrow (applicant local calendar). */
-export function isMoveInDateValid(moveIn: string): boolean {
+/** Earliest allowed move-in is tomorrow, or unit available date when later. */
+export function isMoveInDateValid(
+  moveIn: string,
+  unit: MoveInUnitContext | null | undefined
+): boolean {
   if (!moveIn) return false;
-  return moveIn > localDateString();
+  return moveIn >= unitEarliestMoveIn(unit);
 }
 
 export function validateEmailFormat(email: string): ApplyValidationCode | null {
@@ -115,12 +191,20 @@ export function validatePersonalStep(email: string): ApplyValidationCode | null 
 export function validateHousingStep(
   input: Pick<
     ApplyValidationInput,
-    "move_in_date" | "email" | "roommates" | "includeGuarantor" | "guarantor"
+    | "move_in_date"
+    | "unit_earliest_move_in"
+    | "unit_available_date"
+    | "email"
+    | "roommates"
+    | "includeGuarantor"
+    | "guarantor"
   >
 ): ApplyValidationCode | null {
-  if (!isMoveInDateValid(input.move_in_date)) {
-    return "move_in_too_soon";
-  }
+  const moveInError = moveInValidationCode(input.move_in_date, {
+    earliest_move_in_date: input.unit_earliest_move_in,
+    available_date: input.unit_available_date,
+  });
+  if (moveInError) return moveInError;
 
   const primaryError = validateEmailFormat(input.email);
   if (primaryError) return primaryError;
@@ -154,6 +238,7 @@ export function validateReferencesStep(
 export function stepForValidationCode(code: ApplyValidationCode): ApplyFormStep {
   switch (code) {
     case "move_in_too_soon":
+    case "move_in_before_available":
     case "invalid_email":
     case "duplicate_email":
       return "housing";
@@ -189,13 +274,23 @@ export type ApplyFieldErrors = Partial<Record<string, ApplyValidationCode>>;
 export function housingFieldErrors(
   input: Pick<
     ApplyValidationInput,
-    "move_in_date" | "email" | "roommates" | "includeGuarantor" | "guarantor"
+    | "move_in_date"
+    | "unit_earliest_move_in"
+    | "unit_available_date"
+    | "email"
+    | "roommates"
+    | "includeGuarantor"
+    | "guarantor"
   >
 ): ApplyFieldErrors {
   const errors: ApplyFieldErrors = {};
 
-  if (input.move_in_date && !isMoveInDateValid(input.move_in_date)) {
-    errors.move_in_date = "move_in_too_soon";
+  if (input.move_in_date) {
+    const moveInError = moveInValidationCode(input.move_in_date, {
+      earliest_move_in_date: input.unit_earliest_move_in,
+      available_date: input.unit_available_date,
+    });
+    if (moveInError) errors.move_in_date = moveInError;
   }
 
   const emailFields: { key: string; email: string }[] = [
