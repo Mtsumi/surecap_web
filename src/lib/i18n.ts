@@ -71,6 +71,12 @@ export const messages = {
     langToggle: "Français",
     addressManualHint: "Start typing to search, or enter your address manually.",
     validationMoveInTooSoon: "Move-in date must be tomorrow or later.",
+    validationMoveInBeforeAvailable:
+      "Move-in date cannot be before the unit is available.",
+    moveInHintImmediate:
+      "Available immediately. Earliest move-in date is tomorrow.",
+    moveInHintAvailableFrom:
+      "Available from {date}. Move-in cannot be earlier than that date.",
     validationInvalidEmail: "Please enter a valid email address.",
     validationDuplicateEmail: "Each person must have a different email address.",
     validationLandlordHrSamePhone:
@@ -152,6 +158,12 @@ export const messages = {
       "Commencez à taper pour rechercher, ou entrez l'adresse manuellement.",
     validationMoveInTooSoon:
       "La date d'emménagement doit être demain ou plus tard.",
+    validationMoveInBeforeAvailable:
+      "La date d'emménagement ne peut pas précéder la disponibilité du logement.",
+    moveInHintImmediate:
+      "Disponible immédiatement. La première date d'emménagement possible est demain.",
+    moveInHintAvailableFrom:
+      "Disponible à partir du {date}. L'emménagement ne peut pas être plus tôt.",
     validationInvalidEmail: "Veuillez entrer une adresse courriel valide.",
     validationDuplicateEmail:
       "Chaque personne doit avoir une adresse courriel différente.",

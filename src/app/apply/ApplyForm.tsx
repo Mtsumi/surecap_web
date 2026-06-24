@@ -26,7 +26,10 @@ import {
   firstFieldErrorCode,
   firstFieldErrorKey,
   housingFieldErrors,
-  isMoveInDateValid,
+  isImmediateAvailability,
+  moveInValidationCode,
+  parseUnitAvailableDate,
+  unitEarliestMoveIn,
   otherEmailsForGuarantor,
   otherEmailsForPrimary,
   otherEmailsForRoommate,
@@ -38,6 +41,7 @@ import {
 
 const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   move_in_too_soon: "validationMoveInTooSoon",
+  move_in_before_available: "validationMoveInBeforeAvailable",
   invalid_email: "validationInvalidEmail",
   duplicate_email: "validationDuplicateEmail",
   landlord_hr_same_phone: "validationLandlordHrSamePhone",
@@ -412,6 +416,8 @@ export default function ApplyForm() {
 
   const validationInput = () => ({
     move_in_date: form.move_in_date,
+    unit_earliest_move_in: selectedUnit?.earliest_move_in_date ?? null,
+    unit_available_date: selectedUnit?.available_date ?? null,
     email: form.email,
     roommates: form.renting_with_others ? roommates : [],
     includeGuarantor,
@@ -419,6 +425,29 @@ export default function ApplyForm() {
     landlord_phone: form.landlord_phone,
     hr_phone: form.hr_phone,
   });
+
+  const moveInUnitContext = () =>
+    selectedUnit
+      ? {
+          earliest_move_in_date: selectedUnit.earliest_move_in_date,
+          available_date: selectedUnit.available_date,
+        }
+      : null;
+
+  const moveInHint = (): string | null => {
+    if (!selectedUnit) return null;
+    if (isImmediateAvailability(selectedUnit.available_date)) {
+      return t(locale, "moveInHintImmediate");
+    }
+    const parsed = parseUnitAvailableDate(selectedUnit.available_date);
+    if (parsed) {
+      return t(locale, "moveInHintAvailableFrom").replace("{date}", parsed);
+    }
+    if (selectedUnit.available_date) {
+      return `${t(locale, "available")}: ${selectedUnit.available_date}`;
+    }
+    return null;
+  };
 
   const showValidationError = (code: ApplyValidationCode) => {
     setError(t(locale, VALIDATION_MESSAGE[code]));
@@ -856,6 +885,7 @@ export default function ApplyForm() {
               <input
                 type="date"
                 required
+                min={unitEarliestMoveIn(moveInUnitContext())}
                 value={form.move_in_date}
                 onChange={(e) => {
                   const value = e.target.value;
@@ -863,7 +893,7 @@ export default function ApplyForm() {
                   if (value) {
                     setFieldValidation(
                       "move_in_date",
-                      isMoveInDateValid(value) ? null : "move_in_too_soon"
+                      moveInValidationCode(value, moveInUnitContext())
                     );
                   }
                 }}
@@ -871,11 +901,14 @@ export default function ApplyForm() {
                   if (!form.move_in_date) return;
                   setFieldValidation(
                     "move_in_date",
-                    isMoveInDateValid(form.move_in_date) ? null : "move_in_too_soon"
+                    moveInValidationCode(form.move_in_date, moveInUnitContext())
                   );
                 }}
                 className={inputClassFor("move_in_date")}
               />
+              {moveInHint() && (
+                <p className="mt-1 text-xs text-[#78716c]">{moveInHint()}</p>
+              )}
               {fieldHint("move_in_date")}
             </label>
             </div>
