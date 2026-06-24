@@ -81,6 +81,18 @@ export const messages = {
     validationDuplicateEmail: "Each person must have a different email address.",
     validationLandlordHrSamePhone:
       "Landlord and employer phone numbers must be different.",
+    inviteTitleRoommate: "Co-tenant application",
+    inviteTitleGuarantor: "Guarantor section",
+    inviteSubtitle:
+      "{primary} applied for {building}, unit {unit}. Complete your section below.",
+    inviteExpired: "This invite link is invalid or has expired.",
+    inviteAlreadySubmitted: "You have already submitted this section.",
+    inviteSuccessTitle: "Section submitted",
+    inviteSuccessBody:
+      "Thank you. A confirmation email has been sent to you.",
+    validationInviteEmailMismatch:
+      "Email must match the address that received the invitation.",
+    fieldRequired: "This field is required.",
   },
   fr: {
     title: "Demande de location",
@@ -169,6 +181,18 @@ export const messages = {
       "Chaque personne doit avoir une adresse courriel différente.",
     validationLandlordHrSamePhone:
       "Les numéros du locateur et de l'employeur doivent être différents.",
+    inviteTitleRoommate: "Demande de colocation",
+    inviteTitleGuarantor: "Section garant",
+    inviteSubtitle:
+      "{primary} a fait une demande pour {building}, logement {unit}. Complétez votre section ci-dessous.",
+    inviteExpired: "Ce lien d'invitation est invalide ou expiré.",
+    inviteAlreadySubmitted: "Vous avez déjà soumis cette section.",
+    inviteSuccessTitle: "Section soumise",
+    inviteSuccessBody:
+      "Merci. Un courriel de confirmation vous a été envoyé.",
+    validationInviteEmailMismatch:
+      "Le courriel doit correspondre à celui qui a reçu l'invitation.",
+    fieldRequired: "Ce champ est obligatoire.",
   },
 } as const;
 
