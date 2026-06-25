@@ -241,6 +241,25 @@ export default function InviteForm({ token }: Props) {
     setStep(next);
   };
 
+  const goToStep = (target: Step) => {
+    if (!role) return;
+    setError(null);
+    const currentIdx = steps.indexOf(step);
+    const targetIdx = steps.indexOf(target);
+    if (targetIdx < 0) return;
+    if (targetIdx > currentIdx) {
+      for (let i = currentIdx; i < targetIdx; i++) {
+        const stepToValidate = steps[i];
+        if (!validateStep(stepToValidate)) {
+          setStep(stepToValidate);
+          return;
+        }
+      }
+    }
+    setFieldErrors({});
+    setStep(target);
+  };
+
   const handleSubmit = async () => {
     if (!role || !context) return;
     const errors = inviteeFieldErrors(role, form, context.invited_email || "");
@@ -363,14 +382,20 @@ export default function InviteForm({ token }: Props) {
         </button>
       </div>
 
-      <nav className="mb-6 flex flex-wrap gap-2 text-xs text-[#78716c]">
+      <nav className="mb-6 flex flex-wrap items-center gap-1 text-xs text-[#78716c]" aria-label="Invite form steps">
         {steps.map((s, i) => (
-          <span
-            key={s}
-            className={i === stepIndex ? "font-medium text-[#3d5a45]" : ""}
-          >
-            {stepLabel(locale, s)}
-            {i < steps.length - 1 ? " · " : ""}
+          <span key={s} className="inline-flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => goToStep(s)}
+              aria-current={i === stepIndex ? "step" : undefined}
+              className={`rounded px-1 py-0.5 underline-offset-2 hover:underline ${
+                i === stepIndex ? "font-medium text-[#3d5a45]" : "text-[#78716c]"
+              }`}
+            >
+              {stepLabel(locale, s)}
+            </button>
+            {i < steps.length - 1 ? <span aria-hidden>·</span> : null}
           </span>
         ))}
       </nav>

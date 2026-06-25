@@ -49,8 +49,20 @@ export type ApplicationMember = {
   invited_email: string | null;
   given_name: string | null;
   family_name: string | null;
+  date_of_birth: string | null;
   email: string | null;
   phone: string | null;
+  current_address: string | null;
+  previous_address: string | null;
+  lease_in_name: boolean | null;
+  move_in_date: string | null;
+  landlord_phone: string | null;
+  hr_phone: string | null;
+  landlord_name: string | null;
+  hr_name: string | null;
+  referral_source: string | null;
+  facebook_url: string | null;
+  linkedin_url: string | null;
 };
 
 export type ApplicationDetail = {
