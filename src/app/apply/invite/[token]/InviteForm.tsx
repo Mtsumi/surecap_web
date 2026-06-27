@@ -189,8 +189,11 @@ export default function InviteForm({ token }: Props) {
     if (!role || !context) return false;
     const keysForStep: Record<Step, (keyof InviteeFormFields)[]> = {
       personal: ["given_name", "family_name", "date_of_birth", "email", "phone"],
-      addresses: ["current_address"],
-      housing: ["lease_in_name", "move_in_date"],
+      addresses:
+        role === "roommate"
+          ? ["current_address", "lease_in_name"]
+          : ["current_address"],
+      housing: role === "roommate" ? ["move_in_date"] : [],
       references:
         role === "guarantor"
           ? ["hr_name", "hr_phone"]
@@ -273,8 +276,10 @@ export default function InviteForm({ token }: Props) {
           setStep("addresses");
         } else if (key.startsWith("landlord") || key.startsWith("hr")) {
           setStep("references");
-        } else if (key === "move_in_date" || key === "lease_in_name") {
+        } else if (key === "move_in_date") {
           setStep("housing");
+        } else if (key === "lease_in_name") {
+          setStep("addresses");
         }
       }
       return;
@@ -507,13 +512,40 @@ export default function InviteForm({ token }: Props) {
             }}
             inputClass={inputClass}
           />
+          {role === "roommate" && (
+            <fieldset>
+              <legend className="text-sm text-[#57534e]">
+                {t(locale, "leaseInName")}
+              </legend>
+              <div className="mt-2 flex gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    required
+                    checked={form.lease_in_name === true}
+                    onChange={() => setField("lease_in_name", true)}
+                  />
+                  {t(locale, "yes")}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    checked={form.lease_in_name === false}
+                    onChange={() => setField("lease_in_name", false)}
+                  />
+                  {t(locale, "no")}
+                </label>
+              </div>
+              {fieldHint("lease_in_name")}
+            </fieldset>
+          )}
           <div className="flex gap-3">
             <button
               type="button"
               onClick={() => setStep(steps[stepIndex - 1])}
               className="text-sm text-[#57534e] underline-offset-2 hover:underline"
             >
-              {t(locale, "back")}
+              {t(locale, "previousStep")}
             </button>
             <button
               type="submit"
@@ -533,30 +565,6 @@ export default function InviteForm({ token }: Props) {
             continueTo(steps[stepIndex + 1]);
           }}
         >
-          <fieldset>
-            <legend className="text-sm text-[#57534e]">
-              {t(locale, "leaseInName")}
-            </legend>
-            <div className="mt-2 flex gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={form.lease_in_name === true}
-                  onChange={() => setField("lease_in_name", true)}
-                />
-                {t(locale, "yes")}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="radio"
-                  checked={form.lease_in_name === false}
-                  onChange={() => setField("lease_in_name", false)}
-                />
-                {t(locale, "no")}
-              </label>
-            </div>
-            {fieldHint("lease_in_name")}
-          </fieldset>
           <label className="block text-sm text-[#57534e]">
             {t(locale, "moveInDate")}
             <input
@@ -570,7 +578,7 @@ export default function InviteForm({ token }: Props) {
           </label>
           <div className="flex gap-3">
             <button type="button" onClick={() => setStep(steps[stepIndex - 1])} className="text-sm text-[#57534e] underline-offset-2 hover:underline">
-              {t(locale, "back")}
+              {t(locale, "previousStep")}
             </button>
             <button type="submit" className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white">
               {t(locale, "continue")}
@@ -636,7 +644,7 @@ export default function InviteForm({ token }: Props) {
           </label>
           <div className="flex gap-3">
             <button type="button" onClick={() => setStep(steps[stepIndex - 1])} className="text-sm text-[#57534e] underline-offset-2 hover:underline">
-              {t(locale, "back")}
+              {t(locale, "previousStep")}
             </button>
             <button type="submit" className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white">
               {t(locale, "continue")}
@@ -680,7 +688,7 @@ export default function InviteForm({ token }: Props) {
           </label>
           <div className="flex gap-3">
             <button type="button" onClick={() => setStep("references")} className="text-sm text-[#57534e] underline-offset-2 hover:underline">
-              {t(locale, "back")}
+              {t(locale, "previousStep")}
             </button>
             <button type="submit" className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white">
               {t(locale, "continue")}
@@ -712,7 +720,7 @@ export default function InviteForm({ token }: Props) {
               onClick={() => setStep(steps[stepIndex - 1])}
               className="text-sm text-[#57534e] underline-offset-2 hover:underline"
             >
-              {t(locale, "back")}
+              {t(locale, "previousStep")}
             </button>
             <button
               type="button"

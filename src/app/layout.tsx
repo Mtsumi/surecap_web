@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SureCap — Rental application",
+  title: "Montreal Living — Rental application",
   description: "Apply for an apartment",
 };
 

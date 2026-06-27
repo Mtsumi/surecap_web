@@ -527,10 +527,7 @@ export default function ApplyForm() {
       <header className="mb-10 border-b border-[#e7e0d5] pb-8">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-medium uppercase tracking-[0.14em] text-[#78716c]">
-              SureCap
-            </p>
-            <h1 className="mt-2 text-[1.65rem] font-semibold leading-tight text-[#292524]">
+            <h1 className="text-[1.65rem] font-semibold leading-tight text-[#292524]">
               {t(locale, "title")}
             </h1>
             <p className="mt-2 text-[0.95rem] leading-relaxed text-[#57534e]">
@@ -641,7 +638,7 @@ export default function ApplyForm() {
             }}
             className="mb-5 text-sm text-[#57534e] underline-offset-2 hover:underline"
           >
-            ← {t(locale, "back")}
+            ← {t(locale, "previousStep")}
           </button>
           <h2 className="text-base font-medium text-[#292524]">
             {t(locale, "selectUnit")}
@@ -693,7 +690,7 @@ export default function ApplyForm() {
             onClick={() => setStep("unit")}
             className="mb-5 text-sm text-[#57534e] underline-offset-2 hover:underline"
           >
-            ← {t(locale, "back")}
+            ← {t(locale, "previousStep")}
           </button>
           <h2 className="mb-5 text-base font-medium text-[#292524]">
             {t(locale, "personalInfo")}
@@ -701,7 +698,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (blockWithFieldErrors(personalFieldErrors(form.email))) return;
+              if (blockWithFieldErrors(personalFieldErrors(form.email, form.phone))) return;
               setError(null);
               continueToStep("addresses");
             }}
@@ -775,6 +772,26 @@ export default function ApplyForm() {
               />
               {fieldHint("phone")}
             </label>
+            <label className="block text-sm text-[#57534e]">
+              {t(locale, "facebookUrl")}
+              <input
+                type="url"
+                value={form.facebook_url}
+                onChange={(e) => setField("facebook_url", e.target.value)}
+                className={inputClass}
+                placeholder="https://"
+              />
+            </label>
+            <label className="block text-sm text-[#57534e]">
+              {t(locale, "linkedinUrl")}
+              <input
+                type="url"
+                value={form.linkedin_url}
+                onChange={(e) => setField("linkedin_url", e.target.value)}
+                className={inputClass}
+                placeholder="https://"
+              />
+            </label>
             <StepAlert />
             <button
               type="submit"
@@ -794,7 +811,7 @@ export default function ApplyForm() {
             onClick={backFromForm}
             className="mb-5 text-sm text-[#57534e] underline-offset-2 hover:underline"
           >
-            ← {t(locale, "back")}
+            ← {t(locale, "previousStep")}
           </button>
           <h2 className="mb-5 text-base font-medium text-[#292524]">
             {t(locale, "addresses")}
@@ -802,6 +819,15 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
+              if (!form.current_address.trim()) {
+                setError(t(locale, "fieldRequired"));
+                return;
+              }
+              if (form.lease_in_name === null) {
+                setError(t(locale, "fieldRequired"));
+                return;
+              }
+              setError(null);
               continueToStep("housing");
             }}
             className="space-y-4"
@@ -827,38 +853,6 @@ export default function ApplyForm() {
               }}
               inputClass={inputClass}
             />
-            <button
-              type="submit"
-              disabled={submitting}
-              className="w-full rounded bg-[#3d5a45] py-3.5 text-sm font-medium text-[#f4f1ec] transition hover:bg-[#334d3a] disabled:opacity-60"
-            >
-              {submitting ? t(locale, "loading") : t(locale, "continue")}
-            </button>
-          </form>
-        </section>
-      )}
-
-      {step === "housing" && (
-        <section>
-          <button
-            type="button"
-            onClick={backFromForm}
-            className="mb-5 text-sm text-[#57534e] underline-offset-2 hover:underline"
-          >
-            ← {t(locale, "back")}
-          </button>
-          <h2 className="mb-5 text-base font-medium text-[#292524]">
-            {t(locale, "housing")}
-          </h2>
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (blockWithFieldErrors(housingFieldErrors(validationInput()))) return;
-              setError(null);
-              continueToStep("references");
-            }}
-            className="space-y-4"
-          >
             <fieldset>
               <legend className="text-sm text-[#57534e]">
                 {t(locale, "leaseInName")}
@@ -885,6 +879,38 @@ export default function ApplyForm() {
                 </label>
               </div>
             </fieldset>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full rounded bg-[#3d5a45] py-3.5 text-sm font-medium text-[#f4f1ec] transition hover:bg-[#334d3a] disabled:opacity-60"
+            >
+              {submitting ? t(locale, "loading") : t(locale, "continue")}
+            </button>
+          </form>
+        </section>
+      )}
+
+      {step === "housing" && (
+        <section>
+          <button
+            type="button"
+            onClick={backFromForm}
+            className="mb-5 text-sm text-[#57534e] underline-offset-2 hover:underline"
+          >
+            ← {t(locale, "previousStep")}
+          </button>
+          <h2 className="mb-5 text-base font-medium text-[#292524]">
+            {t(locale, "housing")}
+          </h2>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (blockWithFieldErrors(housingFieldErrors(validationInput()))) return;
+              setError(null);
+              continueToStep("references");
+            }}
+            className="space-y-4"
+          >
             <div id="apply-field-move_in_date">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "moveInDate")}
@@ -1132,7 +1158,7 @@ export default function ApplyForm() {
             onClick={backFromForm}
             className="mb-5 text-sm text-[#57534e] underline-offset-2 hover:underline"
           >
-            ← {t(locale, "back")}
+            ← {t(locale, "previousStep")}
           </button>
           <h2 className="mb-5 text-base font-medium text-[#292524]">
             {t(locale, "references")}
@@ -1234,7 +1260,7 @@ export default function ApplyForm() {
             onClick={backFromForm}
             className="mb-5 text-sm text-[#57534e] underline-offset-2 hover:underline"
           >
-            ← {t(locale, "back")}
+            ← {t(locale, "previousStep")}
           </button>
           <h2 className="mb-5 text-base font-medium text-[#292524]">
             {t(locale, "otherInfo")}
@@ -1256,26 +1282,6 @@ export default function ApplyForm() {
                 className={inputClass}
               />
             </label>
-            <label className="block text-sm text-[#57534e]">
-              {t(locale, "facebookUrl")}
-              <input
-                type="url"
-                value={form.facebook_url}
-                onChange={(e) => setField("facebook_url", e.target.value)}
-                className={inputClass}
-                placeholder="https://"
-              />
-            </label>
-            <label className="block text-sm text-[#57534e]">
-              {t(locale, "linkedinUrl")}
-              <input
-                type="url"
-                value={form.linkedin_url}
-                onChange={(e) => setField("linkedin_url", e.target.value)}
-                className={inputClass}
-                placeholder="https://"
-              />
-            </label>
             <button
               type="submit"
               disabled={submitting}
@@ -1294,7 +1300,7 @@ export default function ApplyForm() {
             onClick={backFromForm}
             className="mb-5 text-sm text-[#57534e] underline-offset-2 hover:underline"
           >
-            ← {t(locale, "back")}
+            ← {t(locale, "previousStep")}
           </button>
           <h2 className="mb-2 text-base font-medium text-[#292524]">
             {t(locale, "review")}
