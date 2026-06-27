@@ -3,7 +3,7 @@ export type Locale = "en" | "fr";
 export const messages = {
   en: {
     title: "Rental application",
-    subtitle: "Pick a building, then complete your application for Montreal Living.",
+    subtitle: "Please select a building and fill in the required fields.",
     stepBuilding: "Building",
     stepUnit: "Unit",
     stepPersonal: "Personal",
@@ -60,6 +60,7 @@ export const messages = {
     available: "Available",
     perMonth: "/mo",
     continue: "Continue",
+    previousStep: "Previous step",
     back: "Back",
     submit: "Submit application",
     successTitle: "Application submitted",
@@ -98,7 +99,7 @@ export const messages = {
   fr: {
     title: "Demande de location",
     subtitle:
-      "Choisissez un immeuble, puis complétez votre demande pour Montreal Living.",
+      "Veuillez s'il vous plaît choisir l'immeuble et le numéro d'appartement pour lequel vous appliquez et remplissez les champs requis.",
     stepBuilding: "Immeuble",
     stepUnit: "Logement",
     stepPersonal: "Personnel",
@@ -157,6 +158,7 @@ export const messages = {
     available: "Disponible",
     perMonth: "/mois",
     continue: "Continuer",
+    previousStep: "Étape précédente",
     back: "Retour",
     submit: "Soumettre la demande",
     successTitle: "Demande soumise",
