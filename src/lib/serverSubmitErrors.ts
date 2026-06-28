@@ -3,11 +3,12 @@ import {
   ApplyFormStep,
   ApplyValidationInput,
   addressFieldErrors,
+  housingFieldErrors,
   validatePhoneFormat,
   validatePhones,
 } from "./applyValidation";
 import { toAddressValidationInput } from "./addressFormUtils";
-import type { InviteeFormFields, InviteeRole } from "./inviteValidation";
+import type { InviteeFieldErrors, InviteeFormFields, InviteeRole } from "./inviteValidation";
 import type { MessageKey } from "./i18n";
 
 export type InviteFormStep = "personal" | "addresses" | "housing" | "references";
@@ -20,9 +21,31 @@ export type ServerSubmitErrorResult = {
 
 export type InviteServerSubmitErrorResult = {
   step: InviteFormStep;
-  fieldErrors: ApplyFieldErrors;
+  fieldErrors: InviteeFieldErrors;
   messageKey: MessageKey;
 };
+
+function roommateDuplicateFieldErrors(
+  roommates: { email: string }[]
+): ApplyFieldErrors {
+  const errors: ApplyFieldErrors = {};
+  const seen = new Map<string, number[]>();
+  roommates.forEach((roommate, index) => {
+    const normalized = roommate.email.trim().toLowerCase();
+    if (!normalized) return;
+    const indices = seen.get(normalized) ?? [];
+    indices.push(index);
+    seen.set(normalized, indices);
+  });
+  for (const indices of Array.from(seen.values())) {
+    if (indices.length > 1) {
+      for (const index of indices) {
+        errors[`roommate_email_${index}`] = "duplicate_email";
+      }
+    }
+  }
+  return errors;
+}
 
 function inviteToValidationInput(
   role: InviteeRole,
@@ -107,6 +130,38 @@ export function mapServerSubmitError(
     };
   }
 
+  if (trimmed.startsWith("Move-in date cannot be before the unit is available")) {
+    return {
+      step: "housing",
+      fieldErrors: { move_in_date: "move_in_before_available" },
+      messageKey: "validationMoveInBeforeAvailable",
+    };
+  }
+
+  if (trimmed === "Duplicate roommate emails") {
+    return {
+      step: "housing",
+      fieldErrors: roommateDuplicateFieldErrors(input.roommates),
+      messageKey: "validationDuplicateEmail",
+    };
+  }
+
+  if (trimmed === "This email is already used on this application") {
+    return {
+      step: "housing",
+      fieldErrors: housingFieldErrors(input),
+      messageKey: "validationDuplicateEmail",
+    };
+  }
+
+  if (trimmed.startsWith("Missing required fields:")) {
+    return {
+      step: "personal",
+      fieldErrors: {},
+      messageKey: "fieldRequired",
+    };
+  }
+
   if (trimmed === "Current address move-in date is required") {
     return {
       step: "addresses",
@@ -160,6 +215,16 @@ export function mapInviteServerSubmitError(
   role: InviteeRole,
   form: InviteeFormFields
 ): InviteServerSubmitErrorResult | null {
+  const trimmed = message.trim();
+
+  if (trimmed === "Email must match the address used for your invitation") {
+    return {
+      step: "personal",
+      fieldErrors: { email: "invite_email_mismatch" },
+      messageKey: "validationInviteEmailMismatch",
+    };
+  }
+
   const mapped = mapServerSubmitError(message, inviteToValidationInput(role, form));
   if (!mapped) return null;
   return {

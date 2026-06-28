@@ -589,9 +589,6 @@ export default function InviteForm({ token }: Props) {
               <legend className="text-sm text-[#57534e]">
                 {t(locale, "leaseInName")}
               </legend>
-              <p className="mt-1 text-sm text-[#78716c]">
-                {t(locale, "leaseInNameHint")}
-              </p>
               <div className="mt-2 flex gap-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -611,6 +608,9 @@ export default function InviteForm({ token }: Props) {
                   {t(locale, "no")}
                 </label>
               </div>
+              <p className="mt-2 text-xs text-[#a8a29e]">
+                {t(locale, "leaseInNameHint")}
+              </p>
               {fieldHint("lease_in_name")}
             </fieldset>
           )}
