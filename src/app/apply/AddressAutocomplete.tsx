@@ -10,6 +10,7 @@ type Props = {
   onChange: (address: string, placeId?: string) => void;
   required?: boolean;
   inputClass: string;
+  manualOnly?: boolean;
 };
 
 declare global {
@@ -59,6 +60,7 @@ export default function AddressAutocomplete({
   onChange,
   required,
   inputClass,
+  manualOnly = false,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
@@ -68,7 +70,7 @@ export default function AddressAutocomplete({
   onChangeRef.current = onChange;
 
   useEffect(() => {
-    if (!apiKey || !inputRef.current) return;
+    if (!apiKey || !inputRef.current || manualOnly) return;
 
     let cancelled = false;
 
@@ -105,7 +107,9 @@ export default function AddressAutocomplete({
       cancelled = true;
       autocompleteRef.current = null;
     };
-  }, [apiKey]);
+  }, [apiKey, manualOnly]);
+
+  const showManualHint = manualOnly || !apiKey;
 
   return (
     <label className="block text-sm text-[#57534e]">
@@ -114,11 +118,11 @@ export default function AddressAutocomplete({
         ref={inputRef}
         type="text"
         required={required}
-        autoComplete={apiKey ? "off" : "street-address"}
+        autoComplete={apiKey && !manualOnly ? "off" : "street-address"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={inputClass}
-        placeholder={apiKey ? undefined : t(locale, "addressManualHint")}
+        placeholder={showManualHint ? t(locale, "addressManualHint") : undefined}
       />
     </label>
   );

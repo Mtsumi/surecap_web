@@ -67,6 +67,9 @@ function MemberCard({ member }: { member: ApplicationMember }) {
         <Field label="Téléphone" value={member.phone} />
         <Field label="Date de naissance" value={member.date_of_birth} />
         <Field label="Adresse actuelle" value={member.current_address} />
+        {member.address_not_in_canada ? (
+          <Field label="Adresse hors Canada" value="Oui" />
+        ) : null}
         <Field label="Adresse précédente" value={member.previous_address} />
         {member.role === "roommate" && (
           <>

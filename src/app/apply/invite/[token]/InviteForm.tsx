@@ -66,6 +66,7 @@ function emptyFields(): InviteeFormFields {
     phone: "",
     current_address: "",
     current_place_id: "",
+    address_not_in_canada: false,
     previous_address: "",
     previous_place_id: "",
     lease_in_name: null,
@@ -293,7 +294,11 @@ export default function InviteForm({ token }: Props) {
       phone: form.phone.trim(),
       current_address: form.current_address.trim(),
     };
-    if (form.current_place_id) payload.current_place_id = form.current_place_id;
+    if (form.address_not_in_canada) {
+      payload.address_not_in_canada = true;
+    } else if (form.current_place_id) {
+      payload.current_place_id = form.current_place_id;
+    }
     if (form.previous_address.trim()) payload.previous_address = form.previous_address.trim();
     if (form.previous_place_id) payload.previous_place_id = form.previous_place_id;
 
@@ -490,13 +495,32 @@ export default function InviteForm({ token }: Props) {
             continueTo(steps[stepIndex + 1]);
           }}
         >
+          <label className="flex items-start gap-2 text-sm text-[#292524]">
+            <input
+              type="checkbox"
+              checked={form.address_not_in_canada}
+              onChange={(e) => {
+                const checked = e.target.checked;
+                setForm((prev) => ({
+                  ...prev,
+                  address_not_in_canada: checked,
+                  current_place_id: checked ? "" : prev.current_place_id,
+                }));
+              }}
+              className="mt-1"
+            />
+            <span>{t(locale, "addressNotInCanada")}</span>
+          </label>
           <AddressAutocomplete
             locale={locale}
             label={t(locale, "currentAddress")}
             value={form.current_address}
+            manualOnly={form.address_not_in_canada}
             onChange={(address, placeId) => {
               setField("current_address", address);
-              if (placeId) setField("current_place_id", placeId);
+              if (!form.address_not_in_canada && placeId) {
+                setField("current_place_id", placeId);
+              }
             }}
             required
             inputClass={inputClass}
