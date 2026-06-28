@@ -76,6 +76,7 @@ type FormFields = {
   phone: string;
   current_address: string;
   current_place_id: string;
+  address_not_in_canada: boolean;
   previous_address: string;
   previous_place_id: string;
   lease_in_name: boolean | null;
@@ -98,6 +99,7 @@ const emptyForm: FormFields = {
   phone: "",
   current_address: "",
   current_place_id: "",
+  address_not_in_canada: false,
   previous_address: "",
   previous_place_id: "",
   lease_in_name: null,
@@ -151,7 +153,10 @@ function formPayload(
     email: fields.email.trim(),
     phone: fields.phone.trim(),
     current_address: fields.current_address.trim(),
-    current_place_id: fields.current_place_id || undefined,
+    current_place_id: fields.address_not_in_canada
+      ? undefined
+      : fields.current_place_id || undefined,
+    address_not_in_canada: fields.address_not_in_canada,
     previous_address: fields.previous_address.trim() || undefined,
     previous_place_id: fields.previous_place_id || undefined,
     lease_in_name: fields.lease_in_name ?? undefined,
@@ -832,13 +837,32 @@ export default function ApplyForm() {
             }}
             className="space-y-4"
           >
+            <label className="flex items-start gap-2 text-sm text-[#292524]">
+              <input
+                type="checkbox"
+                checked={form.address_not_in_canada}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  setForm((prev) => ({
+                    ...prev,
+                    address_not_in_canada: checked,
+                    current_place_id: checked ? "" : prev.current_place_id,
+                  }));
+                }}
+                className="mt-1"
+              />
+              <span>{t(locale, "addressNotInCanada")}</span>
+            </label>
             <AddressAutocomplete
               locale={locale}
               label={t(locale, "currentAddress")}
               value={form.current_address}
+              manualOnly={form.address_not_in_canada}
               onChange={(address, placeId) => {
                 setField("current_address", address);
-                if (placeId) setField("current_place_id", placeId);
+                if (!form.address_not_in_canada && placeId) {
+                  setField("current_place_id", placeId);
+                }
               }}
               required
               inputClass={inputClass}
@@ -1350,6 +1374,12 @@ export default function ApplyForm() {
               label={t(locale, "currentAddress")}
               value={form.current_address}
             />
+            {form.address_not_in_canada && (
+              <ReviewRow
+                label={t(locale, "addressNotInCanada")}
+                value={t(locale, "yes")}
+              />
+            )}
             {form.previous_address && (
               <ReviewRow
                 label={t(locale, "previousAddress")}

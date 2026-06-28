@@ -71,6 +71,7 @@ export const messages = {
     error: "Something went wrong. Please try again.",
     langToggle: "Français",
     addressManualHint: "Start typing to search, or enter your address manually.",
+    addressNotInCanada: "My current address is not in Canada",
     validationMoveInTooSoon: "Move-in date must be tomorrow or later.",
     validationMoveInBeforeAvailable:
       "Move-in date cannot be before the unit is available.",
@@ -170,6 +171,7 @@ export const messages = {
     langToggle: "English",
     addressManualHint:
       "Commencez à taper pour rechercher, ou entrez l'adresse manuellement.",
+    addressNotInCanada: "Mon adresse actuelle n'est pas au Canada",
     validationMoveInTooSoon:
       "La date d'emménagement doit être demain ou plus tard.",
     validationMoveInBeforeAvailable:

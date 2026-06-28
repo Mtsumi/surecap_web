@@ -32,6 +32,7 @@ export type Application = {
   phone: string | null;
   current_address: string | null;
   current_place_id: string | null;
+  address_not_in_canada: boolean | null;
   previous_address: string | null;
   previous_place_id: string | null;
   lease_in_name: boolean | null;
@@ -69,6 +70,7 @@ export type ApplicationUpdate = Partial<{
   phone: string;
   current_address: string;
   current_place_id: string;
+  address_not_in_canada: boolean;
   previous_address: string;
   previous_place_id: string;
   lease_in_name: boolean;
@@ -172,6 +174,7 @@ export type InviteeSubmitPayload = {
   phone: string;
   current_address: string;
   current_place_id?: string;
+  address_not_in_canada?: boolean;
   previous_address?: string;
   previous_place_id?: string;
   lease_in_name?: boolean;
