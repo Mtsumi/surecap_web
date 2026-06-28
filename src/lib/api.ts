@@ -151,6 +151,28 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return body.data;
 }
 
+async function apiFetchVoid(path: string, init?: RequestInit): Promise<void> {
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: apiHeaders(init),
+  });
+
+  if (res.status === 204) {
+    return;
+  }
+
+  let body: ApiEnvelope<unknown> | null = null;
+  try {
+    body = (await res.json()) as ApiEnvelope<unknown>;
+  } catch {
+    body = null;
+  }
+
+  if (!res.ok || body?.status === "error") {
+    throw new Error(body?.message || res.statusText);
+  }
+}
+
 async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
   const headers: Record<string, string> = {};
   if (API_URL.includes("ngrok")) {
@@ -188,10 +210,40 @@ export type ApplicationSubmit = ApplicationUpdate & {
   guarantor: GuarantorContact | null;
 };
 
+/** @deprecated Use submitApplicationById after creating a draft. */
 export function submitApplication(payload: ApplicationSubmit): Promise<Application> {
   return apiFetch<Application>("/applications/submit", {
     method: "POST",
     body: JSON.stringify(payload),
+  });
+}
+
+export function createApplicationDraft(unitId: number): Promise<Application> {
+  return apiFetch<Application>("/applications", {
+    method: "POST",
+    body: JSON.stringify({ unit_id: unitId }),
+  });
+}
+
+export function updateApplication(
+  id: number,
+  uploadToken: string,
+  payload: ApplicationUpdate
+): Promise<Application> {
+  const params = new URLSearchParams({ upload_token: uploadToken });
+  return apiFetch<Application>(`/applications/${id}?${params}`, {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function submitApplicationById(
+  id: number,
+  uploadToken: string
+): Promise<Application> {
+  const params = new URLSearchParams({ upload_token: uploadToken });
+  return apiFetch<Application>(`/applications/${id}/submit?${params}`, {
+    method: "POST",
   });
 }
 
@@ -310,27 +362,25 @@ export function listInviteDocuments(inviteToken: string): Promise<MemberDocument
   );
 }
 
-/** @deprecated Use submitApplication — server drafts are not used in the apply flow. */
-export function createApplicationDraft(unitId: number): Promise<Application> {
-  return apiFetch<Application>("/applications", {
-    method: "POST",
-    body: JSON.stringify({ unit_id: unitId }),
-  });
+export function deleteMemberDocument(
+  applicationId: number,
+  memberId: number,
+  uploadToken: string,
+  documentType: string
+): Promise<void> {
+  const params = new URLSearchParams({ upload_token: uploadToken });
+  return apiFetchVoid(
+    `/applications/${applicationId}/members/${memberId}/uploads/${encodeURIComponent(documentType)}?${params}`,
+    { method: "DELETE" }
+  );
 }
 
-export function updateApplication(
-  id: number,
-  payload: ApplicationUpdate
-): Promise<Application> {
-  return apiFetch<Application>(`/applications/${id}`, {
-    method: "PATCH",
-    body: JSON.stringify(payload),
-  });
-}
-
-/** @deprecated Use submitApplication — server drafts are not used in the apply flow. */
-export function submitApplicationById(id: number): Promise<Application> {
-  return apiFetch<Application>(`/applications/${id}/submit`, {
-    method: "POST",
-  });
+export function deleteInviteDocument(
+  inviteToken: string,
+  documentType: string
+): Promise<void> {
+  return apiFetchVoid(
+    `/applications/invites/${encodeURIComponent(inviteToken)}/uploads/${encodeURIComponent(documentType)}`,
+    { method: "DELETE" }
+  );
 }
