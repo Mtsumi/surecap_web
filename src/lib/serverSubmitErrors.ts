@@ -37,7 +37,7 @@ function roommateDuplicateFieldErrors(
     indices.push(index);
     seen.set(normalized, indices);
   });
-  for (const indices of seen.values()) {
+  for (const indices of Array.from(seen.values())) {
     if (indices.length > 1) {
       for (const index of indices) {
         errors[`roommate_email_${index}`] = "duplicate_email";
