@@ -53,6 +53,19 @@ export type Application = {
   linkedin_url: string | null;
   created_at: string;
   updated_at: string;
+  primary_member_id?: number | null;
+  upload_token?: string | null;
+};
+
+export type MemberDocument = {
+  id: number;
+  application_member_id: number;
+  document_type: string;
+  dropbox_path: string;
+  original_filename: string;
+  content_type: string;
+  byte_size: number;
+  uploaded_at: string;
 };
 
 export type RoommateContact = {
@@ -138,6 +151,29 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   return body.data;
 }
 
+async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
+  const headers: Record<string, string> = {};
+  if (API_URL.includes("ngrok")) {
+    headers["ngrok-skip-browser-warning"] = "1";
+  }
+  const res = await fetch(`${API_URL}${path}`, { method: "POST", headers, body: form });
+
+  let body: ApiEnvelope<T> | null = null;
+  try {
+    body = (await res.json()) as ApiEnvelope<T>;
+  } catch {
+    body = null;
+  }
+
+  if (!res.ok || body?.status === "error") {
+    throw new Error(body?.message || res.statusText);
+  }
+  if (!body || body.data === null || body.data === undefined) {
+    throw new Error(body?.message || "Empty API response");
+  }
+  return body.data;
+}
+
 export function fetchBuildings(): Promise<Building[]> {
   return apiFetch<Building[]>("/buildings");
 }
@@ -206,6 +242,7 @@ export type InviteeSubmitResult = {
   role: string;
   member_status: string;
   application_status: string;
+  upload_token?: string | null;
 };
 
 export function fetchInvite(token: string): Promise<InviteContext> {
@@ -222,6 +259,54 @@ export function submitInvite(
       method: "POST",
       body: JSON.stringify(payload),
     }
+  );
+}
+
+export function uploadMemberDocument(
+  applicationId: number,
+  memberId: number,
+  uploadToken: string,
+  documentType: string,
+  file: File
+): Promise<MemberDocument> {
+  const form = new FormData();
+  form.append("upload_token", uploadToken);
+  form.append("document_type", documentType);
+  form.append("file", file);
+  return apiFetchForm<MemberDocument>(
+    `/applications/${applicationId}/members/${memberId}/uploads`,
+    form
+  );
+}
+
+export function uploadInviteDocument(
+  inviteToken: string,
+  documentType: string,
+  file: File
+): Promise<MemberDocument> {
+  const form = new FormData();
+  form.append("document_type", documentType);
+  form.append("file", file);
+  return apiFetchForm<MemberDocument>(
+    `/applications/invites/${encodeURIComponent(inviteToken)}/uploads`,
+    form
+  );
+}
+
+export function listMemberDocuments(
+  applicationId: number,
+  memberId: number,
+  uploadToken: string
+): Promise<MemberDocument[]> {
+  const params = new URLSearchParams({ upload_token: uploadToken });
+  return apiFetch<MemberDocument[]>(
+    `/applications/${applicationId}/members/${memberId}/uploads?${params}`
+  );
+}
+
+export function listInviteDocuments(inviteToken: string): Promise<MemberDocument[]> {
+  return apiFetch<MemberDocument[]>(
+    `/applications/invites/${encodeURIComponent(inviteToken)}/uploads`
   );
 }
 
