@@ -54,6 +54,10 @@ export type ApplicationMember = {
   phone: string | null;
   current_address: string | null;
   previous_address: string | null;
+  current_address_lived_from: string | null;
+  current_address_lived_to: string | null;
+  previous_address_lived_from: string | null;
+  previous_address_lived_to: string | null;
   address_not_in_canada: boolean | null;
   lease_in_name: boolean | null;
   move_in_date: string | null;
@@ -77,6 +81,10 @@ export type ApplicationDetail = {
   phone: string | null;
   current_address: string | null;
   previous_address: string | null;
+  current_address_lived_from: string | null;
+  current_address_lived_to: string | null;
+  previous_address_lived_from: string | null;
+  previous_address_lived_to: string | null;
   address_not_in_canada: boolean | null;
   lease_in_name: boolean | null;
   move_in_date: string | null;

@@ -12,6 +12,15 @@ import {
   getApplicationJobs,
   rejectApplication,
 } from "@/lib/adminApi";
+import { formatAddressDateRange } from "@/lib/addressFormUtils";
+
+function formatLivedDates(
+  from: string | null | undefined,
+  to: string | null | undefined
+): string | null {
+  if (!from) return null;
+  return formatAddressDateRange("fr", from, to);
+}
 
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
   if (!value) return null;
@@ -67,22 +76,38 @@ function MemberCard({ member }: { member: ApplicationMember }) {
         <Field label="Téléphone" value={member.phone} />
         <Field label="Date de naissance" value={member.date_of_birth} />
         <Field label="Adresse actuelle" value={member.current_address} />
+        <Field
+          label="Dates à l'adresse actuelle"
+          value={formatLivedDates(
+            member.current_address_lived_from,
+            member.current_address_lived_to
+          )}
+        />
         {member.address_not_in_canada ? (
           <Field label="Adresse hors Canada" value="Oui" />
         ) : null}
         <Field label="Adresse précédente" value={member.previous_address} />
+        <Field
+          label="Dates à l'adresse précédente"
+          value={formatLivedDates(
+            member.previous_address_lived_from,
+            member.previous_address_lived_to
+          )}
+        />
+        {(member.role === "primary" || member.role === "roommate") && (
+          <Field
+            label="Bail au nom du locataire"
+            value={
+              member.lease_in_name === null
+                ? null
+                : member.lease_in_name
+                  ? "Oui"
+                  : "Non"
+            }
+          />
+        )}
         {member.role === "roommate" && (
           <>
-            <Field
-              label="Bail au nom du locataire"
-              value={
-                member.lease_in_name === null
-                  ? null
-                  : member.lease_in_name
-                    ? "Oui"
-                    : "Non"
-              }
-            />
             <Field label="Date d'emménagement" value={member.move_in_date} />
             <Field label="Locateur" value={member.landlord_name} />
             <Field label="Tél. locateur" value={member.landlord_phone} />

@@ -2,10 +2,12 @@
 
 import {
   ApplyValidationCode,
+  addressFieldErrors,
   validateEmailFormat,
   validatePhoneFormat,
   validatePhones,
 } from "./applyValidation";
+import { toAddressValidationInput } from "./addressFormUtils";
 
 export type InviteeRole = "roommate" | "guarantor";
 
@@ -20,6 +22,11 @@ export type InviteeFormFields = {
   address_not_in_canada: boolean;
   previous_address: string;
   previous_place_id: string;
+  current_address_lived_from: string;
+  current_address_lived_to: string;
+  still_at_current_address: boolean;
+  previous_address_lived_from: string;
+  previous_address_lived_to: string;
   lease_in_name: boolean | null;
   move_in_date: string;
   landlord_name: string;
@@ -41,8 +48,6 @@ const ROOMMATE_REQUIRED: (keyof InviteeFormFields)[] = [
   "date_of_birth",
   "email",
   "phone",
-  "current_address",
-  "lease_in_name",
   "move_in_date",
   "landlord_name",
   "landlord_phone",
@@ -56,7 +61,6 @@ const GUARANTOR_REQUIRED: (keyof InviteeFormFields)[] = [
   "date_of_birth",
   "email",
   "phone",
-  "current_address",
   "hr_name",
   "hr_phone",
 ];
@@ -107,6 +111,13 @@ export function inviteeFieldErrors(
       errors.hr_phone = phoneError;
     }
   }
+
+  Object.assign(
+    errors,
+    addressFieldErrors(
+      toAddressValidationInput(fields, { requireLeaseInName: role === "roommate" })
+    )
+  );
 
   return errors;
 }

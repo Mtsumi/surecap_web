@@ -35,6 +35,10 @@ export type Application = {
   address_not_in_canada: boolean | null;
   previous_address: string | null;
   previous_place_id: string | null;
+  current_address_lived_from: string | null;
+  current_address_lived_to: string | null;
+  previous_address_lived_from: string | null;
+  previous_address_lived_to: string | null;
   lease_in_name: boolean | null;
   move_in_date: string | null;
   renting_with_others: boolean | null;
@@ -73,6 +77,10 @@ export type ApplicationUpdate = Partial<{
   address_not_in_canada: boolean;
   previous_address: string;
   previous_place_id: string;
+  current_address_lived_from: string;
+  current_address_lived_to: string;
+  previous_address_lived_from: string;
+  previous_address_lived_to: string;
   lease_in_name: boolean;
   move_in_date: string;
   renting_with_others: boolean;
@@ -177,6 +185,10 @@ export type InviteeSubmitPayload = {
   address_not_in_canada?: boolean;
   previous_address?: string;
   previous_place_id?: string;
+  current_address_lived_from: string;
+  current_address_lived_to?: string;
+  previous_address_lived_from?: string;
+  previous_address_lived_to?: string;
   lease_in_name?: boolean;
   move_in_date?: string;
   landlord_phone?: string;

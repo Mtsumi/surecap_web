@@ -26,6 +26,11 @@ export const messages = {
     previousAddress: "Previous address (optional)",
     housing: "Housing details",
     leaseInName: "Is the lease in your name?",
+    leaseInNameHint: "We may call your current landlord for a reference.",
+    addressLivedHere: "Lived here",
+    addressLivedFrom: "From",
+    addressLivedTo: "To",
+    stillAtCurrentAddress: "I still live at this address",
     yes: "Yes",
     no: "No",
     moveInDate: "Desired move-in date",
@@ -84,6 +89,11 @@ export const messages = {
     validationLandlordHrSamePhone:
       "Landlord and employer phone numbers must be different.",
     validationInvalidPhone: "Please enter a valid phone number (Canada or international, e.g. +1…).",
+    validationAddressDateRequired: "Please enter the dates you lived at this address.",
+    validationInvalidAddressDateRange: "The end date must be on or after the start date.",
+    validationAddressDateInFuture: "Address dates cannot be in the future.",
+    validationAddressDatesChain:
+      "Your previous address must end on or before you started living at your current address.",
     inviteTitleRoommate: "Co-tenant application",
     inviteTitleGuarantor: "Guarantor section",
     inviteSubtitle:
@@ -124,6 +134,11 @@ export const messages = {
     previousAddress: "Adresse précédente (facultatif)",
     housing: "Détails du logement",
     leaseInName: "Le bail est-il à votre nom?",
+    leaseInNameHint: "Nous pourrions appeler votre locateur actuel pour une référence.",
+    addressLivedHere: "Habité ici",
+    addressLivedFrom: "Du",
+    addressLivedTo: "Au",
+    stillAtCurrentAddress: "J'habite encore à cette adresse",
     yes: "Oui",
     no: "Non",
     moveInDate: "Date d'emménagement souhaitée",
@@ -187,6 +202,14 @@ export const messages = {
       "Les numéros du locateur et de l'employeur doivent être différents.",
     validationInvalidPhone:
       "Veuillez entrer un numéro de téléphone valide (Canada ou international, ex. +1…).",
+    validationAddressDateRequired:
+      "Veuillez indiquer les dates auxquelles vous avez habité à cette adresse.",
+    validationInvalidAddressDateRange:
+      "La date de fin doit être égale ou postérieure à la date de début.",
+    validationAddressDateInFuture:
+      "Les dates d'adresse ne peuvent pas être dans le futur.",
+    validationAddressDatesChain:
+      "Votre adresse précédente doit se terminer au plus tard à la date de début de votre adresse actuelle.",
     inviteTitleRoommate: "Demande de colocation",
     inviteTitleGuarantor: "Section garant",
     inviteSubtitle:
