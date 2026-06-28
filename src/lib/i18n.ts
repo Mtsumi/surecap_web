@@ -26,7 +26,8 @@ export const messages = {
     previousAddress: "Previous address (optional)",
     housing: "Housing details",
     leaseInName: "Is the lease in your name?",
-    leaseInNameHint: "We may call your current landlord for a reference.",
+    leaseInNameHint:
+      "We use this when contacting your current landlord for a reference.",
     addressLivedHere: "Lived here",
     addressLivedFrom: "From",
     addressLivedTo: "To",
@@ -134,7 +135,8 @@ export const messages = {
     previousAddress: "Adresse précédente (facultatif)",
     housing: "Détails du logement",
     leaseInName: "Le bail est-il à votre nom?",
-    leaseInNameHint: "Nous pourrions appeler votre locateur actuel pour une référence.",
+    leaseInNameHint:
+      "Cela nous aide à joindre le bon locateur pour votre référence.",
     addressLivedHere: "Habité ici",
     addressLivedFrom: "Du",
     addressLivedTo: "Au",

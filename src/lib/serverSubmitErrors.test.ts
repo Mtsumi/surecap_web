@@ -52,4 +52,28 @@ describe("mapServerSubmitError", () => {
     expect(result?.step).toBe("addresses");
     expect(result?.fieldErrors.previous_address_lived_to).toBe("address_dates_chain");
   });
+
+  it("routes move-in before unit availability to housing", () => {
+    const result = mapServerSubmitError(
+      "Move-in date cannot be before the unit is available (2026-08-01)",
+      baseInput()
+    );
+    expect(result?.step).toBe("housing");
+    expect(result?.fieldErrors.move_in_date).toBe("move_in_before_available");
+  });
+
+  it("routes duplicate roommate emails to housing", () => {
+    const result = mapServerSubmitError(
+      "Duplicate roommate emails",
+      baseInput({
+        roommates: [
+          { email: "dup@example.com" },
+          { email: "dup@example.com" },
+        ],
+      })
+    );
+    expect(result?.step).toBe("housing");
+    expect(result?.fieldErrors.roommate_email_0).toBe("duplicate_email");
+    expect(result?.fieldErrors.roommate_email_1).toBe("duplicate_email");
+  });
 });
