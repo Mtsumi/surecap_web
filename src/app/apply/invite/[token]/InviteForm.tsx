@@ -29,6 +29,7 @@ import {
   firstInviteeErrorKey,
   inviteeFieldErrors,
 } from "@/lib/inviteValidation";
+import { mapInviteServerSubmitError } from "@/lib/serverSubmitErrors";
 
 type Step = "personal" | "addresses" | "housing" | "references" | "other" | "review" | "done";
 
@@ -354,7 +355,15 @@ export default function InviteForm({ token }: Props) {
       await submitInvite(token, payload);
       setStep("done");
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "error"));
+      const message = e instanceof Error ? e.message : t(locale, "error");
+      const mapped = mapInviteServerSubmitError(message, role, form);
+      if (mapped) {
+        setFieldErrors(mapped.fieldErrors);
+        setError(t(locale, mapped.messageKey));
+        setStep(mapped.step);
+      } else {
+        setError(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -849,6 +858,14 @@ export default function InviteForm({ token }: Props) {
               </>
             )}
           </dl>
+          {error && (
+            <p
+              className="mb-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
           <div className="flex gap-3">
             <button
               type="button"

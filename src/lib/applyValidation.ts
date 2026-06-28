@@ -367,11 +367,19 @@ export function findFirstValidationIssue(
   const personal = validatePersonalStep(input.email);
   if (personal) return { code: personal, step: "personal" };
 
+  const applicantPhone = validatePhoneFormat(input.phone);
+  if (applicantPhone) return { code: applicantPhone, step: "personal" };
+
   const addresses = validateAddressesStep(input);
   if (addresses) return { code: addresses, step: "addresses" };
 
   const housing = validateHousingStep(input);
   if (housing) return { code: housing, step: "housing" };
+
+  if (input.includeGuarantor && input.guarantor?.phone) {
+    const guarantorPhone = validatePhoneFormat(input.guarantor.phone);
+    if (guarantorPhone) return { code: guarantorPhone, step: "housing" };
+  }
 
   const references = validateReferencesStep(input.landlord_phone, input.hr_phone);
   if (references) return { code: references, step: "references" };

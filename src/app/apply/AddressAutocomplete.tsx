@@ -41,7 +41,7 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
     }
     window.__surecapMapsInit = () => resolve();
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&callback=__surecapMapsInit`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=__surecapMapsInit`;
     script.async = true;
     script.dataset.surecapMaps = "1";
     script.onerror = () => reject(new Error("Failed to load Google Maps"));
