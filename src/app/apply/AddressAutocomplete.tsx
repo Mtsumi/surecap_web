@@ -24,9 +24,18 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
     return Promise.resolve();
   }
   return new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[data-surecap-maps="1"]');
+    const existing = document.querySelector<HTMLScriptElement>(
+      'script[data-surecap-maps="1"]'
+    );
     if (existing) {
-      existing.addEventListener("load", () => resolve());
+      if (window.google?.maps?.places) {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error("Failed to load Google Maps")), {
+        once: true,
+      });
       return;
     }
     window.__surecapMapsInit = () => resolve();
@@ -39,6 +48,10 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
   });
 }
 
+function newSessionToken(): google.maps.places.AutocompleteSessionToken {
+  return new google.maps.places.AutocompleteSessionToken();
+}
+
 export default function AddressAutocomplete({
   locale,
   label,
@@ -48,35 +61,51 @@ export default function AddressAutocomplete({
   inputClass,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const onChangeRef = useRef(onChange);
+  const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+
+  onChangeRef.current = onChange;
 
   useEffect(() => {
     if (!apiKey || !inputRef.current) return;
 
-    let autocomplete: google.maps.places.Autocomplete | null = null;
+    let cancelled = false;
 
     loadGoogleMaps(apiKey)
       .then(() => {
-        if (!inputRef.current || !window.google) return;
-        autocomplete = new window.google.maps.places.Autocomplete(inputRef.current, {
-          fields: ["formatted_address", "place_id"],
-          types: ["address"],
-        });
-        autocomplete.addListener("place_changed", () => {
-          const place = autocomplete?.getPlace();
-          if (place?.formatted_address) {
-            onChange(place.formatted_address, place.place_id);
+        if (cancelled || !inputRef.current || !window.google) return;
+
+        const sessionToken = newSessionToken();
+        const autocomplete = new window.google.maps.places.Autocomplete(
+          inputRef.current,
+          {
+            fields: ["formatted_address", "place_id"],
+            types: ["address"],
+            componentRestrictions: { country: "ca" },
+            sessionToken,
           }
+        );
+
+        autocomplete.addListener("place_changed", () => {
+          const place = autocomplete.getPlace();
+          if (place?.formatted_address) {
+            onChangeRef.current(place.formatted_address, place.place_id);
+          }
+          autocomplete.setOptions({ sessionToken: newSessionToken() });
         });
+
+        autocompleteRef.current = autocomplete;
       })
       .catch(() => {
-        /* plain text fallback */
+        /* plain text fallback when Maps script fails */
       });
 
     return () => {
-      autocomplete = null;
+      cancelled = true;
+      autocompleteRef.current = null;
     };
-  }, [apiKey, onChange]);
+  }, [apiKey]);
 
   return (
     <label className="block text-sm text-[#57534e]">
@@ -85,7 +114,7 @@ export default function AddressAutocomplete({
         ref={inputRef}
         type="text"
         required={required}
-        autoComplete="street-address"
+        autoComplete={apiKey ? "off" : "street-address"}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         className={inputClass}
