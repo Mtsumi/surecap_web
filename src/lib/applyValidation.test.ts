@@ -126,10 +126,12 @@ describe("email validation", () => {
 });
 
 describe("phone validation", () => {
-  it("rejects letters and short numbers", () => {
+  it("rejects invalid numbers and accepts CA and international formats", () => {
     expect(validatePhoneFormat("call-me")).toBe("invalid_phone");
     expect(validatePhoneFormat("12345")).toBe("invalid_phone");
-    expect(validatePhoneFormat("514-555-0100")).toBeNull();
+    expect(validatePhoneFormat("+14165550123")).toBeNull();
+    expect(validatePhoneFormat("5145550101")).toBeNull();
+    expect(validatePhoneFormat("+254712531490")).toBeNull();
   });
 
   it("rejects identical landlord and HR phones", () => {

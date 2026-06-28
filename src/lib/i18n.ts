@@ -83,7 +83,7 @@ export const messages = {
     validationDuplicateEmail: "Each person must have a different email address.",
     validationLandlordHrSamePhone:
       "Landlord and employer phone numbers must be different.",
-    validationInvalidPhone: "Please enter a valid phone number (digits only).",
+    validationInvalidPhone: "Please enter a valid phone number (Canada or international, e.g. +1…).",
     inviteTitleRoommate: "Co-tenant application",
     inviteTitleGuarantor: "Guarantor section",
     inviteSubtitle:
@@ -186,7 +186,7 @@ export const messages = {
     validationLandlordHrSamePhone:
       "Les numéros du locateur et de l'employeur doivent être différents.",
     validationInvalidPhone:
-      "Veuillez entrer un numéro de téléphone valide (chiffres seulement).",
+      "Veuillez entrer un numéro de téléphone valide (Canada ou international, ex. +1…).",
     inviteTitleRoommate: "Demande de colocation",
     inviteTitleGuarantor: "Section garant",
     inviteSubtitle:

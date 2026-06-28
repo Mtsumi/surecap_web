@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AddressAutocomplete from "../../AddressAutocomplete";
+import PhoneField from "../../PhoneField";
 import {
   InviteContext,
   InviteeSubmitPayload,
@@ -467,17 +468,17 @@ export default function InviteForm({ token }: Props) {
             />
             {fieldHint("email")}
           </label>
-          <label className="block text-sm text-[#57534e]">
-            {t(locale, "phone")}
-            <input
-              type="tel"
+          <div className="block text-sm text-[#57534e]">
+            <span className="block">{t(locale, "phone")}</span>
+            <PhoneField
+              locale={locale}
               required
+              invalid={!!fieldErrors.phone}
               value={form.phone}
-              onChange={(e) => setField("phone", e.target.value)}
-              className={inputClass}
+              onChange={(value) => setField("phone", value)}
             />
             {fieldHint("phone")}
-          </label>
+          </div>
           <button
             type="submit"
             className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white"
@@ -632,17 +633,17 @@ export default function InviteForm({ token }: Props) {
                 />
                 {fieldHint("landlord_name")}
               </label>
-              <label className="block text-sm text-[#57534e]">
-                {t(locale, "landlordPhone")}
-                <input
-                  type="tel"
+              <div className="block text-sm text-[#57534e]">
+                <span className="block">{t(locale, "landlordPhone")}</span>
+                <PhoneField
+                  locale={locale}
                   required
+                  invalid={!!fieldErrors.landlord_phone}
                   value={form.landlord_phone}
-                  onChange={(e) => setField("landlord_phone", e.target.value)}
-                  className={inputClass}
+                  onChange={(value) => setField("landlord_phone", value)}
                 />
                 {fieldHint("landlord_phone")}
-              </label>
+              </div>
             </>
           )}
           <label className="block text-sm text-[#57534e]">
@@ -655,17 +656,17 @@ export default function InviteForm({ token }: Props) {
             />
             {fieldHint("hr_name")}
           </label>
-          <label className="block text-sm text-[#57534e]">
-            {t(locale, "hrPhone")}
-            <input
-              type="tel"
+          <div className="block text-sm text-[#57534e]">
+            <span className="block">{t(locale, "hrPhone")}</span>
+            <PhoneField
+              locale={locale}
               required
+              invalid={!!fieldErrors.hr_phone}
               value={form.hr_phone}
-              onChange={(e) => setField("hr_phone", e.target.value)}
-              className={inputClass}
+              onChange={(value) => setField("hr_phone", value)}
             />
             {fieldHint("hr_phone")}
-          </label>
+          </div>
           <div className="flex gap-3">
             <button type="button" onClick={() => setStep(steps[stepIndex - 1])} className="text-sm text-[#57534e] underline-offset-2 hover:underline">
               {t(locale, "previousStep")}
