@@ -46,6 +46,7 @@ import {
   validateEmailUniqueness,
   validatePhones,
 } from "@/lib/applyValidation";
+import { mapServerSubmitError } from "@/lib/serverSubmitErrors";
 
 const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   move_in_too_soon: "validationMoveInTooSoon",
@@ -520,7 +521,18 @@ export default function ApplyForm() {
       setSubmittedApplicationId(app.id);
       setStep("done");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t(locale, "error"));
+      const message = err instanceof Error ? err.message : t(locale, "error");
+      const mapped = mapServerSubmitError(message, input);
+      if (mapped) {
+        applyFieldErrors(mapped.fieldErrors);
+        setError(t(locale, mapped.messageKey));
+        persistProgress(mapped.step);
+        setStep(mapped.step);
+        const key = firstFieldErrorKey(mapped.fieldErrors);
+        if (key) scrollToField(key);
+      } else {
+        setError(message);
+      }
     } finally {
       setSubmitting(false);
     }
@@ -1532,6 +1544,7 @@ export default function ApplyForm() {
             )}
           </dl>
 
+          <StepAlert />
           <form onSubmit={handleSubmit}>
             <button
               type="submit"

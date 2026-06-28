@@ -242,6 +242,9 @@ describe("step validators", () => {
     );
     expect(issue).toEqual({ code: "invalid_email", step: "personal" });
 
+    const phoneIssue = findFirstValidationIssue(baseInput({ phone: "12345" }));
+    expect(phoneIssue).toEqual({ code: "invalid_phone", step: "personal" });
+
     const housingIssue = findFirstValidationIssue(
       baseInput({ move_in_date: "2026-06-03", landlord_phone: "5145550100", hr_phone: "5145550100" })
     );
