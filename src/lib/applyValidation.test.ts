@@ -22,6 +22,7 @@ import {
   validatePhoneFormat,
   validatePhones,
   validateReferencesStep,
+  addressFieldErrors,
   type ApplyValidationInput,
 } from "./applyValidation";
 
@@ -37,6 +38,14 @@ function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidati
     phone: "5145550100",
     landlord_phone: "5145550101",
     hr_phone: "5145550102",
+    current_address: "123 Rue Example",
+    current_address_lived_from: "2024-01-01",
+    current_address_lived_to: "",
+    still_at_current_address: true,
+    previous_address: "",
+    previous_address_lived_from: "",
+    previous_address_lived_to: "",
+    lease_in_name: true,
     ...overrides,
   };
 }
@@ -137,6 +146,53 @@ describe("phone validation", () => {
   it("rejects identical landlord and HR phones", () => {
     expect(validatePhones("5145550100", "514-555-0100")).toBe("landlord_hr_same_phone");
     expect(validatePhones("5145550101", "5145550102")).toBeNull();
+  });
+});
+
+describe("address date validation", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-06-03T12:00:00"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("requires current lived-from and accepts still living here", () => {
+    expect(
+      addressFieldErrors({
+        ...baseInput(),
+        current_address_lived_from: "",
+      }).current_address_lived_from
+    ).toBe("address_date_required");
+    expect(addressFieldErrors(baseInput())).toEqual({});
+  });
+
+  it("rejects overlapping previous and current dates", () => {
+    const errors = addressFieldErrors(
+      baseInput({
+        previous_address: "10 Old St",
+        previous_address_lived_from: "2022-01-01",
+        previous_address_lived_to: "2024-06-01",
+        current_address_lived_from: "2024-01-01",
+        still_at_current_address: true,
+      })
+    );
+    expect(errors.previous_address_lived_to).toBe("address_dates_chain");
+  });
+
+  it("allows same-day move between addresses", () => {
+    const errors = addressFieldErrors(
+      baseInput({
+        previous_address: "10 Old St",
+        previous_address_lived_from: "2022-01-01",
+        previous_address_lived_to: "2024-01-01",
+        current_address_lived_from: "2024-01-01",
+        still_at_current_address: true,
+      })
+    );
+    expect(errors.previous_address_lived_to).toBeUndefined();
   });
 });
 

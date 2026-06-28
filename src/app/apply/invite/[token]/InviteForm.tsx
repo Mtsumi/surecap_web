@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AddressAutocomplete from "../../AddressAutocomplete";
+import AddressLivedDates from "../../AddressLivedDates";
 import PhoneField from "../../PhoneField";
 import {
   InviteContext,
@@ -11,7 +12,13 @@ import {
 } from "@/lib/api";
 import { Locale, MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
+  addressDatePayload,
+  formatAddressDateRange,
+  toAddressValidationInput,
+} from "@/lib/addressFormUtils";
+import {
   ApplyValidationCode,
+  addressFieldErrors,
   validatePhoneFormat,
   validatePhones,
 } from "@/lib/applyValidation";
@@ -45,6 +52,11 @@ const VALIDATION_MESSAGE: Record<
   duplicate_email: "validationDuplicateEmail",
   landlord_hr_same_phone: "validationLandlordHrSamePhone",
   invalid_phone: "validationInvalidPhone",
+  required: "fieldRequired",
+  address_date_required: "validationAddressDateRequired",
+  invalid_address_date_range: "validationInvalidAddressDateRange",
+  address_date_in_future: "validationAddressDateInFuture",
+  address_dates_chain: "validationAddressDatesChain",
   invite_email_mismatch: "validationInviteEmailMismatch",
 };
 
@@ -70,6 +82,11 @@ function emptyFields(): InviteeFormFields {
     address_not_in_canada: false,
     previous_address: "",
     previous_place_id: "",
+    current_address_lived_from: "",
+    current_address_lived_to: "",
+    still_at_current_address: true,
+    previous_address_lived_from: "",
+    previous_address_lived_to: "",
     lease_in_name: null,
     move_in_date: "",
     landlord_name: "",
@@ -109,6 +126,11 @@ export default function InviteForm({ token }: Props) {
 
   const inputClass =
     "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-base text-[#292524] outline-none transition focus:border-[#3d5a45]";
+
+  const inputClassFor = (fieldKey: string) =>
+    fieldErrors[fieldKey]
+      ? `${inputClass} border-[#e7a4a4] focus:border-[#b91c1c]`
+      : inputClass;
 
   const role: InviteeRole | null =
     context?.role === "roommate" || context?.role === "guarantor"
@@ -187,14 +209,14 @@ export default function InviteForm({ token }: Props) {
     );
   };
 
+  const addressFields = () =>
+    toAddressValidationInput(form, { requireLeaseInName: role === "roommate" });
+
   const validateStep = (current: Step): boolean => {
     if (!role || !context) return false;
     const keysForStep: Record<Step, (keyof InviteeFormFields)[]> = {
       personal: ["given_name", "family_name", "date_of_birth", "email", "phone"],
-      addresses:
-        role === "roommate"
-          ? ["current_address", "lease_in_name"]
-          : ["current_address"],
+      addresses: [],
       housing: role === "roommate" ? ["move_in_date"] : [],
       references:
         role === "guarantor"
@@ -220,6 +242,9 @@ export default function InviteForm({ token }: Props) {
     if (current === "personal") {
       const phoneError = validatePhoneFormat(form.phone);
       if (phoneError) errors.phone = phoneError;
+    }
+    if (current === "addresses") {
+      Object.assign(errors, addressFieldErrors(addressFields()));
     }
     if (current === "references") {
       if (role === "guarantor") {
@@ -274,14 +299,16 @@ export default function InviteForm({ token }: Props) {
       if (key) {
         if (["given_name", "family_name", "date_of_birth", "email", "phone"].includes(key)) {
           setStep("personal");
-        } else if (key === "current_address") {
+        } else if (
+          key === "current_address" ||
+          key === "lease_in_name" ||
+          key.includes("address_lived")
+        ) {
           setStep("addresses");
         } else if (key.startsWith("landlord") || key.startsWith("hr")) {
           setStep("references");
         } else if (key === "move_in_date") {
           setStep("housing");
-        } else if (key === "lease_in_name") {
-          setStep("addresses");
         }
       }
       return;
@@ -294,13 +321,16 @@ export default function InviteForm({ token }: Props) {
       email: form.email.trim(),
       phone: form.phone.trim(),
       current_address: form.current_address.trim(),
+      ...addressDatePayload(form),
     };
     if (form.address_not_in_canada) {
       payload.address_not_in_canada = true;
     } else if (form.current_place_id) {
       payload.current_place_id = form.current_place_id;
     }
-    if (form.previous_address.trim()) payload.previous_address = form.previous_address.trim();
+    if (form.previous_address.trim()) {
+      payload.previous_address = form.previous_address.trim();
+    }
     if (form.previous_place_id) payload.previous_place_id = form.previous_place_id;
 
     if (role === "roommate") {
@@ -527,21 +557,32 @@ export default function InviteForm({ token }: Props) {
             inputClass={inputClass}
           />
           {fieldHint("current_address")}
-          <AddressAutocomplete
+          <AddressLivedDates
             locale={locale}
-            label={t(locale, "previousAddress")}
-            value={form.previous_address}
-            onChange={(address, placeId) => {
-              setField("previous_address", address);
-              if (placeId) setField("previous_place_id", placeId);
+            prefix="current"
+            livedFrom={form.current_address_lived_from}
+            livedTo={form.current_address_lived_to}
+            stillLivingHere={form.still_at_current_address}
+            onLivedFromChange={(value) => setField("current_address_lived_from", value)}
+            onLivedToChange={(value) => setField("current_address_lived_to", value)}
+            onStillLivingChange={(checked) => {
+              setForm((prev) => ({
+                ...prev,
+                still_at_current_address: checked,
+                current_address_lived_to: checked ? "" : prev.current_address_lived_to,
+              }));
             }}
-            inputClass={inputClass}
+            inputClassFor={inputClassFor}
+            fieldHint={fieldHint}
           />
           {role === "roommate" && (
             <fieldset>
               <legend className="text-sm text-[#57534e]">
                 {t(locale, "leaseInName")}
               </legend>
+              <p className="mt-1 text-sm text-[#78716c]">
+                {t(locale, "leaseInNameHint")}
+              </p>
               <div className="mt-2 flex gap-4">
                 <label className="flex items-center gap-2 text-sm">
                   <input
@@ -564,6 +605,39 @@ export default function InviteForm({ token }: Props) {
               {fieldHint("lease_in_name")}
             </fieldset>
           )}
+          <AddressAutocomplete
+            locale={locale}
+            label={t(locale, "previousAddress")}
+            value={form.previous_address}
+            onChange={(address, placeId) => {
+              setField("previous_address", address);
+              if (!address.trim()) {
+                setForm((prev) => ({
+                  ...prev,
+                  previous_address_lived_from: "",
+                  previous_address_lived_to: "",
+                }));
+              }
+              if (placeId) setField("previous_place_id", placeId);
+            }}
+            inputClass={inputClass}
+          />
+          {form.previous_address.trim() ? (
+            <AddressLivedDates
+              locale={locale}
+              prefix="previous"
+              livedFrom={form.previous_address_lived_from}
+              livedTo={form.previous_address_lived_to}
+              onLivedFromChange={(value) =>
+                setField("previous_address_lived_from", value)
+              }
+              onLivedToChange={(value) =>
+                setField("previous_address_lived_to", value)
+              }
+              inputClassFor={inputClassFor}
+              fieldHint={fieldHint}
+            />
+          ) : null}
           <div className="flex gap-3">
             <button
               type="button"
@@ -738,6 +812,42 @@ export default function InviteForm({ token }: Props) {
               <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "currentAddress")}</dt>
               <dd>{form.current_address}</dd>
             </div>
+            <div>
+              <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "addressLivedHere")}</dt>
+              <dd>
+                {formatAddressDateRange(
+                  locale,
+                  form.current_address_lived_from,
+                  form.still_at_current_address ? null : form.current_address_lived_to
+                )}
+              </dd>
+            </div>
+            {role === "roommate" && (
+              <div>
+                <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "leaseInName")}</dt>
+                <dd>
+                  {form.lease_in_name ? t(locale, "yes") : t(locale, "no")}
+                </dd>
+              </div>
+            )}
+            {form.previous_address.trim() && (
+              <>
+                <div>
+                  <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "previousAddress")}</dt>
+                  <dd>{form.previous_address}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "addressLivedHere")}</dt>
+                  <dd>
+                    {formatAddressDateRange(
+                      locale,
+                      form.previous_address_lived_from,
+                      form.previous_address_lived_to
+                    )}
+                  </dd>
+                </div>
+              </>
+            )}
           </dl>
           <div className="flex gap-3">
             <button

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AddressAutocomplete from "./AddressAutocomplete";
+import AddressLivedDates from "./AddressLivedDates";
 import PhoneField from "./PhoneField";
 import {
   ApplicationSubmit,
@@ -14,6 +15,11 @@ import {
   fetchUnits,
   submitApplication,
 } from "@/lib/api";
+import {
+  addressDatePayload,
+  formatAddressDateRange,
+  toAddressValidationInput,
+} from "@/lib/addressFormUtils";
 import {
   clearApplyProgress,
   loadApplyProgress,
@@ -36,6 +42,7 @@ import {
   otherEmailsForRoommate,
   personalFieldErrors,
   referencesFieldErrors,
+  addressFieldErrors,
   validateEmailUniqueness,
   validatePhones,
 } from "@/lib/applyValidation";
@@ -47,6 +54,11 @@ const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   duplicate_email: "validationDuplicateEmail",
   landlord_hr_same_phone: "validationLandlordHrSamePhone",
   invalid_phone: "validationInvalidPhone",
+  required: "fieldRequired",
+  address_date_required: "validationAddressDateRequired",
+  invalid_address_date_range: "validationInvalidAddressDateRange",
+  address_date_in_future: "validationAddressDateInFuture",
+  address_dates_chain: "validationAddressDatesChain",
 };
 
 type Step =
@@ -80,6 +92,11 @@ type FormFields = {
   address_not_in_canada: boolean;
   previous_address: string;
   previous_place_id: string;
+  current_address_lived_from: string;
+  current_address_lived_to: string;
+  still_at_current_address: boolean;
+  previous_address_lived_from: string;
+  previous_address_lived_to: string;
   lease_in_name: boolean | null;
   move_in_date: string;
   renting_with_others: boolean | null;
@@ -103,6 +120,11 @@ const emptyForm: FormFields = {
   address_not_in_canada: false,
   previous_address: "",
   previous_place_id: "",
+  current_address_lived_from: "",
+  current_address_lived_to: "",
+  still_at_current_address: true,
+  previous_address_lived_from: "",
+  previous_address_lived_to: "",
   lease_in_name: null,
   move_in_date: "",
   renting_with_others: null,
@@ -160,6 +182,7 @@ function formPayload(
     address_not_in_canada: fields.address_not_in_canada,
     previous_address: fields.previous_address.trim() || undefined,
     previous_place_id: fields.previous_place_id || undefined,
+    ...addressDatePayload(fields),
     lease_in_name: fields.lease_in_name ?? undefined,
     move_in_date: fields.move_in_date,
     renting_with_others: fields.renting_with_others ?? undefined,
@@ -355,6 +378,8 @@ export default function ApplyForm() {
     switch (formStep) {
       case "personal":
         return personalFieldErrors(input.email, form.phone);
+      case "addresses":
+        return addressFieldErrors(input);
       case "housing":
         return housingFieldErrors(input);
       case "references":
@@ -421,6 +446,9 @@ export default function ApplyForm() {
     }
   };
 
+  const addressValidationFields = () =>
+    toAddressValidationInput(form, { requireLeaseInName: true });
+
   const validationInput = () => ({
     move_in_date: form.move_in_date,
     unit_earliest_move_in: selectedUnit?.earliest_move_in_date ?? null,
@@ -432,6 +460,7 @@ export default function ApplyForm() {
     guarantor: includeGuarantor ? guarantor : null,
     landlord_phone: form.landlord_phone,
     hr_phone: form.hr_phone,
+    ...addressValidationFields(),
   });
 
   const moveInUnitContext = () =>
@@ -469,10 +498,12 @@ export default function ApplyForm() {
     if (issue) {
       const errors =
         issue.step === "personal"
-          ? personalFieldErrors(input.email)
-          : issue.step === "housing"
-            ? housingFieldErrors(input)
-            : referencesFieldErrors(input.landlord_phone, input.hr_phone);
+          ? personalFieldErrors(input.email, input.phone)
+          : issue.step === "addresses"
+            ? addressFieldErrors(input)
+            : issue.step === "housing"
+              ? housingFieldErrors(input)
+              : referencesFieldErrors(input.landlord_phone, input.hr_phone);
       blockWithFieldErrors(errors);
       persistProgress(issue.step);
       setStep(issue.step);
@@ -824,12 +855,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (!form.current_address.trim()) {
-                setError(t(locale, "fieldRequired"));
-                return;
-              }
-              if (form.lease_in_name === null) {
-                setError(t(locale, "fieldRequired"));
+              if (blockWithFieldErrors(addressFieldErrors(addressValidationFields()))) {
                 return;
               }
               setError(null);
@@ -853,34 +879,56 @@ export default function ApplyForm() {
               />
               <span>{t(locale, "addressNotInCanada")}</span>
             </label>
-            <AddressAutocomplete
+            <div id="apply-field-current_address">
+              <AddressAutocomplete
+                locale={locale}
+                label={t(locale, "currentAddress")}
+                value={form.current_address}
+                manualOnly={form.address_not_in_canada}
+                onChange={(address, placeId) => {
+                  setField("current_address", address);
+                  clearFieldError("current_address");
+                  if (!form.address_not_in_canada && placeId) {
+                    setField("current_place_id", placeId);
+                  }
+                }}
+                required
+                inputClass={inputClassFor("current_address")}
+              />
+              {fieldHint("current_address")}
+            </div>
+            <AddressLivedDates
               locale={locale}
-              label={t(locale, "currentAddress")}
-              value={form.current_address}
-              manualOnly={form.address_not_in_canada}
-              onChange={(address, placeId) => {
-                setField("current_address", address);
-                if (!form.address_not_in_canada && placeId) {
-                  setField("current_place_id", placeId);
-                }
+              prefix="current"
+              livedFrom={form.current_address_lived_from}
+              livedTo={form.current_address_lived_to}
+              stillLivingHere={form.still_at_current_address}
+              onLivedFromChange={(value) => {
+                setField("current_address_lived_from", value);
+                clearFieldError("current_address_lived_from");
               }}
-              required
-              inputClass={inputClass}
-            />
-            <AddressAutocomplete
-              locale={locale}
-              label={t(locale, "previousAddress")}
-              value={form.previous_address}
-              onChange={(address, placeId) => {
-                setField("previous_address", address);
-                if (placeId) setField("previous_place_id", placeId);
+              onLivedToChange={(value) => {
+                setField("current_address_lived_to", value);
+                clearFieldError("current_address_lived_to");
               }}
-              inputClass={inputClass}
+              onStillLivingChange={(checked) => {
+                setForm((prev) => ({
+                  ...prev,
+                  still_at_current_address: checked,
+                  current_address_lived_to: checked ? "" : prev.current_address_lived_to,
+                }));
+                clearFieldError("current_address_lived_to");
+              }}
+              inputClassFor={inputClassFor}
+              fieldHint={fieldHint}
             />
-            <fieldset>
+            <fieldset id="apply-field-lease_in_name">
               <legend className="text-sm text-[#57534e]">
                 {t(locale, "leaseInName")}
               </legend>
+              <p className="mt-1 text-sm text-[#78716c]">
+                {t(locale, "leaseInNameHint")}
+              </p>
               <div className="mt-2 flex gap-4">
                 <label className="flex items-center gap-2 text-sm text-[#292524]">
                   <input
@@ -888,7 +936,10 @@ export default function ApplyForm() {
                     name="lease_in_name"
                     required
                     checked={form.lease_in_name === true}
-                    onChange={() => setField("lease_in_name", true)}
+                    onChange={() => {
+                      setField("lease_in_name", true);
+                      clearFieldError("lease_in_name");
+                    }}
                   />
                   {t(locale, "yes")}
                 </label>
@@ -897,12 +948,51 @@ export default function ApplyForm() {
                     type="radio"
                     name="lease_in_name"
                     checked={form.lease_in_name === false}
-                    onChange={() => setField("lease_in_name", false)}
+                    onChange={() => {
+                      setField("lease_in_name", false);
+                      clearFieldError("lease_in_name");
+                    }}
                   />
                   {t(locale, "no")}
                 </label>
               </div>
+              {fieldHint("lease_in_name")}
             </fieldset>
+            <AddressAutocomplete
+              locale={locale}
+              label={t(locale, "previousAddress")}
+              value={form.previous_address}
+              onChange={(address, placeId) => {
+                setField("previous_address", address);
+                if (!address.trim()) {
+                  setForm((prev) => ({
+                    ...prev,
+                    previous_address_lived_from: "",
+                    previous_address_lived_to: "",
+                  }));
+                }
+                if (placeId) setField("previous_place_id", placeId);
+              }}
+              inputClass={inputClass}
+            />
+            {form.previous_address.trim() ? (
+              <AddressLivedDates
+                locale={locale}
+                prefix="previous"
+                livedFrom={form.previous_address_lived_from}
+                livedTo={form.previous_address_lived_to}
+                onLivedFromChange={(value) => {
+                  setField("previous_address_lived_from", value);
+                  clearFieldError("previous_address_lived_from");
+                }}
+                onLivedToChange={(value) => {
+                  setField("previous_address_lived_to", value);
+                  clearFieldError("previous_address_lived_to");
+                }}
+                inputClassFor={inputClassFor}
+                fieldHint={fieldHint}
+              />
+            ) : null}
             <button
               type="submit"
               disabled={submitting}
@@ -1366,6 +1456,24 @@ export default function ApplyForm() {
               label={t(locale, "currentAddress")}
               value={form.current_address}
             />
+            <ReviewRow
+              label={t(locale, "addressLivedHere")}
+              value={formatAddressDateRange(
+                locale,
+                form.current_address_lived_from,
+                form.still_at_current_address ? null : form.current_address_lived_to
+              )}
+            />
+            <ReviewRow
+              label={t(locale, "leaseInName")}
+              value={
+                form.lease_in_name === null
+                  ? ""
+                  : form.lease_in_name
+                    ? t(locale, "yes")
+                    : t(locale, "no")
+              }
+            />
             {form.address_not_in_canada && (
               <ReviewRow
                 label={t(locale, "addressNotInCanada")}
@@ -1376,6 +1484,16 @@ export default function ApplyForm() {
               <ReviewRow
                 label={t(locale, "previousAddress")}
                 value={form.previous_address}
+              />
+            )}
+            {form.previous_address && (
+              <ReviewRow
+                label={t(locale, "addressLivedHere")}
+                value={formatAddressDateRange(
+                  locale,
+                  form.previous_address_lived_from,
+                  form.previous_address_lived_to
+                )}
               />
             )}
             <ReviewRow

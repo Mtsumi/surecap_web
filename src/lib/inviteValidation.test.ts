@@ -15,8 +15,14 @@ function roommateFields(overrides: Partial<InviteeFormFields> = {}): InviteeForm
     phone: "5145550100",
     current_address: "123 Rue Example, Montréal",
     current_place_id: "",
+    address_not_in_canada: false,
     previous_address: "",
     previous_place_id: "",
+    current_address_lived_from: "2024-01-01",
+    current_address_lived_to: "",
+    still_at_current_address: true,
+    previous_address_lived_from: "",
+    previous_address_lived_to: "",
     lease_in_name: true,
     move_in_date: "2026-07-01",
     landlord_name: "Landlord Co",
@@ -65,6 +71,16 @@ describe("inviteeFieldErrors", () => {
     const errors = inviteeFieldErrors("guarantor", guarantorFields({ hr_name: "" }), "roommate@example.com");
     expect(errors.landlord_phone).toBeUndefined();
     expect(errors.hr_name).toBe("required");
+  });
+
+  it("requires guarantor current address lived-from", () => {
+    const errors = inviteeFieldErrors(
+      "guarantor",
+      guarantorFields({ current_address_lived_from: "" }),
+      "guarantor@example.com"
+    );
+    expect(errors.current_address_lived_from).toBe("address_date_required");
+    expect(errors.lease_in_name).toBeUndefined();
   });
 
   it("flags invite email mismatch and duplicate landlord/HR phones for roommates", () => {

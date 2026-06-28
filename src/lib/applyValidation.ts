@@ -1,5 +1,10 @@
 /** Client-side apply form validation (FR/EN messages via i18n keys). */
 
+import {
+  isValidPhone,
+  normalizePhoneDigits,
+} from "./phoneValidation";
+
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export type ApplyValidationCode =
@@ -8,9 +13,26 @@ export type ApplyValidationCode =
   | "invalid_email"
   | "duplicate_email"
   | "invalid_phone"
-  | "landlord_hr_same_phone";
+  | "landlord_hr_same_phone"
+  | "required"
+  | "address_date_required"
+  | "invalid_address_date_range"
+  | "address_date_in_future"
+  | "address_dates_chain";
 
-export type ApplyFormStep = "personal" | "housing" | "references";
+export type ApplyFormStep = "personal" | "addresses" | "housing" | "references";
+
+export type AddressDatesInput = {
+  current_address: string;
+  current_address_lived_from: string;
+  current_address_lived_to: string;
+  still_at_current_address: boolean;
+  previous_address: string;
+  previous_address_lived_from: string;
+  previous_address_lived_to: string;
+  lease_in_name: boolean | null;
+  require_lease_in_name?: boolean;
+};
 
 export type ApplyValidationInput = {
   move_in_date: string;
@@ -23,7 +45,7 @@ export type ApplyValidationInput = {
   phone: string;
   landlord_phone: string;
   hr_phone: string;
-};
+} & AddressDatesInput;
 
 function localDateString(): string {
   const d = new Date();
@@ -102,11 +124,6 @@ export function moveInValidationCode(
   }
   return "move_in_too_soon";
 }
-
-import {
-  isValidPhone,
-  normalizePhoneDigits,
-} from "./phoneValidation";
 
 export function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email.trim());
@@ -248,6 +265,82 @@ export function validateReferencesStep(
   return validatePhones(landlordPhone, hrPhone);
 }
 
+export function addressFieldErrors(fields: AddressDatesInput): ApplyFieldErrors {
+  const errors: ApplyFieldErrors = {};
+  const today = localDateString();
+
+  if (!fields.current_address.trim()) {
+    errors.current_address = "required";
+  }
+
+  const currentFrom = fields.current_address_lived_from.trim();
+  const currentTo = fields.still_at_current_address
+    ? ""
+    : fields.current_address_lived_to.trim();
+
+  if (!currentFrom) {
+    errors.current_address_lived_from = "address_date_required";
+  } else if (currentFrom > today) {
+    errors.current_address_lived_from = "address_date_in_future";
+  }
+
+  if (!fields.still_at_current_address && !currentTo) {
+    errors.current_address_lived_to = "address_date_required";
+  } else if (currentTo) {
+    if (currentFrom && currentFrom > currentTo) {
+      errors.current_address_lived_from = "invalid_address_date_range";
+      errors.current_address_lived_to = "invalid_address_date_range";
+    } else if (currentTo > today) {
+      errors.current_address_lived_to = "address_date_in_future";
+    }
+  }
+
+  if (fields.require_lease_in_name !== false && fields.lease_in_name === null) {
+    errors.lease_in_name = "required";
+  }
+
+  const previousText = fields.previous_address.trim();
+  if (previousText) {
+    const previousFrom = fields.previous_address_lived_from.trim();
+    const previousTo = fields.previous_address_lived_to.trim();
+    if (!previousFrom) {
+      errors.previous_address_lived_from = "address_date_required";
+    }
+    if (!previousTo) {
+      errors.previous_address_lived_to = "address_date_required";
+    }
+    if (previousFrom && previousTo) {
+      if (previousFrom > previousTo) {
+        errors.previous_address_lived_from = "invalid_address_date_range";
+        errors.previous_address_lived_to = "invalid_address_date_range";
+      }
+      if (previousFrom > today) {
+        errors.previous_address_lived_from = "address_date_in_future";
+      }
+      if (previousTo > today) {
+        errors.previous_address_lived_to = "address_date_in_future";
+      }
+      if (currentFrom && previousTo > currentFrom) {
+        errors.previous_address_lived_to = "address_dates_chain";
+      }
+    }
+  } else if (
+    fields.previous_address_lived_from.trim() ||
+    fields.previous_address_lived_to.trim()
+  ) {
+    errors.previous_address_lived_from = "invalid_address_date_range";
+    errors.previous_address_lived_to = "invalid_address_date_range";
+  }
+
+  return errors;
+}
+
+export function validateAddressesStep(
+  fields: AddressDatesInput
+): ApplyValidationCode | null {
+  return firstFieldErrorCode(addressFieldErrors(fields));
+}
+
 export function stepForValidationCode(code: ApplyValidationCode): ApplyFormStep {
   switch (code) {
     case "move_in_too_soon":
@@ -257,6 +350,12 @@ export function stepForValidationCode(code: ApplyValidationCode): ApplyFormStep 
       return "housing";
     case "landlord_hr_same_phone":
       return "references";
+    case "required":
+    case "address_date_required":
+    case "invalid_address_date_range":
+    case "address_date_in_future":
+    case "address_dates_chain":
+      return "addresses";
     default:
       return "personal";
   }
@@ -267,6 +366,9 @@ export function findFirstValidationIssue(
 ): { code: ApplyValidationCode; step: ApplyFormStep } | null {
   const personal = validatePersonalStep(input.email);
   if (personal) return { code: personal, step: "personal" };
+
+  const addresses = validateAddressesStep(input);
+  if (addresses) return { code: addresses, step: "addresses" };
 
   const housing = validateHousingStep(input);
   if (housing) return { code: housing, step: "housing" };
