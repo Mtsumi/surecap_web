@@ -1,5 +1,11 @@
 const STORAGE_PREFIX = "surecap_apply_v1";
 
+export type DraftSession = {
+  applicationId: number;
+  memberId: number;
+  uploadToken: string;
+};
+
 export type StoredApplyProgress = {
   unitId: number;
   buildingId: number;
@@ -8,6 +14,8 @@ export type StoredApplyProgress = {
   roommates: { name: string; email: string }[];
   includeGuarantor: boolean;
   guarantor: { name: string; email: string; phone: string };
+  draftSession?: DraftSession | null;
+  idKind?: "driver_licence" | "medicare" | "passport";
   updatedAt: string;
 };
 

@@ -5,16 +5,19 @@ import { useSearchParams } from "next/navigation";
 import AddressAutocomplete from "./AddressAutocomplete";
 import AddressLivedDates from "./AddressLivedDates";
 import PhoneField from "./PhoneField";
-import PostSubmitDocuments from "./PostSubmitDocuments";
+import StepDocumentUpload from "./StepDocumentUpload";
 import {
   ApplicationSubmit,
   Building,
   GuarantorContact,
+  MemberDocument,
   RoommateContact,
   Unit,
+  createApplicationDraft,
   fetchBuildings,
   fetchUnits,
-  submitApplication,
+  submitApplicationById,
+  updateApplication,
 } from "@/lib/api";
 import {
   addressDatePayload,
@@ -23,9 +26,11 @@ import {
 } from "@/lib/addressFormUtils";
 import {
   clearApplyProgress,
+  DraftSession,
   loadApplyProgress,
   saveApplyProgress,
 } from "@/lib/applyStorage";
+import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
 import { Locale, type MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
   ApplyFieldErrors,
@@ -224,11 +229,9 @@ export default function ApplyForm() {
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [submittedApplicationId, setSubmittedApplicationId] = useState<number | null>(null);
-  const [submitUpload, setSubmitUpload] = useState<{
-    applicationId: number;
-    memberId: number;
-    uploadToken: string;
-  } | null>(null);
+  const [draftSession, setDraftSession] = useState<DraftSession | null>(null);
+  const [idKind, setIdKind] = useState<IdDocumentKind>("passport");
+  const [idDocuments, setIdDocuments] = useState<MemberDocument[]>([]);
   const [form, setForm] = useState<FormFields>(emptyForm);
   const [roommates, setRoommates] = useState<RoommateContact[]>([
     { name: "", email: "" },
@@ -372,10 +375,21 @@ export default function ApplyForm() {
         roommates,
         includeGuarantor,
         guarantor,
+        draftSession,
+        idKind,
         updatedAt: new Date().toISOString(),
       });
     },
-    [selectedUnit, selectedBuilding, form, roommates, includeGuarantor, guarantor]
+    [
+      selectedUnit,
+      selectedBuilding,
+      form,
+      roommates,
+      includeGuarantor,
+      guarantor,
+      draftSession,
+      idKind,
+    ]
   );
 
   const fieldErrorsForFormStep = (
@@ -414,6 +428,18 @@ export default function ApplyForm() {
           persistProgress(FORM_STEPS[i]);
           return;
         }
+        if (
+          FORM_STEPS[i] === "personal" &&
+          !idUploadComplete(
+            idKind,
+            idDocuments.map((doc) => doc.document_type)
+          )
+        ) {
+          setError(t(locale, "idUploadRequired"));
+          setStep("personal");
+          persistProgress("personal");
+          return;
+        }
       }
     }
     persistProgress(target);
@@ -424,6 +450,9 @@ export default function ApplyForm() {
     setSelectedBuilding(b);
     setSelectedUnit(null);
     setSubmittedApplicationId(null);
+    setDraftSession(null);
+    setIdKind("passport");
+    setIdDocuments([]);
     setForm(emptyForm);
     setRoommates([{ name: "", email: "" }]);
     setIncludeGuarantor(false);
@@ -431,25 +460,74 @@ export default function ApplyForm() {
     setStep("unit");
   };
 
-  const handleSelectUnit = (u: Unit) => {
+  const handleSelectUnit = async (u: Unit) => {
     if (!selectedBuilding) return;
     setSelectedUnit(u);
     setSubmittedApplicationId(null);
     setError(null);
+    setLoading(true);
 
-    const saved = loadApplyProgress(u.id);
-    if (saved && saved.buildingId === selectedBuilding.id) {
-      setForm({ ...emptyForm, ...(saved.form as FormFields) });
-      setRoommates(saved.roommates.length ? saved.roommates : [{ name: "", email: "" }]);
-      setIncludeGuarantor(saved.includeGuarantor);
-      setGuarantor(saved.guarantor);
-      setStep(isFormStep(saved.step) ? saved.step : "personal");
-    } else {
-      setForm(emptyForm);
-      setRoommates([{ name: "", email: "" }]);
-      setIncludeGuarantor(false);
-      setGuarantor({ name: "", email: "", phone: "" });
-      setStep("personal");
+    try {
+      const saved = loadApplyProgress(u.id);
+      let nextDraftSession: DraftSession | null = saved?.draftSession ?? null;
+      let nextIdKind: IdDocumentKind = saved?.idKind ?? "passport";
+
+      if (saved && saved.buildingId === selectedBuilding.id) {
+        setForm({ ...emptyForm, ...(saved.form as FormFields) });
+        setRoommates(saved.roommates.length ? saved.roommates : [{ name: "", email: "" }]);
+        setIncludeGuarantor(saved.includeGuarantor);
+        setGuarantor(saved.guarantor);
+        setStep(isFormStep(saved.step) ? saved.step : "personal");
+      } else {
+        setForm(emptyForm);
+        setRoommates([{ name: "", email: "" }]);
+        setIncludeGuarantor(false);
+        setGuarantor({ name: "", email: "", phone: "" });
+        setStep("personal");
+        nextDraftSession = null;
+      }
+
+      if (!nextDraftSession?.uploadToken) {
+        const app = await createApplicationDraft(u.id);
+        if (!app.primary_member_id || !app.upload_token) {
+          throw new Error(t(locale, "error"));
+        }
+        nextDraftSession = {
+          applicationId: app.id,
+          memberId: app.primary_member_id,
+          uploadToken: app.upload_token,
+        };
+      }
+
+      setDraftSession(nextDraftSession);
+      setIdKind(nextIdKind);
+      setIdDocuments([]);
+      saveApplyProgress({
+        unitId: u.id,
+        buildingId: selectedBuilding.id,
+        step: saved && saved.buildingId === selectedBuilding.id && isFormStep(saved.step)
+          ? saved.step
+          : "personal",
+        form:
+          saved && saved.buildingId === selectedBuilding.id
+            ? { ...emptyForm, ...(saved.form as FormFields) }
+            : emptyForm,
+        roommates:
+          saved && saved.buildingId === selectedBuilding.id && saved.roommates.length
+            ? saved.roommates
+            : [{ name: "", email: "" }],
+        includeGuarantor: saved?.includeGuarantor ?? false,
+        guarantor: saved?.guarantor ?? { name: "", email: "", phone: "" },
+        draftSession: nextDraftSession,
+        idKind: nextIdKind,
+        updatedAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t(locale, "error"));
+      setSelectedUnit(null);
+      setDraftSession(null);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -499,7 +577,7 @@ export default function ApplyForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedUnit) return;
+    if (!selectedUnit || !draftSession) return;
     const input = validationInput();
     const issue = findFirstValidationIssue(input);
     if (issue) {
@@ -516,24 +594,32 @@ export default function ApplyForm() {
       setStep(issue.step);
       return;
     }
+    if (
+      !idUploadComplete(
+        idKind,
+        idDocuments.map((doc) => doc.document_type)
+      )
+    ) {
+      setError(t(locale, "idUploadRequired"));
+      persistProgress("personal");
+      setStep("personal");
+      return;
+    }
     setSubmitting(true);
     setError(null);
     try {
-      const app = await submitApplication({
-        unit_id: selectedUnit.id,
-        ...formPayload(form, roommates, includeGuarantor ? guarantor : null),
-      });
+      await updateApplication(
+        draftSession.applicationId,
+        draftSession.uploadToken,
+        formPayload(form, roommates, includeGuarantor ? guarantor : null)
+      );
+      const app = await submitApplicationById(
+        draftSession.applicationId,
+        draftSession.uploadToken
+      );
       clearApplyProgress(selectedUnit.id);
       setSubmittedApplicationId(app.id);
-      if (app.primary_member_id && app.upload_token) {
-        setSubmitUpload({
-          applicationId: app.id,
-          memberId: app.primary_member_id,
-          uploadToken: app.upload_token,
-        });
-      } else {
-        setSubmitUpload(null);
-      }
+      setDraftSession(null);
       setStep("done");
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "error");
@@ -763,8 +849,43 @@ export default function ApplyForm() {
             onSubmit={(e) => {
               e.preventDefault();
               if (blockWithFieldErrors(personalFieldErrors(form.email, form.phone))) return;
+              if (!draftSession) {
+                setError(t(locale, "error"));
+                return;
+              }
+              if (
+                !idUploadComplete(
+                  idKind,
+                  idDocuments.map((doc) => doc.document_type)
+                )
+              ) {
+                setError(t(locale, "idUploadRequired"));
+                return;
+              }
               setError(null);
-              continueToStep("addresses");
+              void (async () => {
+                setSubmitting(true);
+                try {
+                  await updateApplication(
+                    draftSession.applicationId,
+                    draftSession.uploadToken,
+                    {
+                      given_name: form.given_name,
+                      family_name: form.family_name,
+                      date_of_birth: form.date_of_birth,
+                      email: form.email,
+                      phone: form.phone,
+                      facebook_url: form.facebook_url || undefined,
+                      linkedin_url: form.linkedin_url || undefined,
+                    }
+                  );
+                  continueToStep("addresses");
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : t(locale, "error"));
+                } finally {
+                  setSubmitting(false);
+                }
+              })();
             }}
             className="space-y-4"
           >
@@ -855,6 +976,32 @@ export default function ApplyForm() {
                 placeholder="https://"
               />
             </label>
+            {draftSession ? (
+              <StepDocumentUpload
+                mode="member"
+                locale={locale}
+                applicationId={draftSession.applicationId}
+                memberId={draftSession.memberId}
+                uploadToken={draftSession.uploadToken}
+                idKind={idKind}
+                onIdKindChange={(kind) => {
+                  setIdKind(kind);
+                  saveApplyProgress({
+                    unitId: selectedUnit!.id,
+                    buildingId: selectedBuilding!.id,
+                    step: "personal",
+                    form,
+                    roommates,
+                    includeGuarantor,
+                    guarantor,
+                    draftSession,
+                    idKind: kind,
+                    updatedAt: new Date().toISOString(),
+                  });
+                }}
+                onDocumentsChange={setIdDocuments}
+              />
+            ) : null}
             <StepAlert />
             <button
               type="submit"
@@ -1584,14 +1731,6 @@ export default function ApplyForm() {
             {t(locale, "applicationId")}:{" "}
             <span className="font-medium text-[#292524]">#{submittedApplicationId}</span>
           </p>
-          {submitUpload ? (
-            <PostSubmitDocuments
-              locale={locale}
-              applicationId={submitUpload.applicationId}
-              memberId={submitUpload.memberId}
-              uploadToken={submitUpload.uploadToken}
-            />
-          ) : null}
         </section>
       )}
     </main>
