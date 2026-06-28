@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import AddressAutocomplete from "./AddressAutocomplete";
 import AddressLivedDates from "./AddressLivedDates";
 import PhoneField from "./PhoneField";
+import PostSubmitDocuments from "./PostSubmitDocuments";
 import {
   ApplicationSubmit,
   Building,
@@ -223,6 +224,11 @@ export default function ApplyForm() {
   const [selectedBuilding, setSelectedBuilding] = useState<Building | null>(null);
   const [selectedUnit, setSelectedUnit] = useState<Unit | null>(null);
   const [submittedApplicationId, setSubmittedApplicationId] = useState<number | null>(null);
+  const [submitUpload, setSubmitUpload] = useState<{
+    applicationId: number;
+    memberId: number;
+    uploadToken: string;
+  } | null>(null);
   const [form, setForm] = useState<FormFields>(emptyForm);
   const [roommates, setRoommates] = useState<RoommateContact[]>([
     { name: "", email: "" },
@@ -519,6 +525,15 @@ export default function ApplyForm() {
       });
       clearApplyProgress(selectedUnit.id);
       setSubmittedApplicationId(app.id);
+      if (app.primary_member_id && app.upload_token) {
+        setSubmitUpload({
+          applicationId: app.id,
+          memberId: app.primary_member_id,
+          uploadToken: app.upload_token,
+        });
+      } else {
+        setSubmitUpload(null);
+      }
       setStep("done");
     } catch (err) {
       const message = err instanceof Error ? err.message : t(locale, "error");
@@ -1569,6 +1584,14 @@ export default function ApplyForm() {
             {t(locale, "applicationId")}:{" "}
             <span className="font-medium text-[#292524]">#{submittedApplicationId}</span>
           </p>
+          {submitUpload ? (
+            <PostSubmitDocuments
+              locale={locale}
+              applicationId={submitUpload.applicationId}
+              memberId={submitUpload.memberId}
+              uploadToken={submitUpload.uploadToken}
+            />
+          ) : null}
         </section>
       )}
     </main>
