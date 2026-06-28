@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AddressAutocomplete from "./AddressAutocomplete";
+import PhoneField from "./PhoneField";
 import {
   ApplicationSubmit,
   Building,
@@ -762,21 +763,20 @@ export default function ApplyForm() {
               {fieldHint("email")}
             </label>
             </div>
-            <label className="block text-sm text-[#57534e]">
-              {t(locale, "phone")}
-              <input
-                type="tel"
+            <div id="apply-field-phone" className="block text-sm text-[#57534e]">
+              <span className="block">{t(locale, "phone")}</span>
+              <PhoneField
+                locale={locale}
                 required
-                autoComplete="tel"
+                invalid={!!fieldErrors.phone}
                 value={form.phone}
-                onChange={(e) => {
-                  setField("phone", e.target.value);
+                onChange={(value) => {
+                  setField("phone", value);
                   clearFieldError("phone");
                 }}
-                className={inputClassFor("phone")}
               />
               {fieldHint("phone")}
-            </label>
+            </div>
             <label className="block text-sm text-[#57534e]">
               {t(locale, "facebookUrl")}
               <input
@@ -1144,21 +1144,19 @@ export default function ApplyForm() {
                     {fieldHint("guarantor_email")}
                   </label>
                   </div>
-                  <div id="apply-field-guarantor_phone">
-                  <label className="block text-sm text-[#57534e]">
-                    {t(locale, "guarantorPhone")}
-                    <input
-                      type="tel"
+                  <div id="apply-field-guarantor_phone" className="block text-sm text-[#57534e]">
+                    <span className="block">{t(locale, "guarantorPhone")}</span>
+                    <PhoneField
+                      locale={locale}
                       required
+                      invalid={!!fieldErrors.guarantor_phone}
                       value={guarantor.phone}
-                      onChange={(e) => {
+                      onChange={(value) => {
                         clearFieldError("guarantor_phone");
-                        setGuarantor((g) => ({ ...g, phone: e.target.value }));
+                        setGuarantor((g) => ({ ...g, phone: value }));
                       }}
-                      className={inputClassFor("guarantor_phone")}
                     />
                     {fieldHint("guarantor_phone")}
-                  </label>
                   </div>
                 </div>
               )}
@@ -1218,22 +1216,19 @@ export default function ApplyForm() {
               />
             </label>
             </div>
-            <div id="apply-field-landlord_phone">
-            <label className="block text-sm text-[#57534e]">
-              {t(locale, "landlordPhone")}
-              <input
-                type="tel"
+            <div id="apply-field-landlord_phone" className="block text-sm text-[#57534e]">
+              <span className="block">{t(locale, "landlordPhone")}</span>
+              <PhoneField
+                locale={locale}
                 required
+                invalid={!!fieldErrors.landlord_phone}
                 value={form.landlord_phone}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(value) => {
                   setField("landlord_phone", value);
                   syncPhoneValidation(value, form.hr_phone);
                 }}
-                className={inputClassFor("landlord_phone")}
               />
               {fieldHint("landlord_phone")}
-            </label>
             </div>
             <div id="apply-field-hr_name">
             <label className="block text-sm text-[#57534e]">
@@ -1248,22 +1243,19 @@ export default function ApplyForm() {
               />
             </label>
             </div>
-            <div id="apply-field-hr_phone">
-            <label className="block text-sm text-[#57534e]">
-              {t(locale, "hrPhone")}
-              <input
-                type="tel"
+            <div id="apply-field-hr_phone" className="block text-sm text-[#57534e]">
+              <span className="block">{t(locale, "hrPhone")}</span>
+              <PhoneField
+                locale={locale}
                 required
+                invalid={!!fieldErrors.hr_phone}
                 value={form.hr_phone}
-                onChange={(e) => {
-                  const value = e.target.value;
+                onChange={(value) => {
                   setField("hr_phone", value);
                   syncPhoneValidation(form.landlord_phone, value);
                 }}
-                className={inputClassFor("hr_phone")}
               />
               {fieldHint("hr_phone")}
-            </label>
             </div>
             <StepAlert />
             <button

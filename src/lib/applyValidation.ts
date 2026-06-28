@@ -103,9 +103,10 @@ export function moveInValidationCode(
   return "move_in_too_soon";
 }
 
-function normalizePhone(phone: string): string {
-  return phone.replace(/\D/g, "");
-}
+import {
+  isValidPhone,
+  normalizePhoneDigits,
+} from "./phoneValidation";
 
 export function isValidEmail(email: string): boolean {
   return EMAIL_RE.test(email.trim());
@@ -129,9 +130,7 @@ export function validateEmailFormat(email: string): ApplyValidationCode | null {
 export function validatePhoneFormat(phone: string): ApplyValidationCode | null {
   const trimmed = phone.trim();
   if (!trimmed) return null;
-  if (/[a-zA-Z]/.test(trimmed)) return "invalid_phone";
-  if (normalizePhone(trimmed).length < 7) return "invalid_phone";
-  return null;
+  return isValidPhone(trimmed) ? null : "invalid_phone";
 }
 
 export function validatePhones(
@@ -142,8 +141,8 @@ export function validatePhones(
   if (landlordFormat) return landlordFormat;
   const hrFormat = validatePhoneFormat(hrPhone);
   if (hrFormat) return hrFormat;
-  const landlord = normalizePhone(landlordPhone);
-  const hr = normalizePhone(hrPhone);
+  const landlord = normalizePhoneDigits(landlordPhone);
+  const hr = normalizePhoneDigits(hrPhone);
   if (landlord && hr && landlord === hr) {
     return "landlord_hr_same_phone";
   }

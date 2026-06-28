@@ -8,3 +8,41 @@ body {
   color: #292524;
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
+
+/* react-phone-number-input — match apply form inputs */
+.phone-field {
+  @apply mt-1 flex w-full items-center gap-2 rounded border border-[#e7e0d5] bg-white px-2 py-1.5 text-base transition;
+}
+
+.phone-field:focus-within {
+  @apply border-[#3d5a45];
+}
+
+.phone-field--invalid {
+  @apply border-[#e7a4a4];
+}
+
+.phone-field--invalid:focus-within {
+  @apply border-[#b91c1c];
+}
+
+.phone-field .PhoneInputCountry {
+  @apply mr-1;
+}
+
+.phone-field .PhoneInputCountrySelect {
+  @apply border-0 bg-transparent text-sm text-[#292524] outline-none;
+}
+
+.phone-field .PhoneInputCountryIcon {
+  @apply h-4 w-5 overflow-hidden rounded-sm shadow-none;
+}
+
+.phone-field .PhoneInputCountryIcon--border {
+  box-shadow: none;
+}
+
+.phone-field__input,
+.phone-field .PhoneInputInput {
+  @apply min-w-0 flex-1 border-0 bg-transparent py-1 text-base text-[#292524] outline-none;
+}
