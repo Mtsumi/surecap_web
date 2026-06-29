@@ -13,6 +13,7 @@ import {
   rejectApplication,
 } from "@/lib/adminApi";
 import { formatAddressDateRange } from "@/lib/addressFormUtils";
+import ApplicationDocuments from "./ApplicationDocuments";
 
 function formatLivedDates(
   from: string | null | undefined,
@@ -268,6 +269,15 @@ export default function ApplicationDetailPage() {
           </dl>
         )}
       </div>
+
+      <h2 className="mt-10 text-base font-medium text-[#292524]">Documents</h2>
+      <ApplicationDocuments
+        applicationId={app.id}
+        members={sortedMembers}
+        summaryPdfAvailable={Boolean(app.summary_pdf_available)}
+        memberRoleLabel={memberRoleLabel}
+        memberDisplayName={memberDisplayName}
+      />
 
       <Field label="Raison du refus" value={app.rejection_reason} />
 

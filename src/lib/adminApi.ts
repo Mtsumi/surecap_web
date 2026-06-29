@@ -1,4 +1,5 @@
 import { clearAdminToken, getAdminToken } from "./adminAuth";
+import type { MemberDocument } from "./adminDocuments";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -68,6 +69,7 @@ export type ApplicationMember = {
   referral_source: string | null;
   facebook_url: string | null;
   linkedin_url: string | null;
+  documents?: MemberDocument[];
 };
 
 export type ApplicationDetail = {
@@ -109,6 +111,7 @@ export type ApplicationDetail = {
   members?: ApplicationMember[];
   roommate_count?: number;
   has_guarantor?: boolean;
+  summary_pdf_available?: boolean;
 };
 
 export type ApplicationList = {

@@ -43,7 +43,6 @@ import {
   ApplyFieldErrors,
   ApplyValidationCode,
   findFirstValidationIssue,
-  firstFieldErrorCode,
   firstFieldErrorKey,
   housingFieldErrors,
   isImmediateAvailability,
@@ -317,8 +316,7 @@ export default function ApplyForm() {
   const blockWithFieldErrors = (errors: ApplyFieldErrors) => {
     if (Object.keys(errors).length === 0) return false;
     applyFieldErrors(errors);
-    const code = firstFieldErrorCode(errors);
-    if (code) showValidationError(code);
+    setError(null);
     const key = firstFieldErrorKey(errors);
     if (key) scrollToField(key);
     return true;
@@ -605,10 +603,6 @@ export default function ApplyForm() {
       return `${t(locale, "available")}: ${selectedUnit.available_date}`;
     }
     return null;
-  };
-
-  const showValidationError = (code: ApplyValidationCode) => {
-    setError(t(locale, VALIDATION_MESSAGE[code]));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
