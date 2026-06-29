@@ -48,7 +48,6 @@ const ROOMMATE_REQUIRED: (keyof InviteeFormFields)[] = [
   "date_of_birth",
   "email",
   "phone",
-  "move_in_date",
   "landlord_name",
   "landlord_phone",
   "hr_name",

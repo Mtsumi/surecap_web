@@ -10,7 +10,7 @@ import { toAddressValidationInput } from "./addressFormUtils";
 import type { InviteeFormFields, InviteeRole } from "./inviteValidation";
 import type { MessageKey } from "./i18n";
 
-export type InviteFormStep = "personal" | "addresses" | "housing" | "references";
+export type InviteFormStep = "personal" | "addresses" | "references";
 
 export type ServerSubmitErrorResult = {
   step: ApplyFormStep;
@@ -48,9 +48,8 @@ function applyStepToInviteStep(
 ): InviteFormStep {
   if (step === "housing") {
     if (role === "guarantor") return "personal";
-    if (fieldErrors.move_in_date) return "housing";
     if (fieldErrors.lease_in_name) return "addresses";
-    return "housing";
+    return "personal";
   }
   return step;
 }
