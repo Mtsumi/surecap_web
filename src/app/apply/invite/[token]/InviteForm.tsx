@@ -35,16 +35,9 @@ import {
 } from "@/lib/inviteValidation";
 import { mapInviteServerSubmitError } from "@/lib/serverSubmitErrors";
 
-type Step = "personal" | "addresses" | "housing" | "references" | "other" | "review" | "done";
+type Step = "personal" | "addresses" | "references" | "review" | "done";
 
-const ROOMMATE_STEPS: Step[] = [
-  "personal",
-  "addresses",
-  "housing",
-  "references",
-  "other",
-  "review",
-];
+const ROOMMATE_STEPS: Step[] = ["personal", "addresses", "references", "review"];
 const GUARANTOR_STEPS: Step[] = ["personal", "addresses", "references", "review"];
 
 const VALIDATION_MESSAGE: Record<
@@ -108,9 +101,7 @@ function stepLabel(locale: Locale, step: Step): string {
   const map: Record<Step, MessageKey> = {
     personal: "stepPersonal",
     addresses: "stepAddresses",
-    housing: "stepHousing",
     references: "stepReferences",
-    other: "stepOther",
     review: "stepReview",
     done: "successTitle",
   };
@@ -244,12 +235,10 @@ export default function InviteForm({ token }: Props) {
     const keysForStep: Record<Step, (keyof InviteeFormFields)[]> = {
       personal: ["given_name", "family_name", "date_of_birth", "email", "phone"],
       addresses: [],
-      housing: role === "roommate" ? ["move_in_date"] : [],
       references:
         role === "guarantor"
           ? ["hr_name", "hr_phone"]
           : ["landlord_name", "landlord_phone", "hr_name", "hr_phone"],
-      other: [],
       review: [],
       done: [],
     };
@@ -356,8 +345,6 @@ export default function InviteForm({ token }: Props) {
           setStep("addresses");
         } else if (key.startsWith("landlord") || key.startsWith("hr")) {
           setStep("references");
-        } else if (key === "move_in_date") {
-          setStep("housing");
         }
       }
       return;
@@ -384,7 +371,6 @@ export default function InviteForm({ token }: Props) {
 
     if (role === "roommate") {
       payload.lease_in_name = form.lease_in_name === true;
-      payload.move_in_date = form.move_in_date;
       payload.landlord_name = form.landlord_name.trim();
       payload.landlord_phone = form.landlord_phone.trim();
       payload.hr_name = form.hr_name.trim();
@@ -566,6 +552,34 @@ export default function InviteForm({ token }: Props) {
             />
             {fieldHint("phone")}
           </div>
+          {role === "roommate" && context.move_in_date ? (
+            <div className="block text-sm text-[#57534e]">
+              <span className="block">{t(locale, "moveInDate")}</span>
+              <p className="mt-1 rounded border border-[#e7e0d5] bg-[#faf8f4] px-3 py-2.5 text-base text-[#292524]">
+                {context.move_in_date}
+              </p>
+            </div>
+          ) : null}
+          <label className="block text-sm text-[#57534e]">
+            {t(locale, "facebookUrl")}
+            <input
+              type="url"
+              value={form.facebook_url}
+              onChange={(e) => setField("facebook_url", e.target.value)}
+              className={inputClass}
+              placeholder="https://"
+            />
+          </label>
+          <label className="block text-sm text-[#57534e]">
+            {t(locale, "linkedinUrl")}
+            <input
+              type="url"
+              value={form.linkedin_url}
+              onChange={(e) => setField("linkedin_url", e.target.value)}
+              className={inputClass}
+              placeholder="https://"
+            />
+          </label>
           {context.upload_token ? (
             <StepDocumentUpload
               mode="member"
@@ -725,36 +739,6 @@ export default function InviteForm({ token }: Props) {
         </form>
       )}
 
-      {step === "housing" && role === "roommate" && (
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            continueTo(steps[stepIndex + 1]);
-          }}
-        >
-          <label className="block text-sm text-[#57534e]">
-            {t(locale, "moveInDate")}
-            <input
-              type="date"
-              required
-              value={form.move_in_date}
-              onChange={(e) => setField("move_in_date", e.target.value)}
-              className={inputClass}
-            />
-            {fieldHint("move_in_date")}
-          </label>
-          <div className="flex gap-3">
-            <button type="button" onClick={() => setStep(steps[stepIndex - 1])} className="text-sm text-[#57534e] underline-offset-2 hover:underline">
-              {t(locale, "previousStep")}
-            </button>
-            <button type="submit" className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white">
-              {t(locale, "continue")}
-            </button>
-          </div>
-        </form>
-      )}
-
       {step === "references" && (
         <form
           className="space-y-4"
@@ -810,52 +794,19 @@ export default function InviteForm({ token }: Props) {
             />
             {fieldHint("hr_phone")}
           </div>
+          {role === "roommate" && (
+            <label className="block text-sm text-[#57534e]">
+              {t(locale, "referralSource")}
+              <textarea
+                value={form.referral_source}
+                onChange={(e) => setField("referral_source", e.target.value)}
+                rows={3}
+                className={inputClass}
+              />
+            </label>
+          )}
           <div className="flex gap-3">
             <button type="button" onClick={() => setStep(steps[stepIndex - 1])} className="text-sm text-[#57534e] underline-offset-2 hover:underline">
-              {t(locale, "previousStep")}
-            </button>
-            <button type="submit" className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white">
-              {t(locale, "continue")}
-            </button>
-          </div>
-        </form>
-      )}
-
-      {step === "other" && role === "roommate" && (
-        <form
-          className="space-y-4"
-          onSubmit={(e) => {
-            e.preventDefault();
-            continueTo("review");
-          }}
-        >
-          <label className="block text-sm text-[#57534e]">
-            {t(locale, "referralSource")}
-            <textarea
-              value={form.referral_source}
-              onChange={(e) => setField("referral_source", e.target.value)}
-              rows={3}
-              className={inputClass}
-            />
-          </label>
-          <label className="block text-sm text-[#57534e]">
-            {t(locale, "facebookUrl")}
-            <input
-              value={form.facebook_url}
-              onChange={(e) => setField("facebook_url", e.target.value)}
-              className={inputClass}
-            />
-          </label>
-          <label className="block text-sm text-[#57534e]">
-            {t(locale, "linkedinUrl")}
-            <input
-              value={form.linkedin_url}
-              onChange={(e) => setField("linkedin_url", e.target.value)}
-              className={inputClass}
-            />
-          </label>
-          <div className="flex gap-3">
-            <button type="button" onClick={() => setStep("references")} className="text-sm text-[#57534e] underline-offset-2 hover:underline">
               {t(locale, "previousStep")}
             </button>
             <button type="submit" className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white">
@@ -891,6 +842,12 @@ export default function InviteForm({ token }: Props) {
                 )}
               </dd>
             </div>
+            {role === "roommate" && context.move_in_date && (
+              <div>
+                <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "moveInDate")}</dt>
+                <dd>{context.move_in_date}</dd>
+              </div>
+            )}
             {role === "roommate" && (
               <div>
                 <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "leaseInName")}</dt>
