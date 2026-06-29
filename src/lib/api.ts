@@ -302,6 +302,15 @@ export function fetchInvite(token: string): Promise<InviteContext> {
   return apiFetch<InviteContext>(`/applications/invites/${encodeURIComponent(token)}`);
 }
 
+export function reissueInviteUploadToken(
+  token: string
+): Promise<{ upload_token: string }> {
+  return apiFetch<{ upload_token: string }>(
+    `/applications/invites/${encodeURIComponent(token)}/upload-token`,
+    { method: "POST" }
+  );
+}
+
 export function submitInvite(
   token: string,
   payload: InviteeSubmitPayload

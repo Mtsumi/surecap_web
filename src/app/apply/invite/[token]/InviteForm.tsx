@@ -10,6 +10,7 @@ import {
   InviteeSubmitPayload,
   MemberDocument,
   fetchInvite,
+  reissueInviteUploadToken,
   submitInvite,
 } from "@/lib/api";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
@@ -118,6 +119,10 @@ function stepLabel(locale: Locale, step: Step): string {
 
 type Props = { token: string };
 
+function inviteUploadTokenKey(inviteToken: string): string {
+  return `surecap-invite-upload-token:${inviteToken}`;
+}
+
 export default function InviteForm({ token }: Props) {
   const [locale, setLocale] = useState<Locale>("fr");
   const [context, setContext] = useState<InviteContext | null>(null);
@@ -157,9 +162,25 @@ export default function InviteForm({ token }: Props) {
     setLoading(true);
     setError(null);
     fetchInvite(token)
-      .then((data) => {
+      .then(async (data) => {
         if (cancelled) return;
-        setContext(data);
+        let uploadToken = data.upload_token;
+        if (!uploadToken && typeof window !== "undefined") {
+          uploadToken = sessionStorage.getItem(inviteUploadTokenKey(token));
+        }
+        if (!uploadToken && data.member_status === "invited") {
+          try {
+            const reissued = await reissueInviteUploadToken(token);
+            uploadToken = reissued.upload_token;
+          } catch {
+            if (!cancelled) setError(t(detectLocale(), "inviteExpired"));
+            return;
+          }
+        }
+        if (uploadToken && typeof window !== "undefined") {
+          sessionStorage.setItem(inviteUploadTokenKey(token), uploadToken);
+        }
+        setContext(uploadToken ? { ...data, upload_token: uploadToken } : data);
         if (data.member_status === "submitted") {
           setStep("done");
           return;
@@ -183,7 +204,7 @@ export default function InviteForm({ token }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [token, locale]);
+  }, [token]);
 
   const setField = <K extends keyof InviteeFormFields>(
     key: K,
