@@ -3,7 +3,9 @@ import {
   documentTypeLabel,
   formatFileSize,
   isImageContentType,
+  isImageDocument,
   isPdfContentType,
+  isPdfDocument,
 } from "./adminDocuments";
 
 describe("adminDocuments", () => {
@@ -22,5 +24,11 @@ describe("adminDocuments", () => {
     expect(isImageContentType("image/jpeg")).toBe(true);
     expect(isPdfContentType("application/pdf")).toBe(true);
     expect(isImageContentType("application/pdf")).toBe(false);
+    expect(
+      isPdfDocument({ content_type: "application/octet-stream", original_filename: "id.pdf" })
+    ).toBe(true);
+    expect(
+      isImageDocument({ content_type: "application/octet-stream", original_filename: "id.jpg" })
+    ).toBe(true);
   });
 });

@@ -8,7 +8,8 @@ import {
   fetchMemberDocumentBlob,
   fetchSummaryPdfBlob,
   formatFileSize,
-  isImageContentType,
+  isImageDocument,
+  isPdfDocument,
   isPdfContentType,
   triggerBlobDownload,
 } from "@/lib/adminDocuments";
@@ -34,13 +35,16 @@ type ApplicationDocumentsProps = {
   memberDisplayName: (member: ApplicationMember) => string;
 };
 
-function PdfPlaceholder({ label }: { label: string }) {
+function PdfPlaceholder({ compact = false }: { compact?: boolean }) {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#f5f2eb] text-[#78716c]">
-      <div className="flex h-12 w-10 items-center justify-center rounded border border-[#d6d3d1] bg-white text-xs font-semibold uppercase tracking-wide text-[#b91c1c]">
+    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#f8f6f1] text-[#78716c]">
+      <div
+        className={`flex items-center justify-center rounded-md border border-[#ddd6c8] bg-white font-semibold uppercase tracking-wide text-[#b45309] ${
+          compact ? "h-10 w-8 text-[10px]" : "h-14 w-11 text-xs"
+        }`}
+      >
         PDF
       </div>
-      <span className="line-clamp-2 px-2 text-center text-[11px] leading-tight">{label}</span>
     </div>
   );
 }
@@ -57,9 +61,10 @@ function DocumentThumbnail({
   onPreview: () => void;
 }) {
   const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(isImageContentType(document.content_type));
+  const [loading, setLoading] = useState(isImageDocument(document));
   const [error, setError] = useState(false);
-  const showImage = isImageContentType(document.content_type);
+  const showImage = isImageDocument(document);
+  const showPdf = isPdfDocument(document);
 
   useEffect(() => {
     if (!showImage) return;
@@ -96,49 +101,47 @@ function DocumentThumbnail({
   };
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-lg border border-[#e7e0d5] bg-white shadow-sm transition hover:border-[#c9c0b3]">
+    <article className="flex flex-col overflow-hidden rounded-lg border border-[#e7e0d5] bg-white shadow-sm transition hover:border-[#c9c0b3]">
       <button
         type="button"
         onClick={onPreview}
-        className="relative aspect-[4/3] w-full overflow-hidden bg-[#faf8f4] text-left"
+        className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-[#faf8f4] p-2 text-left"
       >
         {showImage ? (
           loading ? (
-            <div className="h-full w-full animate-pulse bg-[#ede8df]" />
+            <div className="h-full w-full animate-pulse rounded bg-[#ede8df]" />
           ) : thumbUrl && !error ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={thumbUrl}
               alt={label}
-              className="h-full w-full object-cover transition group-hover:scale-[1.02]"
+              className="max-h-full max-w-full object-contain"
             />
           ) : (
-            <PdfPlaceholder label={label} />
+            <PdfPlaceholder compact />
           )
-        ) : isPdfContentType(document.content_type) ? (
-          <PdfPlaceholder label={label} />
+        ) : showPdf ? (
+          <PdfPlaceholder />
         ) : (
-          <div className="flex h-full items-center justify-center px-3 text-center text-xs text-[#78716c]">
-            {label}
-          </div>
+          <div className="px-3 text-center text-xs text-[#78716c]">{label}</div>
         )}
-        <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-2 pb-2 pt-8 text-xs font-medium text-white">
-          {label}
-        </span>
       </button>
-      <div className="flex items-center justify-between gap-2 px-2.5 py-2">
-        <p className="min-w-0 truncate text-[11px] text-[#78716c]" title={document.original_filename}>
+      <div className="border-t border-[#f0ebe3] px-3 py-2">
+        <p className="text-xs font-medium text-[#292524]">{label}</p>
+        <p className="mt-0.5 truncate text-[11px] text-[#78716c]" title={document.original_filename}>
           {document.original_filename}
         </p>
-        <button
-          type="button"
-          onClick={onDownload}
-          className="shrink-0 text-[11px] font-medium text-[#3d5a45] underline-offset-2 hover:underline"
-        >
-          Télécharger
-        </button>
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <span className="text-[10px] text-[#a8a29e]">{formatFileSize(document.byte_size)}</span>
+          <button
+            type="button"
+            onClick={onDownload}
+            className="text-[11px] font-medium text-[#3d5a45] underline-offset-2 hover:underline"
+          >
+            Télécharger
+          </button>
+        </div>
       </div>
-      <p className="px-2.5 pb-2 text-[10px] text-[#a8a29e]">{formatFileSize(document.byte_size)}</p>
     </article>
   );
 }
@@ -150,6 +153,32 @@ function SummaryThumbnail({
   applicationId: number;
   onPreview: () => void;
 }) {
+  const [available, setAvailable] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchSummaryPdfBlob(applicationId, "inline")
+      .then(() => {
+        if (!cancelled) setAvailable(true);
+      })
+      .catch(() => {
+        if (!cancelled) setAvailable(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [applicationId]);
+
+  if (available === null) {
+    return (
+      <div className="aspect-[3/4] animate-pulse rounded-lg border border-[#e7e0d5] bg-[#ede8df]" />
+    );
+  }
+
+  if (!available) {
+    return null;
+  }
+
   const onDownload = async (event: React.MouseEvent) => {
     event.stopPropagation();
     const blob = await fetchSummaryPdfBlob(applicationId, "attachment");
@@ -157,26 +186,26 @@ function SummaryThumbnail({
   };
 
   return (
-    <article className="group flex flex-col overflow-hidden rounded-lg border border-[#e7e0d5] bg-white shadow-sm transition hover:border-[#c9c0b3]">
+    <article className="flex flex-col overflow-hidden rounded-lg border border-[#e7e0d5] bg-white shadow-sm transition hover:border-[#c9c0b3]">
       <button
         type="button"
         onClick={onPreview}
-        className="relative aspect-[4/3] w-full overflow-hidden bg-[#faf8f4] text-left"
+        className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-[#faf8f4] p-2 text-left"
       >
-        <PdfPlaceholder label="Résumé du dossier" />
-        <span className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-2 pb-2 pt-8 text-xs font-medium text-white">
-          Résumé du dossier
-        </span>
+        <PdfPlaceholder />
       </button>
-      <div className="flex items-center justify-between gap-2 px-2.5 py-2">
-        <p className="text-[11px] text-[#78716c]">application_summary.pdf</p>
-        <button
-          type="button"
-          onClick={onDownload}
-          className="shrink-0 text-[11px] font-medium text-[#3d5a45] underline-offset-2 hover:underline"
-        >
-          Télécharger
-        </button>
+      <div className="border-t border-[#f0ebe3] px-3 py-2">
+        <p className="text-xs font-medium text-[#292524]">Résumé du dossier</p>
+        <p className="mt-0.5 text-[11px] text-[#78716c]">application_summary.pdf</p>
+        <div className="mt-2 flex justify-end">
+          <button
+            type="button"
+            onClick={onDownload}
+            className="text-[11px] font-medium text-[#3d5a45] underline-offset-2 hover:underline"
+          >
+            Télécharger
+          </button>
+        </div>
       </div>
     </article>
   );
@@ -199,6 +228,14 @@ function DocumentPreviewModal({
     target.kind === "member" ? target.document.original_filename : target.filename;
   const contentType =
     target.kind === "member" ? target.document.content_type : target.contentType;
+  const previewAsImage =
+    target.kind === "member"
+      ? isImageDocument(target.document)
+      : false;
+  const previewAsPdf =
+    target.kind === "member"
+      ? isPdfDocument(target.document)
+      : isPdfContentType(contentType);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,14 +329,14 @@ function DocumentPreviewModal({
             <p className="text-sm text-[#78716c]">Chargement…</p>
           ) : error ? (
             <p className="text-sm text-[#b91c1c]">{error}</p>
-          ) : blobUrl && isImageContentType(contentType) ? (
+          ) : blobUrl && previewAsImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={blobUrl}
               alt={target.title}
               className="max-h-[75vh] max-w-full rounded shadow-sm"
             />
-          ) : blobUrl && isPdfContentType(contentType) ? (
+          ) : blobUrl && previewAsPdf ? (
             <iframe
               src={blobUrl}
               title={target.title}
@@ -326,9 +363,9 @@ export default function ApplicationDocuments({
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
 
   const membersWithDocs = members.filter((member) => (member.documents?.length ?? 0) > 0);
-  const hasAnything = summaryPdfAvailable || membersWithDocs.length > 0;
+  const hasMemberDocs = membersWithDocs.length > 0;
 
-  if (!hasAnything) {
+  if (!summaryPdfAvailable && !hasMemberDocs) {
     return (
       <p className="mt-2 text-sm text-[#78716c]">Aucun document téléversé pour cette demande.</p>
     );
@@ -354,6 +391,10 @@ export default function ApplicationDocuments({
           </div>
         </div>
       )}
+
+      {summaryPdfAvailable && !hasMemberDocs ? (
+        <p className="mt-4 text-sm text-[#78716c]">Aucun document membre pour cette demande.</p>
+      ) : null}
 
       {membersWithDocs.map((member) => (
         <div key={member.id} className="mt-6">
