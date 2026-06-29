@@ -21,7 +21,7 @@ export type ApplyValidationCode =
   | "address_date_in_future"
   | "address_dates_chain";
 
-export type ApplyFormStep = "personal" | "addresses" | "housing" | "references";
+export type ApplyFormStep = "personal" | "addresses" | "housing" | "references" | "other";
 
 export type AddressDatesInput = {
   current_address: string;
@@ -44,7 +44,9 @@ export type ApplyValidationInput = {
   includeGuarantor: boolean;
   guarantor: { email: string; phone: string } | null;
   phone: string;
+  landlord_name: string;
   landlord_phone: string;
+  hr_name: string;
   hr_phone: string;
   monthly_net_income: string;
 } & AddressDatesInput;
@@ -383,12 +385,8 @@ export function findFirstValidationIssue(
     if (guarantorPhone) return { code: guarantorPhone, step: "housing" };
   }
 
-  const references = validateReferencesStep(input.landlord_phone, input.hr_phone);
-  if (references) return { code: references, step: "references" };
-
-  if (!parseMonthlyNetIncome(input.monthly_net_income)) {
-    return { code: "required", step: "references" };
-  }
+  const incomeCode = firstFieldErrorCode(incomeFieldErrors(input));
+  if (incomeCode) return { code: incomeCode, step: "references" };
 
   return null;
 }
@@ -478,15 +476,44 @@ export function referencesFieldErrors(
 }
 
 export function incomeFieldErrors(
-  monthlyNetIncome: string,
-  landlordPhone: string,
-  hrPhone: string
+  fields: Pick<
+    ApplyValidationInput,
+    | "monthly_net_income"
+    | "landlord_name"
+    | "landlord_phone"
+    | "hr_name"
+    | "hr_phone"
+  >
 ): ApplyFieldErrors {
   const errors: ApplyFieldErrors = {};
-  if (!parseMonthlyNetIncome(monthlyNetIncome)) {
+  if (!parseMonthlyNetIncome(fields.monthly_net_income)) {
     errors.monthly_net_income = "required";
   }
-  Object.assign(errors, referencesFieldErrors(landlordPhone, hrPhone));
+  if (!fields.landlord_name.trim()) {
+    errors.landlord_name = "required";
+  }
+  if (!fields.hr_name.trim()) {
+    errors.hr_name = "required";
+  }
+  if (!fields.landlord_phone.trim()) {
+    errors.landlord_phone = "required";
+  } else {
+    const landlordFormat = validatePhoneFormat(fields.landlord_phone);
+    if (landlordFormat) errors.landlord_phone = landlordFormat;
+  }
+  if (!fields.hr_phone.trim()) {
+    errors.hr_phone = "required";
+  } else {
+    const hrFormat = validatePhoneFormat(fields.hr_phone);
+    if (hrFormat) errors.hr_phone = hrFormat;
+  }
+  if (!errors.landlord_phone && !errors.hr_phone) {
+    const same = validatePhones(fields.landlord_phone, fields.hr_phone);
+    if (same) {
+      errors.landlord_phone = same;
+      errors.hr_phone = same;
+    }
+  }
   return errors;
 }
 

@@ -35,9 +35,23 @@ export function staleIncomeDocumentTypes(
 }
 
 export function parseMonthlyNetIncome(value: string): number | null {
-  const trimmed = value.trim().replace(/,/g, "");
+  const trimmed = value.trim().replace(/,/g, "").replace(/^\$/, "");
   if (!trimmed) return null;
   const parsed = Number(trimmed);
   if (!Number.isFinite(parsed) || parsed <= 0) return null;
   return parsed;
+}
+
+export function formatMonthlyNetIncome(
+  locale: "en" | "fr",
+  value: string | number
+): string {
+  const amount =
+    typeof value === "number" ? value : parseMonthlyNetIncome(value);
+  if (amount === null) return "";
+  return new Intl.NumberFormat(locale === "fr" ? "fr-CA" : "en-CA", {
+    style: "currency",
+    currency: "CAD",
+    maximumFractionDigits: 2,
+  }).format(amount);
 }

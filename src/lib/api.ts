@@ -120,6 +120,35 @@ type ApiEnvelope<T> = {
   data: T | null;
 };
 
+export type ApiValidationErrorItem = {
+  type: string;
+  loc: (string | number)[];
+  msg: string;
+  input?: unknown;
+};
+
+export class ApiError extends Error {
+  readonly validationErrors: ApiValidationErrorItem[];
+
+  constructor(message: string, validationErrors: ApiValidationErrorItem[] = []) {
+    super(message);
+    this.name = "ApiError";
+    this.validationErrors = validationErrors;
+  }
+}
+
+function extractValidationErrors(data: unknown): ApiValidationErrorItem[] {
+  if (!data || typeof data !== "object") return [];
+  const errors = (data as { errors?: unknown }).errors;
+  if (!Array.isArray(errors)) return [];
+  return errors.filter(
+    (item): item is ApiValidationErrorItem =>
+      typeof item === "object" &&
+      item !== null &&
+      Array.isArray((item as ApiValidationErrorItem).loc)
+  );
+}
+
 function apiHeaders(init?: RequestInit): HeadersInit {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -145,7 +174,10 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   }
 
   if (!res.ok || body?.status === "error") {
-    throw new Error(body?.message || res.statusText);
+    throw new ApiError(
+      body?.message || res.statusText,
+      extractValidationErrors(body?.data)
+    );
   }
 
   if (!body || body.data === null || body.data === undefined) {
@@ -173,7 +205,10 @@ async function apiFetchVoid(path: string, init?: RequestInit): Promise<void> {
   }
 
   if (!res.ok || body?.status === "error") {
-    throw new Error(body?.message || res.statusText);
+    throw new ApiError(
+      body?.message || res.statusText,
+      extractValidationErrors(body?.data)
+    );
   }
 }
 
@@ -192,7 +227,10 @@ async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
   }
 
   if (!res.ok || body?.status === "error") {
-    throw new Error(body?.message || res.statusText);
+    throw new ApiError(
+      body?.message || res.statusText,
+      extractValidationErrors(body?.data)
+    );
   }
   if (!body || body.data === null || body.data === undefined) {
     throw new Error(body?.message || "Empty API response");
