@@ -60,6 +60,7 @@ function inviteToValidationInput(
     guarantor: null,
     landlord_phone: form.landlord_phone,
     hr_phone: form.hr_phone,
+    monthly_net_income: form.monthly_net_income,
     ...toAddressValidationInput(form, { requireLeaseInName: role === "roommate" }),
   };
 }
@@ -203,6 +204,22 @@ export function mapServerSubmitError(
       step: "housing",
       fieldErrors: {},
       messageKey: "validationDuplicateEmail",
+    };
+  }
+
+  if (trimmed.startsWith("Missing required income document")) {
+    return {
+      step: "references",
+      fieldErrors: {},
+      messageKey: "incomeUploadRequired",
+    };
+  }
+
+  if (trimmed.startsWith("Missing required ID document")) {
+    return {
+      step: "personal",
+      fieldErrors: {},
+      messageKey: "idUploadRequired",
     };
   }
 
