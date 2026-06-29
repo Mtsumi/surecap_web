@@ -4,12 +4,15 @@ import { useEffect, useMemo, useState } from "react";
 import AddressAutocomplete from "../../AddressAutocomplete";
 import AddressLivedDates from "../../AddressLivedDates";
 import PhoneField from "../../PhoneField";
+import StepDocumentUpload from "../../StepDocumentUpload";
 import {
   InviteContext,
   InviteeSubmitPayload,
+  MemberDocument,
   fetchInvite,
   submitInvite,
 } from "@/lib/api";
+import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
 import { Locale, MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
   addressDatePayload,
@@ -124,6 +127,8 @@ export default function InviteForm({ token }: Props) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [idKind, setIdKind] = useState<IdDocumentKind>("passport");
+  const [idDocuments, setIdDocuments] = useState<MemberDocument[]>([]);
 
   const inputClass =
     "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-base text-[#292524] outline-none transition focus:border-[#3d5a45]";
@@ -263,6 +268,17 @@ export default function InviteForm({ token }: Props) {
       setFieldErrors(errors);
       return false;
     }
+    if (
+      current === "personal" &&
+      context.upload_token &&
+      !idUploadComplete(
+        idKind,
+        idDocuments.map((doc) => doc.document_type)
+      )
+    ) {
+      setError(t(locale, "idUploadRequired"));
+      return false;
+    }
     return true;
   };
 
@@ -293,6 +309,17 @@ export default function InviteForm({ token }: Props) {
 
   const handleSubmit = async () => {
     if (!role || !context) return;
+    if (
+      context.upload_token &&
+      !idUploadComplete(
+        idKind,
+        idDocuments.map((doc) => doc.document_type)
+      )
+    ) {
+      setError(t(locale, "idUploadRequired"));
+      setStep("personal");
+      return;
+    }
     const errors = inviteeFieldErrors(role, form, context.invited_email || "");
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
@@ -518,6 +545,18 @@ export default function InviteForm({ token }: Props) {
             />
             {fieldHint("phone")}
           </div>
+          {context.upload_token ? (
+            <StepDocumentUpload
+              mode="member"
+              locale={locale}
+              applicationId={context.application_id}
+              memberId={context.member_id}
+              uploadToken={context.upload_token}
+              idKind={idKind}
+              onIdKindChange={setIdKind}
+              onDocumentsChange={setIdDocuments}
+            />
+          ) : null}
           <button
             type="submit"
             className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white"

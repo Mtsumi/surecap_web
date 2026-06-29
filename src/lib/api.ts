@@ -252,6 +252,7 @@ export type InviteContext = {
   member_id: number;
   role: "roommate" | "guarantor";
   member_status: string;
+  upload_token: string | null;
   invited_name: string | null;
   invited_email: string | null;
   invited_phone: string | null;
