@@ -47,6 +47,15 @@ describe("mapServerSubmitError", () => {
     expect(result?.fieldErrors.phone).toBe("invalid_phone");
   });
 
+  it("routes API field-specific phone errors to the right step", () => {
+    const result = mapServerSubmitError(
+      "Invalid phone number (hr_phone)",
+      baseInput()
+    );
+    expect(result?.step).toBe("references");
+    expect(result?.fieldErrors.hr_phone).toBe("invalid_phone");
+  });
+
   it("routes address chain errors to addresses step", () => {
     const result = mapServerSubmitError(
       "Previous address must end on or before your current address start date",
