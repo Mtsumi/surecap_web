@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ACCEPTED_UPLOAD_TYPES,
   ID_DOCUMENT_SLOTS,
@@ -45,39 +45,59 @@ type Props = (MemberMode | InviteMode) & {
   onDocumentsChange?: (documents: MemberDocument[]) => void;
 };
 
+function documentsEqual(a: MemberDocument[], b: MemberDocument[]): boolean {
+  if (a.length !== b.length) return false;
+  return a.every(
+    (doc, index) =>
+      doc.id === b[index]?.id && doc.document_type === b[index]?.document_type
+  );
+}
+
 export default function StepDocumentUpload(props: Props) {
   const { locale, idKind, onIdKindChange, onDocumentsChange } = props;
+  const isMember = props.mode === "member";
+  const applicationId = isMember ? props.applicationId : 0;
+  const memberId = isMember ? props.memberId : 0;
+  const uploadToken = isMember ? props.uploadToken : "";
+  const inviteToken = props.mode === "invite" ? props.inviteToken : "";
+
   const [documents, setDocuments] = useState<MemberDocument[]>([]);
   const [loadingList, setLoadingList] = useState(true);
   const [busySlot, setBusySlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const publishDocuments = useCallback(
-    (next: MemberDocument[]) => {
-      setDocuments(next);
-      onDocumentsChange?.(next);
-    },
-    [onDocumentsChange]
-  );
+  const onDocumentsChangeRef = useRef(onDocumentsChange);
+  onDocumentsChangeRef.current = onDocumentsChange;
+
+  const publishDocuments = useCallback((next: MemberDocument[]) => {
+    setDocuments((prev) => {
+      if (documentsEqual(prev, next)) return prev;
+      onDocumentsChangeRef.current?.(next);
+      return next;
+    });
+  }, []);
 
   const refreshDocuments = useCallback(async () => {
     setLoadingList(true);
     try {
-      const list =
-        props.mode === "member"
-          ? await listMemberDocuments(
-              props.applicationId,
-              props.memberId,
-              props.uploadToken
-            )
-          : await listInviteDocuments(props.inviteToken);
+      const list = isMember
+        ? await listMemberDocuments(applicationId, memberId, uploadToken)
+        : await listInviteDocuments(inviteToken);
       publishDocuments(list);
     } catch (e) {
       setError(e instanceof Error ? e.message : t(locale, "uploadFailed"));
     } finally {
       setLoadingList(false);
     }
-  }, [props, locale, publishDocuments]);
+  }, [
+    isMember,
+    applicationId,
+    memberId,
+    uploadToken,
+    inviteToken,
+    locale,
+    publishDocuments,
+  ]);
 
   useEffect(() => {
     void refreshDocuments();
