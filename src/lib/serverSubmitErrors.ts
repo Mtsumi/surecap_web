@@ -60,6 +60,7 @@ function inviteToValidationInput(
     guarantor: null,
     landlord_phone: form.landlord_phone,
     hr_phone: form.hr_phone,
+    monthly_net_income: form.monthly_net_income,
     ...toAddressValidationInput(form, { requireLeaseInName: role === "roommate" }),
   };
 }
