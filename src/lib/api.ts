@@ -51,6 +51,8 @@ export type Application = {
   referral_source: string | null;
   facebook_url: string | null;
   linkedin_url: string | null;
+  employment_type: string | null;
+  monthly_net_income: number | null;
   created_at: string;
   updated_at: string;
   primary_member_id?: number | null;
@@ -106,6 +108,8 @@ export type ApplicationUpdate = Partial<{
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
+  employment_type: "employed" | "self_employed" | "other";
+  monthly_net_income: number;
   roommates: RoommateContact[];
   guarantor: GuarantorContact | null;
 }>;
@@ -287,6 +291,8 @@ export type InviteeSubmitPayload = {
   referral_source?: string;
   facebook_url?: string;
   linkedin_url?: string;
+  employment_type: "employed" | "self_employed" | "other";
+  monthly_net_income: number;
 };
 
 export type InviteeSubmitResult = {

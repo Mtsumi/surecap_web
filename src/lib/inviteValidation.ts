@@ -7,6 +7,7 @@ import {
   validatePhoneFormat,
   validatePhones,
 } from "./applyValidation";
+import { parseMonthlyNetIncome, type EmploymentType } from "./incomeUpload";
 import { toAddressValidationInput } from "./addressFormUtils";
 
 export type InviteeRole = "roommate" | "guarantor";
@@ -33,6 +34,8 @@ export type InviteeFormFields = {
   landlord_phone: string;
   hr_name: string;
   hr_phone: string;
+  employment_type: EmploymentType;
+  monthly_net_income: string;
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
@@ -52,6 +55,8 @@ const ROOMMATE_REQUIRED: (keyof InviteeFormFields)[] = [
   "landlord_phone",
   "hr_name",
   "hr_phone",
+  "employment_type",
+  "monthly_net_income",
 ];
 
 const GUARANTOR_REQUIRED: (keyof InviteeFormFields)[] = [
@@ -62,6 +67,8 @@ const GUARANTOR_REQUIRED: (keyof InviteeFormFields)[] = [
   "phone",
   "hr_name",
   "hr_phone",
+  "employment_type",
+  "monthly_net_income",
 ];
 
 export function validateInviteeEmailMatch(
@@ -86,6 +93,12 @@ export function inviteeFieldErrors(
 
   for (const key of required) {
     const value = fields[key];
+    if (key === "monthly_net_income") {
+      if (!parseMonthlyNetIncome(String(value ?? ""))) {
+        errors[key] = "required";
+      }
+      continue;
+    }
     if (value === null || value === undefined || String(value).trim() === "") {
       errors[key] = "required";
     }

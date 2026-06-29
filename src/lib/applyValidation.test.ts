@@ -38,6 +38,7 @@ function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidati
     phone: "5145550100",
     landlord_phone: "5145550101",
     hr_phone: "5145550102",
+    monthly_net_income: "4000",
     current_address: "123 Rue Example",
     current_address_lived_from: "2024-01-01",
     current_address_lived_to: "",

@@ -5,6 +5,7 @@ import AddressAutocomplete from "../../AddressAutocomplete";
 import AddressLivedDates from "../../AddressLivedDates";
 import PhoneField from "../../PhoneField";
 import StepDocumentUpload from "../../StepDocumentUpload";
+import StepIncomeUpload from "../../StepIncomeUpload";
 import {
   InviteContext,
   InviteeSubmitPayload,
@@ -14,6 +15,7 @@ import {
   submitInvite,
 } from "@/lib/api";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
+import { incomeUploadComplete, parseMonthlyNetIncome } from "@/lib/incomeUpload";
 import { Locale, MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
   addressDatePayload,
@@ -91,6 +93,8 @@ function emptyFields(): InviteeFormFields {
     landlord_phone: "",
     hr_name: "",
     hr_phone: "",
+    employment_type: "employed",
+    monthly_net_income: "",
     referral_source: "",
     facebook_url: "",
     linkedin_url: "",
@@ -125,6 +129,7 @@ export default function InviteForm({ token }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [idKind, setIdKind] = useState<IdDocumentKind>("passport");
   const [idDocuments, setIdDocuments] = useState<MemberDocument[]>([]);
+  const [incomeDocuments, setIncomeDocuments] = useState<MemberDocument[]>([]);
 
   const inputClass =
     "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-base text-[#292524] outline-none transition focus:border-[#3d5a45]";
@@ -237,8 +242,8 @@ export default function InviteForm({ token }: Props) {
       addresses: [],
       references:
         role === "guarantor"
-          ? ["hr_name", "hr_phone"]
-          : ["landlord_name", "landlord_phone", "hr_name", "hr_phone"],
+          ? ["hr_name", "hr_phone", "monthly_net_income"]
+          : ["landlord_name", "landlord_phone", "hr_name", "hr_phone", "monthly_net_income"],
       review: [],
       done: [],
     };
@@ -263,6 +268,9 @@ export default function InviteForm({ token }: Props) {
       Object.assign(errors, addressFieldErrors(addressFields()));
     }
     if (current === "references") {
+      if (!parseMonthlyNetIncome(form.monthly_net_income)) {
+        errors.monthly_net_income = "required";
+      }
       if (role === "guarantor") {
         const hrError = validatePhoneFormat(form.hr_phone);
         if (hrError) errors.hr_phone = hrError;
@@ -287,6 +295,17 @@ export default function InviteForm({ token }: Props) {
       )
     ) {
       setError(t(locale, "idUploadRequired"));
+      return false;
+    }
+    if (
+      current === "references" &&
+      context.upload_token &&
+      !incomeUploadComplete(
+        form.employment_type,
+        incomeDocuments.map((doc) => doc.document_type)
+      )
+    ) {
+      setError(t(locale, "incomeUploadRequired"));
       return false;
     }
     return true;
@@ -330,6 +349,17 @@ export default function InviteForm({ token }: Props) {
       setStep("personal");
       return;
     }
+    if (
+      context.upload_token &&
+      !incomeUploadComplete(
+        form.employment_type,
+        incomeDocuments.map((doc) => doc.document_type)
+      )
+    ) {
+      setError(t(locale, "incomeUploadRequired"));
+      setStep("references");
+      return;
+    }
     const errors = inviteeFieldErrors(role, form, context.invited_email || "");
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
@@ -343,7 +373,7 @@ export default function InviteForm({ token }: Props) {
           key.includes("address_lived")
         ) {
           setStep("addresses");
-        } else if (key.startsWith("landlord") || key.startsWith("hr")) {
+        } else if (key.startsWith("landlord") || key.startsWith("hr") || key === "monthly_net_income") {
           setStep("references");
         }
       }
@@ -357,6 +387,8 @@ export default function InviteForm({ token }: Props) {
       email: form.email.trim(),
       phone: form.phone.trim(),
       current_address: form.current_address.trim(),
+      employment_type: form.employment_type,
+      monthly_net_income: parseMonthlyNetIncome(form.monthly_net_income) ?? 0,
       ...addressDatePayload(form),
     };
     if (form.address_not_in_canada) {
@@ -747,7 +779,33 @@ export default function InviteForm({ token }: Props) {
             continueTo(steps[stepIndex + 1]);
           }}
         >
+          <h2 className="text-base font-medium text-[#292524]">{t(locale, "references")}</h2>
           <p className="text-sm text-[#78716c]">{t(locale, "referencesNote")}</p>
+          {context?.upload_token && (
+            <StepIncomeUpload
+              mode="invite"
+              locale={locale}
+              inviteToken={token}
+              employmentType={form.employment_type}
+              onEmploymentTypeChange={(type) => setField("employment_type", type)}
+              onDocumentsChange={setIncomeDocuments}
+            />
+          )}
+          <label className="block text-sm text-[#57534e]">
+            {t(locale, "monthlyNetIncome")}
+            <input
+              type="text"
+              inputMode="decimal"
+              required
+              value={form.monthly_net_income}
+              onChange={(e) => setField("monthly_net_income", e.target.value)}
+              className={inputClassFor("monthly_net_income")}
+            />
+            {fieldHint("monthly_net_income")}
+          </label>
+          <h3 className="pt-2 text-sm font-medium text-[#292524]">
+            {t(locale, "incomeReferencesHeading")}
+          </h3>
           {role === "roommate" && (
             <>
               <label className="block text-sm text-[#57534e]">

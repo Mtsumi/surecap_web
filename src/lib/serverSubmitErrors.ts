@@ -206,6 +206,22 @@ export function mapServerSubmitError(
     };
   }
 
+  if (trimmed.startsWith("Missing required income document")) {
+    return {
+      step: "references",
+      fieldErrors: {},
+      messageKey: "incomeUploadRequired",
+    };
+  }
+
+  if (trimmed.startsWith("Missing required ID document")) {
+    return {
+      step: "personal",
+      fieldErrors: {},
+      messageKey: "idUploadRequired",
+    };
+  }
+
   return null;
 }
 

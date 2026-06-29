@@ -4,6 +4,7 @@ import {
   isValidPhone,
   normalizePhoneDigits,
 } from "./phoneValidation";
+import { parseMonthlyNetIncome } from "./incomeUpload";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -45,6 +46,7 @@ export type ApplyValidationInput = {
   phone: string;
   landlord_phone: string;
   hr_phone: string;
+  monthly_net_income: string;
 } & AddressDatesInput;
 
 function localDateString(): string {
@@ -384,6 +386,10 @@ export function findFirstValidationIssue(
   const references = validateReferencesStep(input.landlord_phone, input.hr_phone);
   if (references) return { code: references, step: "references" };
 
+  if (!parseMonthlyNetIncome(input.monthly_net_income)) {
+    return { code: "required", step: "references" };
+  }
+
   return null;
 }
 
@@ -469,6 +475,19 @@ export function referencesFieldErrors(
   const same = validatePhones(landlordPhone, hrPhone);
   if (!same) return {};
   return { landlord_phone: same, hr_phone: same };
+}
+
+export function incomeFieldErrors(
+  monthlyNetIncome: string,
+  landlordPhone: string,
+  hrPhone: string
+): ApplyFieldErrors {
+  const errors: ApplyFieldErrors = {};
+  if (!parseMonthlyNetIncome(monthlyNetIncome)) {
+    errors.monthly_net_income = "required";
+  }
+  Object.assign(errors, referencesFieldErrors(landlordPhone, hrPhone));
+  return errors;
 }
 
 export function personalFieldErrors(email: string, phone?: string): ApplyFieldErrors {

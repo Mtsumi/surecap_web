@@ -6,6 +6,7 @@ import AddressAutocomplete from "./AddressAutocomplete";
 import AddressLivedDates from "./AddressLivedDates";
 import PhoneField from "./PhoneField";
 import StepDocumentUpload from "./StepDocumentUpload";
+import StepIncomeUpload from "./StepIncomeUpload";
 import {
   ApplicationSubmit,
   Building,
@@ -31,6 +32,11 @@ import {
   saveApplyProgress,
 } from "@/lib/applyStorage";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
+import {
+  EmploymentType,
+  incomeUploadComplete,
+  parseMonthlyNetIncome,
+} from "@/lib/incomeUpload";
 import { Locale, type MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
   ApplyFieldErrors,
@@ -47,6 +53,7 @@ import {
   otherEmailsForPrimary,
   otherEmailsForRoommate,
   personalFieldErrors,
+  incomeFieldErrors,
   referencesFieldErrors,
   addressFieldErrors,
   validateEmailUniqueness,
@@ -111,6 +118,8 @@ type FormFields = {
   landlord_phone: string;
   hr_name: string;
   hr_phone: string;
+  employment_type: EmploymentType;
+  monthly_net_income: string;
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
@@ -139,6 +148,8 @@ const emptyForm: FormFields = {
   landlord_phone: "",
   hr_name: "",
   hr_phone: "",
+  employment_type: "employed",
+  monthly_net_income: "",
   referral_source: "",
   facebook_url: "",
   linkedin_url: "",
@@ -197,6 +208,8 @@ function formPayload(
     landlord_phone: fields.landlord_phone.trim(),
     hr_name: fields.hr_name.trim(),
     hr_phone: fields.hr_phone.trim(),
+    employment_type: fields.employment_type,
+    monthly_net_income: parseMonthlyNetIncome(fields.monthly_net_income) ?? 0,
     referral_source: fields.referral_source.trim(),
     facebook_url: fields.facebook_url.trim() || undefined,
     linkedin_url: fields.linkedin_url.trim() || undefined,
@@ -232,6 +245,7 @@ export default function ApplyForm() {
   const [draftSession, setDraftSession] = useState<DraftSession | null>(null);
   const [idKind, setIdKind] = useState<IdDocumentKind>("passport");
   const [idDocuments, setIdDocuments] = useState<MemberDocument[]>([]);
+  const [incomeDocuments, setIncomeDocuments] = useState<MemberDocument[]>([]);
   const [form, setForm] = useState<FormFields>(emptyForm);
   const [roommates, setRoommates] = useState<RoommateContact[]>([
     { name: "", email: "" },
@@ -404,7 +418,11 @@ export default function ApplyForm() {
       case "housing":
         return housingFieldErrors(input);
       case "references":
-        return referencesFieldErrors(input.landlord_phone, input.hr_phone);
+        return incomeFieldErrors(
+          input.monthly_net_income,
+          input.landlord_phone,
+          input.hr_phone
+        );
       default:
         return {};
     }
@@ -438,6 +456,18 @@ export default function ApplyForm() {
           setError(t(locale, "idUploadRequired"));
           setStep("personal");
           persistProgress("personal");
+          return;
+        }
+        if (
+          FORM_STEPS[i] === "references" &&
+          !incomeUploadComplete(
+            form.employment_type,
+            incomeDocuments.map((doc) => doc.document_type)
+          )
+        ) {
+          setError(t(locale, "incomeUploadRequired"));
+          setStep("references");
+          persistProgress("references");
           return;
         }
       }
@@ -545,6 +575,7 @@ export default function ApplyForm() {
     guarantor: includeGuarantor ? guarantor : null,
     landlord_phone: form.landlord_phone,
     hr_phone: form.hr_phone,
+    monthly_net_income: form.monthly_net_income,
     ...addressValidationFields(),
   });
 
@@ -588,7 +619,11 @@ export default function ApplyForm() {
             ? addressFieldErrors(input)
             : issue.step === "housing"
               ? housingFieldErrors(input)
-              : referencesFieldErrors(input.landlord_phone, input.hr_phone);
+              : incomeFieldErrors(
+                  input.monthly_net_income,
+                  input.landlord_phone,
+                  input.hr_phone
+                );
       blockWithFieldErrors(errors);
       persistProgress(issue.step);
       setStep(issue.step);
@@ -603,6 +638,17 @@ export default function ApplyForm() {
       setError(t(locale, "idUploadRequired"));
       persistProgress("personal");
       setStep("personal");
+      return;
+    }
+    if (
+      !incomeUploadComplete(
+        form.employment_type,
+        incomeDocuments.map((doc) => doc.document_type)
+      )
+    ) {
+      setError(t(locale, "incomeUploadRequired"));
+      persistProgress("references");
+      setStep("references");
       return;
     }
     setSubmitting(true);
@@ -1457,9 +1503,22 @@ export default function ApplyForm() {
               e.preventDefault();
               if (
                 blockWithFieldErrors(
-                  referencesFieldErrors(form.landlord_phone, form.hr_phone)
+                  incomeFieldErrors(
+                    form.monthly_net_income,
+                    form.landlord_phone,
+                    form.hr_phone
+                  )
                 )
               ) {
+                return;
+              }
+              if (
+                !incomeUploadComplete(
+                  form.employment_type,
+                  incomeDocuments.map((doc) => doc.document_type)
+                )
+              ) {
+                setError(t(locale, "incomeUploadRequired"));
                 return;
               }
               setError(null);
@@ -1467,6 +1526,36 @@ export default function ApplyForm() {
             }}
             className="space-y-4"
           >
+            {draftSession && (
+              <StepIncomeUpload
+                mode="member"
+                locale={locale}
+                applicationId={draftSession.applicationId}
+                memberId={draftSession.memberId}
+                uploadToken={draftSession.uploadToken}
+                employmentType={form.employment_type}
+                onEmploymentTypeChange={(type) => setField("employment_type", type)}
+                onDocumentsChange={setIncomeDocuments}
+              />
+            )}
+            <div id="apply-field-monthly_net_income">
+              <label className="block text-sm text-[#57534e]">
+                {t(locale, "monthlyNetIncome")}
+                <input
+                  type="text"
+                  inputMode="decimal"
+                  required
+                  value={form.monthly_net_income}
+                  onChange={(e) => setField("monthly_net_income", e.target.value)}
+                  className={inputClassFor("monthly_net_income")}
+                  placeholder="3500"
+                />
+              </label>
+              {fieldHint("monthly_net_income")}
+            </div>
+            <h3 className="pt-2 text-sm font-medium text-[#292524]">
+              {t(locale, "incomeReferencesHeading")}
+            </h3>
             <div id="apply-field-landlord_name">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "landlordName")}
