@@ -47,6 +47,30 @@ export function isPdfContentType(contentType: string): boolean {
   return contentType === "application/pdf" || contentType.endsWith("/pdf");
 }
 
+export function isPdfDocument(doc: {
+  content_type: string;
+  original_filename: string;
+}): boolean {
+  return (
+    isPdfContentType(doc.content_type) ||
+    doc.original_filename.toLowerCase().endsWith(".pdf")
+  );
+}
+
+export function isImageDocument(doc: {
+  content_type: string;
+  original_filename: string;
+}): boolean {
+  if (isImageContentType(doc.content_type)) return true;
+  const lower = doc.original_filename.toLowerCase();
+  return (
+    lower.endsWith(".jpg") ||
+    lower.endsWith(".jpeg") ||
+    lower.endsWith(".png") ||
+    lower.endsWith(".webp")
+  );
+}
+
 function adminFileHeaders(): Record<string, string> {
   const headers: Record<string, string> = {};
   const token = getAdminToken();
