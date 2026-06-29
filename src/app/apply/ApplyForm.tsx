@@ -36,6 +36,7 @@ import {
   EmploymentType,
   incomeUploadComplete,
   parseMonthlyNetIncome,
+  formatMonthlyNetIncome,
 } from "@/lib/incomeUpload";
 import { Locale, type MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
@@ -54,12 +55,11 @@ import {
   otherEmailsForRoommate,
   personalFieldErrors,
   incomeFieldErrors,
-  referencesFieldErrors,
   addressFieldErrors,
   validateEmailUniqueness,
   validatePhones,
 } from "@/lib/applyValidation";
-import { mapServerSubmitError } from "@/lib/serverSubmitErrors";
+import { mapSubmitError } from "@/lib/serverSubmitErrors";
 
 const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   move_in_too_soon: "validationMoveInTooSoon",
@@ -259,6 +259,9 @@ export default function ApplyForm() {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [errorStep, setErrorStep] = useState<(typeof FORM_STEPS)[number] | null>(
+    null
+  );
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<string, ApplyValidationCode>>
   >({});
@@ -418,11 +421,7 @@ export default function ApplyForm() {
       case "housing":
         return housingFieldErrors(input);
       case "references":
-        return incomeFieldErrors(
-          input.monthly_net_income,
-          input.landlord_phone,
-          input.hr_phone
-        );
+        return incomeFieldErrors(input);
       default:
         return {};
     }
@@ -430,6 +429,7 @@ export default function ApplyForm() {
 
   const continueToStep = (next: Step) => {
     setError(null);
+    setErrorStep(null);
     persistProgress(next);
     setStep(next);
   };
@@ -442,6 +442,7 @@ export default function ApplyForm() {
       for (let i = currentIdx; i < targetIdx; i++) {
         const stepErrors = fieldErrorsForFormStep(FORM_STEPS[i]);
         if (blockWithFieldErrors(stepErrors)) {
+          setErrorStep(FORM_STEPS[i]);
           setStep(FORM_STEPS[i]);
           persistProgress(FORM_STEPS[i]);
           return;
@@ -454,6 +455,7 @@ export default function ApplyForm() {
           )
         ) {
           setError(t(locale, "idUploadRequired"));
+          setErrorStep("personal");
           setStep("personal");
           persistProgress("personal");
           return;
@@ -466,6 +468,7 @@ export default function ApplyForm() {
           )
         ) {
           setError(t(locale, "incomeUploadRequired"));
+          setErrorStep("references");
           setStep("references");
           persistProgress("references");
           return;
@@ -574,7 +577,9 @@ export default function ApplyForm() {
     includeGuarantor,
     guarantor: includeGuarantor ? guarantor : null,
     landlord_phone: form.landlord_phone,
+    landlord_name: form.landlord_name,
     hr_phone: form.hr_phone,
+    hr_name: form.hr_name,
     monthly_net_income: form.monthly_net_income,
     ...addressValidationFields(),
   });
@@ -619,12 +624,9 @@ export default function ApplyForm() {
             ? addressFieldErrors(input)
             : issue.step === "housing"
               ? housingFieldErrors(input)
-              : incomeFieldErrors(
-                  input.monthly_net_income,
-                  input.landlord_phone,
-                  input.hr_phone
-                );
+              : incomeFieldErrors(input);
       blockWithFieldErrors(errors);
+      setErrorStep(issue.step);
       persistProgress(issue.step);
       setStep(issue.step);
       return;
@@ -636,6 +638,7 @@ export default function ApplyForm() {
       )
     ) {
       setError(t(locale, "idUploadRequired"));
+      setErrorStep("personal");
       persistProgress("personal");
       setStep("personal");
       return;
@@ -647,6 +650,7 @@ export default function ApplyForm() {
       )
     ) {
       setError(t(locale, "incomeUploadRequired"));
+      setErrorStep("references");
       persistProgress("references");
       setStep("references");
       return;
@@ -668,16 +672,17 @@ export default function ApplyForm() {
       setDraftSession(null);
       setStep("done");
     } catch (err) {
-      const message = err instanceof Error ? err.message : t(locale, "error");
-      const mapped = mapServerSubmitError(message, input);
+      const mapped = mapSubmitError(err, input);
       if (mapped) {
         applyFieldErrors(mapped.fieldErrors);
         setError(t(locale, mapped.messageKey));
+        setErrorStep(mapped.step);
         persistProgress(mapped.step);
         setStep(mapped.step);
         const key = firstFieldErrorKey(mapped.fieldErrors);
         if (key) scrollToField(key);
       } else {
+        const message = err instanceof Error ? err.message : t(locale, "error");
         setError(message);
       }
     } finally {
@@ -693,6 +698,7 @@ export default function ApplyForm() {
     setForm((f) => ({ ...f, [key]: value }));
     clearFieldError(key);
     setError(null);
+    setErrorStep(null);
   };
 
   const formStepIndex =
@@ -744,6 +750,7 @@ export default function ApplyForm() {
             {FORM_STEPS.map((s, i) => {
               const active = step === s;
               const done = formStepIndex > i || step === "done";
+              const hasError = errorStep === s;
               return (
                 <button
                   key={s}
@@ -751,23 +758,33 @@ export default function ApplyForm() {
                   onClick={() => goToFormStep(s)}
                   aria-current={active ? "step" : undefined}
                   className={`flex flex-1 flex-col gap-1.5 rounded-md px-1 py-1.5 text-left transition ${
-                    active
-                      ? "bg-[#e8f0ea] ring-1 ring-[#3d5a45]/40"
-                      : "hover:bg-[#f5f2ec]"
+                    hasError
+                      ? "bg-[#fdf5f5] ring-1 ring-[#b91c1c]/60"
+                      : active
+                        ? "bg-[#e8f0ea] ring-1 ring-[#3d5a45]/40"
+                        : "hover:bg-[#f5f2ec]"
                   }`}
                 >
                   <div
                     className={`rounded-full transition-colors ${
                       active ? "h-1.5" : "h-1"
-                    } ${active || done ? "bg-[#3d5a45]" : "bg-[#e7e0d5]"}`}
+                    } ${
+                      hasError
+                        ? "bg-[#b91c1c]"
+                        : active || done
+                          ? "bg-[#3d5a45]"
+                          : "bg-[#e7e0d5]"
+                    }`}
                   />
                   <span
                     className={`truncate text-[0.65rem] leading-tight ${
-                      active
-                        ? "font-semibold text-[#1c1917]"
-                        : done
-                          ? "font-medium text-[#44403c]"
-                          : "text-[#a8a29e]"
+                      hasError
+                        ? "font-semibold text-[#7f1d1d]"
+                        : active
+                          ? "font-semibold text-[#1c1917]"
+                          : done
+                            ? "font-medium text-[#44403c]"
+                            : "text-[#a8a29e]"
                     }`}
                   >
                     {stepLabel(s, locale)}
@@ -1501,15 +1518,8 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (
-                blockWithFieldErrors(
-                  incomeFieldErrors(
-                    form.monthly_net_income,
-                    form.landlord_phone,
-                    form.hr_phone
-                  )
-                )
-              ) {
+              if (blockWithFieldErrors(incomeFieldErrors(form))) {
+                setErrorStep("references");
                 return;
               }
               if (
@@ -1519,6 +1529,7 @@ export default function ApplyForm() {
                 )
               ) {
                 setError(t(locale, "incomeUploadRequired"));
+                setErrorStep("references");
                 return;
               }
               setError(null);
@@ -1541,15 +1552,23 @@ export default function ApplyForm() {
             <div id="apply-field-monthly_net_income">
               <label className="block text-sm text-[#57534e]">
                 {t(locale, "monthlyNetIncome")}
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  required
-                  value={form.monthly_net_income}
-                  onChange={(e) => setField("monthly_net_income", e.target.value)}
-                  className={inputClassFor("monthly_net_income")}
-                  placeholder="3500"
-                />
+                <span className="mt-0.5 block text-xs text-[#a8a29e]">
+                  {t(locale, "monthlyNetIncomeCad")}
+                </span>
+                <div className="relative mt-1">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#78716c]">
+                    $
+                  </span>
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    required
+                    value={form.monthly_net_income}
+                    onChange={(e) => setField("monthly_net_income", e.target.value)}
+                    className={`${inputClassFor("monthly_net_income")} pl-7`}
+                    placeholder="3,500"
+                  />
+                </div>
               </label>
               {fieldHint("monthly_net_income")}
             </div>
@@ -1762,6 +1781,21 @@ export default function ApplyForm() {
             <ReviewRow
               label={t(locale, "moveInDate")}
               value={form.move_in_date}
+            />
+            <ReviewRow
+              label={t(locale, "employmentType")}
+              value={t(
+                locale,
+                form.employment_type === "employed"
+                  ? "employmentEmployed"
+                  : form.employment_type === "self_employed"
+                    ? "employmentSelfEmployed"
+                    : "employmentOther"
+              )}
+            />
+            <ReviewRow
+              label={t(locale, "monthlyNetIncome")}
+              value={formatMonthlyNetIncome(locale, form.monthly_net_income)}
             />
             <ReviewRow
               label={t(locale, "landlordName")}

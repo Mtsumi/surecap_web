@@ -15,7 +15,7 @@ import {
   submitInvite,
 } from "@/lib/api";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
-import { incomeUploadComplete, parseMonthlyNetIncome } from "@/lib/incomeUpload";
+import { incomeUploadComplete, parseMonthlyNetIncome, formatMonthlyNetIncome } from "@/lib/incomeUpload";
 import { Locale, MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
   addressDatePayload,
@@ -421,13 +421,13 @@ export default function InviteForm({ token }: Props) {
       await submitInvite(token, payload);
       setStep("done");
     } catch (e) {
-      const message = e instanceof Error ? e.message : t(locale, "error");
-      const mapped = mapInviteServerSubmitError(message, role, form);
+      const mapped = mapInviteServerSubmitError(e, role, form);
       if (mapped) {
         setFieldErrors(mapped.fieldErrors);
         setError(t(locale, mapped.messageKey));
         setStep(mapped.step);
       } else {
+        const message = e instanceof Error ? e.message : t(locale, "error");
         setError(message);
       }
     } finally {
@@ -793,14 +793,23 @@ export default function InviteForm({ token }: Props) {
           )}
           <label className="block text-sm text-[#57534e]">
             {t(locale, "monthlyNetIncome")}
-            <input
-              type="text"
-              inputMode="decimal"
-              required
-              value={form.monthly_net_income}
-              onChange={(e) => setField("monthly_net_income", e.target.value)}
-              className={inputClassFor("monthly_net_income")}
-            />
+            <span className="mt-0.5 block text-xs text-[#a8a29e]">
+              {t(locale, "monthlyNetIncomeCad")}
+            </span>
+            <div className="relative mt-1">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#78716c]">
+                $
+              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                required
+                value={form.monthly_net_income}
+                onChange={(e) => setField("monthly_net_income", e.target.value)}
+                className={`${inputClassFor("monthly_net_income")} pl-7`}
+                placeholder="3,500"
+              />
+            </div>
             {fieldHint("monthly_net_income")}
           </label>
           <h3 className="pt-2 text-sm font-medium text-[#292524]">
