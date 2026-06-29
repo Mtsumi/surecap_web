@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { ApplyValidationInput } from "./applyValidation";
-import { mapServerSubmitError } from "./serverSubmitErrors";
+import { mapPydanticValidationErrors, mapServerSubmitError } from "./serverSubmitErrors";
 
 function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidationInput {
   return {
@@ -10,7 +10,9 @@ function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidati
     roommates: [],
     includeGuarantor: false,
     guarantor: null,
+    landlord_name: "Landlord Co",
     landlord_phone: "+15145550101",
+    hr_name: "HR Dept",
     hr_phone: "+15145550102",
     monthly_net_income: "4000",
     current_address: "123 Rue Example",
@@ -76,5 +78,24 @@ describe("mapServerSubmitError", () => {
     expect(result?.step).toBe("housing");
     expect(result?.fieldErrors.roommate_email_0).toBe("duplicate_email");
     expect(result?.fieldErrors.roommate_email_1).toBe("duplicate_email");
+  });
+});
+
+describe("mapPydanticValidationErrors", () => {
+  it("routes empty hr_phone to references step", () => {
+    const result = mapPydanticValidationErrors(
+      [
+        {
+          type: "string_too_short",
+          loc: ["body", "hr_phone"],
+          msg: "String should have at least 7 characters",
+          input: "",
+        },
+      ],
+      baseInput({ hr_phone: "" })
+    );
+    expect(result?.step).toBe("references");
+    expect(result?.fieldErrors.hr_phone).toBe("required");
+    expect(result?.messageKey).toBe("fieldRequired");
   });
 });

@@ -7,6 +7,8 @@ import {
   validatePhoneFormat,
   validatePhones,
 } from "./applyValidation";
+import type { ApiValidationErrorItem } from "./api";
+import { ApiError } from "./api";
 import { toAddressValidationInput } from "./addressFormUtils";
 import type { InviteeFieldErrors, InviteeFormFields, InviteeRole } from "./inviteValidation";
 import type { MessageKey } from "./i18n";
@@ -59,7 +61,9 @@ function inviteToValidationInput(
     includeGuarantor: false,
     guarantor: null,
     landlord_phone: form.landlord_phone,
+    landlord_name: form.landlord_name,
     hr_phone: form.hr_phone,
+    hr_name: form.hr_name,
     monthly_net_income: form.monthly_net_income,
     ...toAddressValidationInput(form, { requireLeaseInName: role === "roommate" }),
   };
@@ -70,12 +74,117 @@ function applyStepToInviteStep(
   role: InviteeRole,
   fieldErrors: ApplyFieldErrors
 ): InviteFormStep {
+  if (step === "other") {
+    return "references";
+  }
   if (step === "housing") {
     if (role === "guarantor") return "personal";
     if (fieldErrors.lease_in_name) return "addresses";
     return "personal";
   }
   return step;
+}
+
+const PYDANTIC_FIELD_STEP: Record<string, ApplyFormStep> = {
+  given_name: "personal",
+  family_name: "personal",
+  date_of_birth: "personal",
+  email: "personal",
+  phone: "personal",
+  current_address: "addresses",
+  current_place_id: "addresses",
+  address_not_in_canada: "addresses",
+  previous_address: "addresses",
+  previous_place_id: "addresses",
+  current_address_lived_from: "addresses",
+  current_address_lived_to: "addresses",
+  previous_address_lived_from: "addresses",
+  previous_address_lived_to: "addresses",
+  lease_in_name: "housing",
+  move_in_date: "housing",
+  renting_with_others: "housing",
+  roommates: "housing",
+  guarantor: "housing",
+  employment_type: "references",
+  monthly_net_income: "references",
+  landlord_name: "references",
+  landlord_phone: "references",
+  hr_name: "references",
+  hr_phone: "references",
+  referral_source: "other",
+  facebook_url: "other",
+  linkedin_url: "other",
+};
+
+function pydanticFieldName(loc: (string | number)[]): string | null {
+  const bodyIndex = loc.indexOf("body");
+  if (bodyIndex < 0) return null;
+  const field = loc[bodyIndex + 1];
+  return typeof field === "string" ? field : null;
+}
+
+function pydanticFieldErrorCode(
+  item: ApiValidationErrorItem,
+  field: string
+): ApplyFieldErrors[string] {
+  if (item.type === "missing" || item.type === "string_too_short") {
+    return "required";
+  }
+  if (field.includes("phone")) {
+    return "invalid_phone";
+  }
+  if (field === "email") {
+    return "invalid_email";
+  }
+  return "required";
+}
+
+/** Map FastAPI/Pydantic 422 field errors to form step + field highlights. */
+export function mapPydanticValidationErrors(
+  errors: ApiValidationErrorItem[],
+  input: ApplyValidationInput
+): ServerSubmitErrorResult | null {
+  const fieldErrors: ApplyFieldErrors = {};
+  let step: ApplyFormStep = "personal";
+
+  for (const item of errors) {
+    const field = pydanticFieldName(item.loc);
+    if (!field) continue;
+    fieldErrors[field] = pydanticFieldErrorCode(item, field);
+    step = PYDANTIC_FIELD_STEP[field] ?? step;
+  }
+
+  if (Object.keys(fieldErrors).length === 0) {
+    return null;
+  }
+
+  const firstField = Object.keys(fieldErrors)[0];
+  step = PYDANTIC_FIELD_STEP[firstField] ?? step;
+
+  const messageKey =
+    fieldErrors[firstField] === "invalid_phone"
+      ? "validationInvalidPhone"
+      : fieldErrors[firstField] === "invalid_email"
+        ? "validationInvalidEmail"
+        : fieldErrors[firstField] === "landlord_hr_same_phone"
+          ? "validationLandlordHrSamePhone"
+          : "fieldRequired";
+
+  // Re-run client rules when phones are present so same-phone check still applies.
+  if (step === "references" && !fieldErrors.landlord_phone && !fieldErrors.hr_phone) {
+    const phoneError = validatePhones(input.landlord_phone, input.hr_phone);
+    if (phoneError) {
+      fieldErrors.landlord_phone = phoneError;
+      fieldErrors.hr_phone = phoneError;
+      return {
+        step,
+        fieldErrors,
+        messageKey: "validationLandlordHrSamePhone",
+      };
+    }
+  }
+
+  return { step, fieldErrors, messageKey };
 }
 
 /** Map API submit error messages to form step + field highlights. */
@@ -226,14 +335,26 @@ export function mapServerSubmitError(
   return null;
 }
 
+export function mapSubmitError(
+  err: unknown,
+  input: ApplyValidationInput
+): ServerSubmitErrorResult | null {
+  if (err instanceof ApiError && err.validationErrors.length > 0) {
+    const mapped = mapPydanticValidationErrors(err.validationErrors, input);
+    if (mapped) return mapped;
+  }
+  const message = err instanceof Error ? err.message : "";
+  return mapServerSubmitError(message, input);
+}
+
 export function mapInviteServerSubmitError(
-  message: string,
+  err: unknown,
   role: InviteeRole,
   form: InviteeFormFields
 ): InviteServerSubmitErrorResult | null {
-  const trimmed = message.trim();
+  const message = err instanceof Error ? err.message : "";
 
-  if (trimmed === "Email must match the address used for your invitation") {
+  if (message.trim() === "Email must match the address used for your invitation") {
     return {
       step: "personal",
       fieldErrors: { email: "invite_email_mismatch" },
@@ -241,7 +362,7 @@ export function mapInviteServerSubmitError(
     };
   }
 
-  const mapped = mapServerSubmitError(message, inviteToValidationInput(role, form));
+  const mapped = mapSubmitError(err, inviteToValidationInput(role, form));
   if (!mapped) return null;
   return {
     step: applyStepToInviteStep(mapped.step, role, mapped.fieldErrors),

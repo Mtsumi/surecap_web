@@ -3,6 +3,7 @@ import {
   incomeSlotsForType,
   incomeUploadComplete,
   parseMonthlyNetIncome,
+  formatMonthlyNetIncome,
   staleIncomeDocumentTypes,
 } from "./incomeUpload";
 
@@ -28,7 +29,13 @@ describe("incomeUpload", () => {
 
   it("parses monthly net income", () => {
     expect(parseMonthlyNetIncome("3,500.50")).toBe(3500.5);
+    expect(parseMonthlyNetIncome("$4200")).toBe(4200);
     expect(parseMonthlyNetIncome("0")).toBeNull();
     expect(parseMonthlyNetIncome("")).toBeNull();
+  });
+
+  it("formats monthly net income as CAD currency", () => {
+    expect(formatMonthlyNetIncome("en", "3500")).toMatch(/\$3,500\.00/);
+    expect(formatMonthlyNetIncome("fr", 4200)).toContain("4");
   });
 });

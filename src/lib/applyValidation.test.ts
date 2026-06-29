@@ -12,6 +12,7 @@ import {
   otherEmailsForRoommate,
   parseUnitAvailableDate,
   personalFieldErrors,
+  incomeFieldErrors,
   referencesFieldErrors,
   stepForValidationCode,
   unitEarliestMoveIn,
@@ -36,7 +37,9 @@ function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidati
     includeGuarantor: false,
     guarantor: null,
     phone: "5145550100",
+    landlord_name: "Marie Landlord",
     landlord_phone: "5145550101",
+    hr_name: "Jean HR",
     hr_phone: "5145550102",
     monthly_net_income: "4000",
     current_address: "123 Rue Example",
@@ -296,5 +299,14 @@ describe("field error maps", () => {
       landlord_phone: "landlord_hr_same_phone",
       hr_phone: "landlord_hr_same_phone",
     });
+    expect(
+      incomeFieldErrors({
+        monthly_net_income: "4000",
+        landlord_name: "Marie",
+        landlord_phone: "5145550101",
+        hr_name: "Jean",
+        hr_phone: "",
+      })
+    ).toEqual({ hr_phone: "required" });
   });
 });
