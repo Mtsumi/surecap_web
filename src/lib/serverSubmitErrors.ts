@@ -194,29 +194,36 @@ export function mapServerSubmitError(
 ): ServerSubmitErrorResult | null {
   const trimmed = message.trim();
 
-  if (trimmed === "Invalid phone number") {
+  const phoneFieldMatch = trimmed.match(/^Invalid phone number \((\w+)\)$/);
+  if (phoneFieldMatch || trimmed === "Invalid phone number") {
     const fieldErrors: ApplyFieldErrors = {};
-    const applicant = validatePhoneFormat(input.phone);
-    if (applicant) fieldErrors.phone = applicant;
-    const landlord = validatePhoneFormat(input.landlord_phone);
-    if (landlord) fieldErrors.landlord_phone = landlord;
-    const hr = validatePhoneFormat(input.hr_phone);
-    if (hr) fieldErrors.hr_phone = hr;
-    if (input.includeGuarantor && input.guarantor?.phone) {
-      const guarantor = validatePhoneFormat(input.guarantor.phone);
-      if (guarantor) fieldErrors.guarantor_phone = guarantor;
+    if (phoneFieldMatch) {
+      fieldErrors[phoneFieldMatch[1]] = "invalid_phone";
+    } else {
+      const applicant = validatePhoneFormat(input.phone);
+      if (applicant) fieldErrors.phone = applicant;
+      const landlord = validatePhoneFormat(input.landlord_phone);
+      if (landlord) fieldErrors.landlord_phone = landlord;
+      const hr = validatePhoneFormat(input.hr_phone);
+      if (hr) fieldErrors.hr_phone = hr;
+      if (input.includeGuarantor && input.guarantor?.phone) {
+        const guarantor = validatePhoneFormat(input.guarantor.phone);
+        if (guarantor) fieldErrors.guarantor_phone = guarantor;
+      }
+      if (Object.keys(fieldErrors).length === 0) {
+        fieldErrors.phone = "invalid_phone";
+        fieldErrors.landlord_phone = "invalid_phone";
+        fieldErrors.hr_phone = "invalid_phone";
+        if (input.includeGuarantor) fieldErrors.guarantor_phone = "invalid_phone";
+      }
     }
-    if (Object.keys(fieldErrors).length === 0) {
-      fieldErrors.phone = "invalid_phone";
-      fieldErrors.landlord_phone = "invalid_phone";
-      fieldErrors.hr_phone = "invalid_phone";
-      if (input.includeGuarantor) fieldErrors.guarantor_phone = "invalid_phone";
-    }
-    const step: ApplyFormStep = fieldErrors.phone
-      ? "personal"
-      : fieldErrors.guarantor_phone
-        ? "housing"
-        : "references";
+    const firstKey = Object.keys(fieldErrors)[0];
+    const step: ApplyFormStep =
+      firstKey === "phone"
+        ? "personal"
+        : firstKey === "guarantor_phone"
+          ? "housing"
+          : "references";
     return { step, fieldErrors, messageKey: "validationInvalidPhone" };
   }
 
