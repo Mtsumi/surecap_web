@@ -35,21 +35,27 @@ type ApplicationDocumentsProps = {
   memberDisplayName: (member: ApplicationMember) => string;
 };
 
-function PdfPlaceholder({ compact = false }: { compact?: boolean }) {
+function PdfPlaceholder() {
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[#f8f6f1] text-[#78716c]">
-      <div
-        className={`flex items-center justify-center rounded-md border border-[#ddd6c8] bg-white font-semibold uppercase tracking-wide text-[#b45309] ${
-          compact ? "h-10 w-8 text-[10px]" : "h-14 w-11 text-xs"
-        }`}
-      >
+    <div className="flex h-full w-full flex-col items-center justify-center bg-[#f8f6f1] text-[#78716c]">
+      <div className="flex h-14 w-11 items-center justify-center rounded-md border border-[#ddd6c8] bg-white text-xs font-semibold uppercase tracking-wide text-[#b45309]">
         PDF
       </div>
     </div>
   );
 }
 
-function DocumentThumbnail({
+function ImagePlaceholder() {
+  return (
+    <div className="flex h-full w-full flex-col items-center justify-center bg-[#f8f6f1] text-[#78716c]">
+      <div className="flex h-14 w-11 items-center justify-center rounded-md border border-[#ddd6c8] bg-white text-xs font-semibold uppercase tracking-wide text-[#3d5a45]">
+        IMG
+      </div>
+    </div>
+  );
+}
+
+function DocumentCard({
   applicationId,
   document,
   label,
@@ -60,35 +66,8 @@ function DocumentThumbnail({
   label: string;
   onPreview: () => void;
 }) {
-  const [thumbUrl, setThumbUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(isImageDocument(document));
-  const [error, setError] = useState(false);
   const showImage = isImageDocument(document);
   const showPdf = isPdfDocument(document);
-
-  useEffect(() => {
-    if (!showImage) return;
-    let cancelled = false;
-    let objectUrl: string | null = null;
-
-    fetchMemberDocumentBlob(applicationId, document.id, "inline")
-      .then((blob) => {
-        if (cancelled) return;
-        objectUrl = URL.createObjectURL(blob);
-        setThumbUrl(objectUrl);
-      })
-      .catch(() => {
-        if (!cancelled) setError(true);
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [applicationId, document.id, showImage]);
 
   const onDownload = async (event: React.MouseEvent) => {
     event.stopPropagation();
@@ -96,7 +75,7 @@ function DocumentThumbnail({
       const blob = await fetchMemberDocumentBlob(applicationId, document.id, "attachment");
       triggerBlobDownload(blob, document.original_filename);
     } catch {
-      // parent page may surface errors later
+      // surfaced in preview modal when user tries Aperçu
     }
   };
 
@@ -107,22 +86,7 @@ function DocumentThumbnail({
         onClick={onPreview}
         className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-[#faf8f4] p-2 text-left"
       >
-        {showImage ? (
-          loading ? (
-            <div className="h-full w-full animate-pulse rounded bg-[#ede8df]" />
-          ) : thumbUrl && !error ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={thumbUrl}
-              alt={label}
-              className="max-h-full max-w-full object-contain"
-            />
-          ) : (
-            <PdfPlaceholder compact />
-          )
-        ) : showPdf ? (
-          <PdfPlaceholder />
-        ) : (
+        {showImage ? <ImagePlaceholder /> : showPdf ? <PdfPlaceholder /> : (
           <div className="px-3 text-center text-xs text-[#78716c]">{label}</div>
         )}
       </button>
@@ -132,6 +96,13 @@ function DocumentThumbnail({
           {document.original_filename}
         </p>
         <div className="mt-2 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={onPreview}
+            className="text-[11px] font-medium text-[#57534e] underline-offset-2 hover:underline"
+          >
+            Aperçu
+          </button>
           <span className="text-[10px] text-[#a8a29e]">{formatFileSize(document.byte_size)}</span>
           <button
             type="button"
@@ -146,39 +117,13 @@ function DocumentThumbnail({
   );
 }
 
-function SummaryThumbnail({
+function SummaryCard({
   applicationId,
   onPreview,
 }: {
   applicationId: number;
   onPreview: () => void;
 }) {
-  const [available, setAvailable] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetchSummaryPdfBlob(applicationId, "inline")
-      .then(() => {
-        if (!cancelled) setAvailable(true);
-      })
-      .catch(() => {
-        if (!cancelled) setAvailable(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [applicationId]);
-
-  if (available === null) {
-    return (
-      <div className="aspect-[3/4] animate-pulse rounded-lg border border-[#e7e0d5] bg-[#ede8df]" />
-    );
-  }
-
-  if (!available) {
-    return null;
-  }
-
   const onDownload = async (event: React.MouseEvent) => {
     event.stopPropagation();
     const blob = await fetchSummaryPdfBlob(applicationId, "attachment");
@@ -197,7 +142,14 @@ function SummaryThumbnail({
       <div className="border-t border-[#f0ebe3] px-3 py-2">
         <p className="text-xs font-medium text-[#292524]">Résumé du dossier</p>
         <p className="mt-0.5 text-[11px] text-[#78716c]">application_summary.pdf</p>
-        <div className="mt-2 flex justify-end">
+        <div className="mt-2 flex items-center justify-between gap-2">
+          <button
+            type="button"
+            onClick={onPreview}
+            className="text-[11px] font-medium text-[#57534e] underline-offset-2 hover:underline"
+          >
+            Aperçu
+          </button>
           <button
             type="button"
             onClick={onDownload}
@@ -229,9 +181,7 @@ function DocumentPreviewModal({
   const contentType =
     target.kind === "member" ? target.document.content_type : target.contentType;
   const previewAsImage =
-    target.kind === "member"
-      ? isImageDocument(target.document)
-      : false;
+    target.kind === "member" ? isImageDocument(target.document) : false;
   const previewAsPdf =
     target.kind === "member"
       ? isPdfDocument(target.document)
@@ -328,7 +278,7 @@ function DocumentPreviewModal({
           {loading ? (
             <p className="text-sm text-[#78716c]">Chargement…</p>
           ) : error ? (
-            <p className="text-sm text-[#b91c1c]">{error}</p>
+            <p className="max-w-md text-center text-sm text-[#b91c1c]">{error}</p>
           ) : blobUrl && previewAsImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -373,11 +323,15 @@ export default function ApplicationDocuments({
 
   return (
     <>
+      <p className="mt-2 text-xs text-[#78716c]">
+        Les fichiers sont chargés depuis Dropbox à la demande (aperçu ou téléchargement).
+      </p>
+
       {summaryPdfAvailable && (
         <div className="mt-4">
           <h3 className="text-sm font-medium text-[#57534e]">Dossier</h3>
           <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <SummaryThumbnail
+            <SummaryCard
               applicationId={applicationId}
               onPreview={() =>
                 setPreview({
@@ -405,7 +359,7 @@ export default function ApplicationDocuments({
             {(member.documents ?? []).map((document) => {
               const label = documentTypeLabel(document.document_type);
               return (
-                <DocumentThumbnail
+                <DocumentCard
                   key={document.id}
                   applicationId={applicationId}
                   document={document}
