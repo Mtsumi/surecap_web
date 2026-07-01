@@ -81,7 +81,8 @@ function adminFileHeaders(): Record<string, string> {
 
 async function adminFileFetch(
   path: string,
-  disposition: DocumentDisposition
+  disposition: DocumentDisposition,
+  fallbackContentType?: string
 ): Promise<Blob> {
   const url = new URL(`${API_URL}${path}`);
   url.searchParams.set("disposition", disposition);
@@ -107,10 +108,24 @@ async function adminFileFetch(
     if (res.status === 503 && message.toLowerCase().includes("dropbox")) {
       throw new Error(message);
     }
+    if (res.status === 404) {
+      throw new Error(message || "Fichier introuvable dans Dropbox");
+    }
     throw new Error(message || "Échec du téléchargement");
   }
 
-  return res.blob();
+  const headerType = res.headers.get("content-type")?.split(";")[0]?.trim();
+  const buffer = await res.arrayBuffer();
+  if (buffer.byteLength === 0) {
+    throw new Error("Fichier vide ou introuvable");
+  }
+
+  const type =
+    headerType && headerType !== "application/octet-stream"
+      ? headerType
+      : fallbackContentType || headerType || "application/octet-stream";
+
+  return new Blob([buffer], { type });
 }
 
 export function memberDocumentFilePath(
@@ -127,16 +142,21 @@ export function summaryPdfPath(applicationId: number): string {
 export function fetchMemberDocumentBlob(
   applicationId: number,
   documentId: number,
-  disposition: DocumentDisposition = "inline"
+  disposition: DocumentDisposition = "inline",
+  fallbackContentType?: string
 ): Promise<Blob> {
-  return adminFileFetch(memberDocumentFilePath(applicationId, documentId), disposition);
+  return adminFileFetch(
+    memberDocumentFilePath(applicationId, documentId),
+    disposition,
+    fallbackContentType
+  );
 }
 
 export function fetchSummaryPdfBlob(
   applicationId: number,
   disposition: DocumentDisposition = "inline"
 ): Promise<Blob> {
-  return adminFileFetch(summaryPdfPath(applicationId), disposition);
+  return adminFileFetch(summaryPdfPath(applicationId), disposition, "application/pdf");
 }
 
 export function triggerBlobDownload(blob: Blob, filename: string): void {
