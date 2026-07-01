@@ -100,9 +100,12 @@ async function adminFileFetch(
     let message = res.statusText;
     try {
       const body = (await res.json()) as { message?: string; detail?: string };
-      message = body.message || body.detail || message;
+      message = body.detail || body.message || message;
     } catch {
       // binary or empty body
+    }
+    if (res.status === 503 && message.toLowerCase().includes("dropbox")) {
+      throw new Error(message);
     }
     throw new Error(message || "Échec du téléchargement");
   }
