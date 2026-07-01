@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { ApplicationMember } from "@/lib/adminApi";
+import { regenerateApplicationSummary } from "@/lib/adminApi";
 import {
   MemberDocument,
   documentTypeLabel,
@@ -9,8 +10,8 @@ import {
   fetchSummaryPdfBlob,
   formatFileSize,
   isImageDocument,
-  isPdfDocument,
   isPdfContentType,
+  isPdfDocument,
   triggerBlobDownload,
 } from "@/lib/adminDocuments";
 
@@ -31,137 +32,11 @@ type ApplicationDocumentsProps = {
   applicationId: number;
   members: ApplicationMember[];
   summaryPdfAvailable: boolean;
+  dropboxDossierReady: boolean;
   memberRoleLabel: (role: string) => string;
   memberDisplayName: (member: ApplicationMember) => string;
+  onSummaryRegenerated?: () => void;
 };
-
-function PdfPlaceholder() {
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-[#f8f6f1] text-[#78716c]">
-      <div className="flex h-14 w-11 items-center justify-center rounded-md border border-[#ddd6c8] bg-white text-xs font-semibold uppercase tracking-wide text-[#b45309]">
-        PDF
-      </div>
-    </div>
-  );
-}
-
-function ImagePlaceholder() {
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-[#f8f6f1] text-[#78716c]">
-      <div className="flex h-14 w-11 items-center justify-center rounded-md border border-[#ddd6c8] bg-white text-xs font-semibold uppercase tracking-wide text-[#3d5a45]">
-        IMG
-      </div>
-    </div>
-  );
-}
-
-function DocumentCard({
-  applicationId,
-  document,
-  label,
-  onPreview,
-}: {
-  applicationId: number;
-  document: MemberDocument;
-  label: string;
-  onPreview: () => void;
-}) {
-  const showImage = isImageDocument(document);
-  const showPdf = isPdfDocument(document);
-
-  const onDownload = async (event: React.MouseEvent) => {
-    event.stopPropagation();
-    try {
-      const blob = await fetchMemberDocumentBlob(applicationId, document.id, "attachment");
-      triggerBlobDownload(blob, document.original_filename);
-    } catch {
-      // surfaced in preview modal when user tries Aperçu
-    }
-  };
-
-  return (
-    <article className="flex flex-col overflow-hidden rounded-lg border border-[#e7e0d5] bg-white shadow-sm transition hover:border-[#c9c0b3]">
-      <button
-        type="button"
-        onClick={onPreview}
-        className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-[#faf8f4] p-2 text-left"
-      >
-        {showImage ? <ImagePlaceholder /> : showPdf ? <PdfPlaceholder /> : (
-          <div className="px-3 text-center text-xs text-[#78716c]">{label}</div>
-        )}
-      </button>
-      <div className="border-t border-[#f0ebe3] px-3 py-2">
-        <p className="text-xs font-medium text-[#292524]">{label}</p>
-        <p className="mt-0.5 truncate text-[11px] text-[#78716c]" title={document.original_filename}>
-          {document.original_filename}
-        </p>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={onPreview}
-            className="text-[11px] font-medium text-[#57534e] underline-offset-2 hover:underline"
-          >
-            Aperçu
-          </button>
-          <span className="text-[10px] text-[#a8a29e]">{formatFileSize(document.byte_size)}</span>
-          <button
-            type="button"
-            onClick={onDownload}
-            className="text-[11px] font-medium text-[#3d5a45] underline-offset-2 hover:underline"
-          >
-            Télécharger
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
-
-function SummaryCard({
-  applicationId,
-  onPreview,
-}: {
-  applicationId: number;
-  onPreview: () => void;
-}) {
-  const onDownload = async (event: React.MouseEvent) => {
-    event.stopPropagation();
-    const blob = await fetchSummaryPdfBlob(applicationId, "attachment");
-    triggerBlobDownload(blob, "application_summary.pdf");
-  };
-
-  return (
-    <article className="flex flex-col overflow-hidden rounded-lg border border-[#e7e0d5] bg-white shadow-sm transition hover:border-[#c9c0b3]">
-      <button
-        type="button"
-        onClick={onPreview}
-        className="relative flex aspect-[3/4] w-full items-center justify-center overflow-hidden bg-[#faf8f4] p-2 text-left"
-      >
-        <PdfPlaceholder />
-      </button>
-      <div className="border-t border-[#f0ebe3] px-3 py-2">
-        <p className="text-xs font-medium text-[#292524]">Résumé du dossier</p>
-        <p className="mt-0.5 text-[11px] text-[#78716c]">application_summary.pdf</p>
-        <div className="mt-2 flex items-center justify-between gap-2">
-          <button
-            type="button"
-            onClick={onPreview}
-            className="text-[11px] font-medium text-[#57534e] underline-offset-2 hover:underline"
-          >
-            Aperçu
-          </button>
-          <button
-            type="button"
-            onClick={onDownload}
-            className="text-[11px] font-medium text-[#3d5a45] underline-offset-2 hover:underline"
-          >
-            Télécharger
-          </button>
-        </div>
-      </div>
-    </article>
-  );
-}
 
 function DocumentPreviewModal({
   applicationId,
@@ -178,14 +53,14 @@ function DocumentPreviewModal({
 
   const filename =
     target.kind === "member" ? target.document.original_filename : target.filename;
-  const contentType =
+  const fallbackContentType =
     target.kind === "member" ? target.document.content_type : target.contentType;
   const previewAsImage =
     target.kind === "member" ? isImageDocument(target.document) : false;
   const previewAsPdf =
     target.kind === "member"
       ? isPdfDocument(target.document)
-      : isPdfContentType(contentType);
+      : isPdfContentType(target.contentType);
 
   useEffect(() => {
     let cancelled = false;
@@ -197,7 +72,12 @@ function DocumentPreviewModal({
       try {
         const blob =
           target.kind === "member"
-            ? await fetchMemberDocumentBlob(applicationId, target.document.id, "inline")
+            ? await fetchMemberDocumentBlob(
+                applicationId,
+                target.document.id,
+                "inline",
+                fallbackContentType
+              )
             : await fetchSummaryPdfBlob(applicationId, "inline");
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
@@ -217,19 +97,24 @@ function DocumentPreviewModal({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [applicationId, target]);
+  }, [applicationId, fallbackContentType, target]);
 
   const onDownload = useCallback(async () => {
     try {
       const blob =
         target.kind === "member"
-          ? await fetchMemberDocumentBlob(applicationId, target.document.id, "attachment")
+          ? await fetchMemberDocumentBlob(
+              applicationId,
+              target.document.id,
+              "attachment",
+              fallbackContentType
+            )
           : await fetchSummaryPdfBlob(applicationId, "attachment");
       triggerBlobDownload(blob, filename);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Échec du téléchargement");
     }
-  }, [applicationId, filename, target]);
+  }, [applicationId, fallbackContentType, filename, target]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -287,11 +172,15 @@ function DocumentPreviewModal({
               className="max-h-[75vh] max-w-full rounded shadow-sm"
             />
           ) : blobUrl && previewAsPdf ? (
-            <iframe
-              src={blobUrl}
-              title={target.title}
+            <object
+              data={blobUrl}
+              type="application/pdf"
               className="h-[75vh] w-full rounded border border-[#e7e0d5] bg-white"
-            />
+            >
+              <p className="p-4 text-center text-sm text-[#78716c]">
+                Aperçu PDF indisponible dans ce navigateur. Utilisez Télécharger.
+              </p>
+            </object>
           ) : blobUrl ? (
             <p className="text-sm text-[#78716c]">
               Aperçu non disponible pour ce type de fichier. Utilisez Télécharger.
@@ -307,19 +196,69 @@ export default function ApplicationDocuments({
   applicationId,
   members,
   summaryPdfAvailable,
+  dropboxDossierReady,
   memberRoleLabel,
   memberDisplayName,
+  onSummaryRegenerated,
 }: ApplicationDocumentsProps) {
   const [preview, setPreview] = useState<PreviewTarget | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [regeneratingSummary, setRegeneratingSummary] = useState(false);
 
   const membersWithDocs = members.filter((member) => (member.documents?.length ?? 0) > 0);
   const hasMemberDocs = membersWithDocs.length > 0;
 
-  if (!summaryPdfAvailable && !hasMemberDocs) {
+  if (!summaryPdfAvailable && !hasMemberDocs && !dropboxDossierReady) {
     return (
       <p className="mt-2 text-sm text-[#78716c]">Aucun document téléversé pour cette demande.</p>
     );
   }
+
+  const onDownloadMember = async (document: MemberDocument) => {
+    const key = `doc-${document.id}`;
+    setBusyKey(key);
+    setError(null);
+    try {
+      const blob = await fetchMemberDocumentBlob(
+        applicationId,
+        document.id,
+        "attachment",
+        document.content_type
+      );
+      triggerBlobDownload(blob, document.original_filename);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Échec du téléchargement");
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const onDownloadSummary = async () => {
+    setBusyKey("summary");
+    setError(null);
+    try {
+      const blob = await fetchSummaryPdfBlob(applicationId, "attachment");
+      triggerBlobDownload(blob, "application_summary.pdf");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Échec du téléchargement");
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  const onRegenerateSummary = async () => {
+    setRegeneratingSummary(true);
+    setError(null);
+    try {
+      await regenerateApplicationSummary(applicationId);
+      onSummaryRegenerated?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Échec de la génération du résumé");
+    } finally {
+      setRegeneratingSummary(false);
+    }
+  };
 
   return (
     <>
@@ -327,64 +266,131 @@ export default function ApplicationDocuments({
         Les fichiers sont chargés depuis Dropbox à la demande (aperçu ou téléchargement).
       </p>
 
-      {summaryPdfAvailable && (
-        <div className="mt-4">
-          <h3 className="text-sm font-medium text-[#57534e]">Dossier</h3>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            <SummaryCard
-              applicationId={applicationId}
-              onPreview={() =>
-                setPreview({
-                  kind: "summary",
-                  title: "Résumé du dossier",
-                  filename: "application_summary.pdf",
-                  contentType: "application/pdf",
-                })
-              }
-            />
-          </div>
-        </div>
-      )}
+      {error ? (
+        <p className="mt-3 rounded border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-sm text-[#b91c1c]">
+          {error}
+        </p>
+      ) : null}
 
-      {summaryPdfAvailable && !hasMemberDocs ? (
+      {dropboxDossierReady && !summaryPdfAvailable ? (
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <p className="text-sm text-[#78716c]">Le résumé PDF n&apos;a pas encore été généré.</p>
+          <button
+            type="button"
+            disabled={regeneratingSummary}
+            onClick={() => void onRegenerateSummary()}
+            className="rounded border border-[#e7e0d5] px-3 py-1.5 text-xs font-medium text-[#3d5a45] hover:bg-[#f5f2eb] disabled:opacity-50"
+          >
+            {regeneratingSummary ? "Génération…" : "Générer le résumé PDF"}
+          </button>
+        </div>
+      ) : null}
+
+      <table className="mt-4 w-full text-left text-sm">
+        <thead>
+          <tr className="border-b border-[#e7e0d5] text-xs uppercase text-[#a8a29e]">
+            <th className="py-2 pr-3">Membre</th>
+            <th className="py-2 pr-3">Type</th>
+            <th className="py-2 pr-3">Fichier</th>
+            <th className="py-2 pr-3">Taille</th>
+            <th className="py-2 text-right">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {summaryPdfAvailable ? (
+            <tr className="border-b border-[#f0ebe3]">
+              <td className="py-2 pr-3 text-[#57534e]">Dossier</td>
+              <td className="py-2 pr-3 text-[#57534e]">Résumé</td>
+              <td className="py-2 pr-3 text-[#78716c]">application_summary.pdf</td>
+              <td className="py-2 pr-3 text-[#a8a29e]">—</td>
+              <td className="py-2 text-right">
+                <div className="flex justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreview({
+                        kind: "summary",
+                        title: "Résumé du dossier",
+                        filename: "application_summary.pdf",
+                        contentType: "application/pdf",
+                      })
+                    }
+                    className="text-xs font-medium text-[#57534e] underline-offset-2 hover:underline"
+                  >
+                    Aperçu
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busyKey === "summary"}
+                    onClick={() => void onDownloadSummary()}
+                    className="text-xs font-medium text-[#3d5a45] underline-offset-2 hover:underline disabled:opacity-50"
+                  >
+                    {busyKey === "summary" ? "…" : "Télécharger"}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ) : null}
+
+          {membersWithDocs.map((member) => {
+            const memberLabel = `${memberRoleLabel(member.role)} — ${memberDisplayName(member)}`;
+            return (member.documents ?? []).map((document) => {
+              const label = documentTypeLabel(document.document_type);
+              const key = `doc-${document.id}`;
+              return (
+                <tr key={document.id} className="border-b border-[#f0ebe3]">
+                  <td className="py-2 pr-3 text-[#57534e]">{memberLabel}</td>
+                  <td className="py-2 pr-3 text-[#57534e]">{label}</td>
+                  <td
+                    className="max-w-[12rem] truncate py-2 pr-3 text-[#78716c]"
+                    title={document.original_filename}
+                  >
+                    {document.original_filename}
+                  </td>
+                  <td className="py-2 pr-3 text-[#a8a29e]">{formatFileSize(document.byte_size)}</td>
+                  <td className="py-2 text-right">
+                    <div className="flex justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setPreview({
+                            kind: "member",
+                            document,
+                            title: label,
+                          })
+                        }
+                        className="text-xs font-medium text-[#57534e] underline-offset-2 hover:underline"
+                      >
+                        Aperçu
+                      </button>
+                      <button
+                        type="button"
+                        disabled={busyKey === key}
+                        onClick={() => void onDownloadMember(document)}
+                        className="text-xs font-medium text-[#3d5a45] underline-offset-2 hover:underline disabled:opacity-50"
+                      >
+                        {busyKey === key ? "…" : "Télécharger"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            });
+          })}
+        </tbody>
+      </table>
+
+      {!summaryPdfAvailable && !hasMemberDocs && dropboxDossierReady ? (
         <p className="mt-4 text-sm text-[#78716c]">Aucun document membre pour cette demande.</p>
       ) : null}
 
-      {membersWithDocs.map((member) => (
-        <div key={member.id} className="mt-6">
-          <h3 className="text-sm font-medium text-[#57534e]">
-            {memberRoleLabel(member.role)} — {memberDisplayName(member)}
-          </h3>
-          <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {(member.documents ?? []).map((document) => {
-              const label = documentTypeLabel(document.document_type);
-              return (
-                <DocumentCard
-                  key={document.id}
-                  applicationId={applicationId}
-                  document={document}
-                  label={label}
-                  onPreview={() =>
-                    setPreview({
-                      kind: "member",
-                      document,
-                      title: label,
-                    })
-                  }
-                />
-              );
-            })}
-          </div>
-        </div>
-      ))}
-
-      {preview && (
+      {preview ? (
         <DocumentPreviewModal
           applicationId={applicationId}
           target={preview}
           onClose={() => setPreview(null)}
         />
-      )}
+      ) : null}
     </>
   );
 }

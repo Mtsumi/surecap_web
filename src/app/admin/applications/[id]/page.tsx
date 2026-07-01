@@ -275,8 +275,10 @@ export default function ApplicationDetailPage() {
         applicationId={app.id}
         members={sortedMembers}
         summaryPdfAvailable={Boolean(app.summary_pdf_available)}
+        dropboxDossierReady={Boolean(app.dropbox_dossier_ready)}
         memberRoleLabel={memberRoleLabel}
         memberDisplayName={memberDisplayName}
+        onSummaryRegenerated={load}
       />
 
       <Field label="Raison du refus" value={app.rejection_reason} />

@@ -112,6 +112,7 @@ export type ApplicationDetail = {
   roommate_count?: number;
   has_guarantor?: boolean;
   summary_pdf_available?: boolean;
+  dropbox_dossier_ready?: boolean;
 };
 
 export type ApplicationList = {
@@ -268,6 +269,13 @@ export function getApplication(id: number) {
 
 export function getApplicationJobs(id: number) {
   return adminFetch<ApplicationJob[]>(`/admin/applications/${id}/jobs`);
+}
+
+export function regenerateApplicationSummary(id: number) {
+  return adminFetch<{ summary_pdf_available: boolean }>(
+    `/admin/applications/${id}/summary/regenerate`,
+    { method: "POST" }
+  );
 }
 
 export function acceptApplication(id: number) {
