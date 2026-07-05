@@ -112,6 +112,9 @@ export const messages = {
     langToggle: "Français",
     addressManualHint: "Start typing to search, or enter your address manually.",
     addressNotInCanada: "My current address is not in Canada",
+    addressApartment: "Apartment / unit # (if applicable)",
+    addressApartmentHint:
+      "If you live in an apartment or condo, enter the unit number. Leave blank for a house.",
     validationMoveInTooSoon: "Move-in date must be tomorrow or later.",
     validationMoveInBeforeAvailable:
       "Move-in date cannot be before the unit is available.",
@@ -258,6 +261,9 @@ export const messages = {
     addressManualHint:
       "Commencez à taper pour rechercher, ou entrez l'adresse manuellement.",
     addressNotInCanada: "Mon adresse actuelle n'est pas au Canada",
+    addressApartment: "Appartement / no d'unité (si applicable)",
+    addressApartmentHint:
+      "Si vous habitez un appartement ou un condo, inscrivez le numéro d'unité. Laissez vide pour une maison.",
     validationMoveInTooSoon:
       "La date d'emménagement doit être demain ou plus tard.",
     validationMoveInBeforeAvailable:

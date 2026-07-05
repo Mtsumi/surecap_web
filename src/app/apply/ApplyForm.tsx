@@ -101,9 +101,11 @@ type FormFields = {
   email: string;
   phone: string;
   current_address: string;
+  current_apartment: string;
   current_place_id: string;
   address_not_in_canada: boolean;
   previous_address: string;
+  previous_apartment: string;
   previous_place_id: string;
   current_address_lived_from: string;
   current_address_lived_to: string;
@@ -131,9 +133,11 @@ const emptyForm: FormFields = {
   email: "",
   phone: "",
   current_address: "",
+  current_apartment: "",
   current_place_id: "",
   address_not_in_canada: false,
   previous_address: "",
+  previous_apartment: "",
   previous_place_id: "",
   current_address_lived_from: "",
   current_address_lived_to: "",
@@ -193,11 +197,13 @@ function formPayload(
     email: fields.email.trim(),
     phone: fields.phone.trim(),
     current_address: fields.current_address.trim(),
+    current_apartment: fields.current_apartment.trim() || undefined,
     current_place_id: fields.address_not_in_canada
       ? undefined
       : fields.current_place_id || undefined,
     address_not_in_canada: fields.address_not_in_canada,
     previous_address: fields.previous_address.trim() || undefined,
+    previous_apartment: fields.previous_apartment.trim() || undefined,
     previous_place_id: fields.previous_place_id || undefined,
     ...addressDatePayload(fields),
     lease_in_name: fields.lease_in_name ?? undefined,
@@ -1128,6 +1134,21 @@ export default function ApplyForm() {
               />
               {fieldHint("current_address")}
             </div>
+            {!form.address_not_in_canada ? (
+              <label className="block text-sm text-[#57534e]">
+                {t(locale, "addressApartment")}
+                <input
+                  type="text"
+                  value={form.current_apartment}
+                  onChange={(e) => setField("current_apartment", e.target.value)}
+                  className={inputClassFor("current_apartment")}
+                  autoComplete="address-line2"
+                />
+                <span className="mt-1 block text-xs text-[#78716c]">
+                  {t(locale, "addressApartmentHint")}
+                </span>
+              </label>
+            ) : null}
             <AddressLivedDates
               locale={locale}
               prefix="current"
@@ -1206,6 +1227,18 @@ export default function ApplyForm() {
               }}
               inputClass={inputClass}
             />
+            {form.previous_address.trim() ? (
+              <label className="block text-sm text-[#57534e]">
+                {t(locale, "addressApartment")}
+                <input
+                  type="text"
+                  value={form.previous_apartment}
+                  onChange={(e) => setField("previous_apartment", e.target.value)}
+                  className={inputClass}
+                  autoComplete="address-line2"
+                />
+              </label>
+            ) : null}
             {form.previous_address.trim() ? (
               <AddressLivedDates
                 locale={locale}

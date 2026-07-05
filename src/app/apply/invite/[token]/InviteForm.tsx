@@ -78,9 +78,11 @@ function emptyFields(): InviteeFormFields {
     email: "",
     phone: "",
     current_address: "",
+    current_apartment: "",
     current_place_id: "",
     address_not_in_canada: false,
     previous_address: "",
+    previous_apartment: "",
     previous_place_id: "",
     current_address_lived_from: "",
     current_address_lived_to: "",
@@ -391,6 +393,9 @@ export default function InviteForm({ token }: Props) {
       monthly_net_income: parseMonthlyNetIncome(form.monthly_net_income) ?? 0,
       ...addressDatePayload(form),
     };
+    if (form.current_apartment.trim()) {
+      payload.current_apartment = form.current_apartment.trim();
+    }
     if (form.address_not_in_canada) {
       payload.address_not_in_canada = true;
     } else if (form.current_place_id) {
@@ -398,6 +403,9 @@ export default function InviteForm({ token }: Props) {
     }
     if (form.previous_address.trim()) {
       payload.previous_address = form.previous_address.trim();
+    }
+    if (form.previous_apartment.trim()) {
+      payload.previous_apartment = form.previous_apartment.trim();
     }
     if (form.previous_place_id) payload.previous_place_id = form.previous_place_id;
 
@@ -672,6 +680,21 @@ export default function InviteForm({ token }: Props) {
             inputClass={inputClass}
           />
           {fieldHint("current_address")}
+          {!form.address_not_in_canada ? (
+            <label className="block text-sm text-[#57534e]">
+              {t(locale, "addressApartment")}
+              <input
+                type="text"
+                value={form.current_apartment}
+                onChange={(e) => setField("current_apartment", e.target.value)}
+                className={inputClass}
+                autoComplete="address-line2"
+              />
+              <span className="mt-1 block text-xs text-[#78716c]">
+                {t(locale, "addressApartmentHint")}
+              </span>
+            </label>
+          ) : null}
           <AddressLivedDates
             locale={locale}
             prefix="current"
@@ -737,6 +760,18 @@ export default function InviteForm({ token }: Props) {
             }}
             inputClass={inputClass}
           />
+          {form.previous_address.trim() ? (
+            <label className="block text-sm text-[#57534e]">
+              {t(locale, "addressApartment")}
+              <input
+                type="text"
+                value={form.previous_apartment}
+                onChange={(e) => setField("previous_apartment", e.target.value)}
+                className={inputClass}
+                autoComplete="address-line2"
+              />
+            </label>
+          ) : null}
           {form.previous_address.trim() ? (
             <AddressLivedDates
               locale={locale}

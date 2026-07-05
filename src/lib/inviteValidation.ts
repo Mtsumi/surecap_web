@@ -19,9 +19,11 @@ export type InviteeFormFields = {
   email: string;
   phone: string;
   current_address: string;
+  current_apartment: string;
   current_place_id: string;
   address_not_in_canada: boolean;
   previous_address: string;
+  previous_apartment: string;
   previous_place_id: string;
   current_address_lived_from: string;
   current_address_lived_to: string;
