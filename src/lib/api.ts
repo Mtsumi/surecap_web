@@ -31,9 +31,11 @@ export type Application = {
   email: string | null;
   phone: string | null;
   current_address: string | null;
+  current_apartment: string | null;
   current_place_id: string | null;
   address_not_in_canada: boolean | null;
   previous_address: string | null;
+  previous_apartment: string | null;
   previous_place_id: string | null;
   current_address_lived_from: string | null;
   current_address_lived_to: string | null;
@@ -88,9 +90,11 @@ export type ApplicationUpdate = Partial<{
   email: string;
   phone: string;
   current_address: string;
+  current_apartment?: string;
   current_place_id: string;
   address_not_in_canada: boolean;
   previous_address: string;
+  previous_apartment?: string;
   previous_place_id: string;
   current_address_lived_from: string;
   current_address_lived_to: string;
@@ -312,9 +316,11 @@ export type InviteeSubmitPayload = {
   email: string;
   phone: string;
   current_address: string;
+  current_apartment?: string;
   current_place_id?: string;
   address_not_in_canada?: boolean;
   previous_address?: string;
+  previous_apartment?: string;
   previous_place_id?: string;
   current_address_lived_from: string;
   current_address_lived_to?: string;
