@@ -14,6 +14,7 @@ import {
 } from "@/lib/adminApi";
 import { formatAddressDateRange } from "@/lib/addressFormUtils";
 import ApplicationDocuments from "./ApplicationDocuments";
+import ScreeningJobs from "./ScreeningJobs";
 
 function formatLivedDates(
   from: string | null | undefined,
@@ -284,29 +285,7 @@ export default function ApplicationDetailPage() {
       <Field label="Raison du refus" value={app.rejection_reason} />
 
       <h2 className="mt-10 text-base font-medium text-[#292524]">Tâches / screening</h2>
-      <table className="mt-3 w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-[#e7e0d5] text-xs uppercase text-[#a8a29e]">
-            <th className="py-2">Membre</th>
-            <th className="py-2">Type</th>
-            <th className="py-2">Statut</th>
-            <th className="py-2">Message</th>
-          </tr>
-        </thead>
-        <tbody>
-          {jobs.map((j) => (
-            <tr key={j.id} className="border-b border-[#f0ebe3]">
-              <td className="py-2 text-[#57534e]">{jobMemberLabel(j.application_member_id)}</td>
-              <td className="py-2">{j.job_type}</td>
-              <td className="py-2">{j.status}</td>
-              <td className="py-2 text-[#78716c]">{j.message || "—"}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {jobs.length === 0 && (
-        <p className="mt-2 text-sm text-[#78716c]">Aucune tâche pour cette demande.</p>
-      )}
+      <ScreeningJobs jobs={jobs} jobMemberLabel={jobMemberLabel} />
     </AdminShell>
   );
 }
