@@ -12,6 +12,8 @@ export type TalDossier = {
   case_status?: string;
   name_match?: boolean;
   matched_parties?: TalMatchedParty[];
+  landlord_match?: boolean;
+  landlord_parties?: TalMatchedParty[];
   intervenants?: TalMatchedParty[];
   detail_skipped?: boolean;
   detail_error?: string;
@@ -25,6 +27,7 @@ export type TalSearch = {
   applicant_name?: string;
   dossier_count?: number;
   name_match_count?: number;
+  landlord_mention_count?: number;
   elapsed_seconds?: number;
   building_detail_truncated?: boolean;
   input?: {
@@ -104,4 +107,13 @@ export function tenantFromDossier(dossier: TalDossier): string | null {
     (p.role || "").toLowerCase().includes("locataire")
   );
   return tenant?.name || null;
+}
+
+export function landlordFromDossier(dossier: TalDossier): string | null {
+  const matched = dossier.landlord_parties?.find((p) => p.name)?.name;
+  if (matched) return matched;
+  const landlord = dossier.intervenants?.find((p) =>
+    (p.role || "").toLowerCase().includes("locateur")
+  );
+  return landlord?.name || null;
 }

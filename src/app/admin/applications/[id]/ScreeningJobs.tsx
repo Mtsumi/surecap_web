@@ -2,6 +2,7 @@
 
 import {
   formatJobMessagePreview,
+  landlordFromDossier,
   parseTalScreeningMessage,
   precisionLabel,
   sourceLabel,
@@ -11,15 +12,36 @@ import {
 } from "@/lib/jobMessageFormat";
 import type { ApplicationJob } from "@/lib/adminApi";
 
-function DossierRow({ dossier }: { dossier: TalDossier }) {
-  const matched = dossier.name_match === true;
-  const tenant = tenantFromDossier(dossier);
+function DossierRow({
+  dossier,
+  kind,
+}: {
+  dossier: TalDossier;
+  kind: "tenant" | "landlord" | "other";
+}) {
+  const mark = kind === "tenant" ? "✓" : kind === "landlord" ? "◈" : "·";
+  const emphasis =
+    kind === "tenant"
+      ? "font-medium text-[#3d5a45]"
+      : kind === "landlord"
+        ? "font-medium text-[#57534e]"
+        : "text-[#78716c]";
+  const label =
+    kind === "tenant"
+      ? tenantFromDossier(dossier)
+      : kind === "landlord"
+        ? landlordFromDossier(dossier)
+        : tenantFromDossier(dossier);
+  const roleHint =
+    kind === "tenant" ? "locataire" : kind === "landlord" ? "locateur" : null;
+
   return (
     <li className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
-      <span className={matched ? "font-medium text-[#3d5a45]" : "text-[#78716c]"}>
-        {matched ? "✓" : "·"} {dossier.dossier || "—"}
+      <span className={emphasis}>
+        {mark} {dossier.dossier || "—"}
       </span>
-      {tenant ? <span className="text-[#57534e]">{tenant}</span> : null}
+      {roleHint ? <span className="text-xs uppercase text-[#a8a29e]">{roleHint}</span> : null}
+      {label ? <span className="text-[#57534e]">{label}</span> : null}
       {dossier.case_status ? (
         <span className="text-xs text-[#a8a29e]">{dossier.case_status}</span>
       ) : null}
@@ -39,8 +61,13 @@ function DossierRow({ dossier }: { dossier: TalDossier }) {
 
 function SearchBlock({ search }: { search: TalSearch }) {
   const dossiers = search.dossiers || [];
-  const matched = dossiers.filter((d) => d.name_match === true);
-  const others = dossiers.filter((d) => d.name_match !== true);
+  const tenants = dossiers.filter((d) => d.name_match === true);
+  const landlords = dossiers.filter(
+    (d) => d.landlord_match === true && d.name_match !== true
+  );
+  const others = dossiers.filter(
+    (d) => d.name_match !== true && d.landlord_match !== true
+  );
 
   return (
     <div className="rounded-md border border-[#e7e0d5] bg-[#faf8f5] p-3">
@@ -60,27 +87,38 @@ function SearchBlock({ search }: { search: TalSearch }) {
           <p className="mt-2 text-xs text-[#78716c]">
             {search.dossier_count ?? dossiers.length} dossier(s)
             {typeof search.name_match_count === "number"
-              ? ` · ${search.name_match_count} correspondance(s) de nom`
+              ? ` · ${search.name_match_count} locataire`
+              : null}
+            {typeof search.landlord_mention_count === "number" &&
+            search.landlord_mention_count > 0
+              ? ` · ${search.landlord_mention_count} locateur`
               : null}
             {typeof search.elapsed_seconds === "number"
               ? ` · ~${Math.round(search.elapsed_seconds)}s`
               : null}
           </p>
-          {matched.length > 0 ? (
+          {tenants.length > 0 ? (
             <ul className="mt-2 space-y-1">
-              {matched.map((d) => (
-                <DossierRow key={d.dossier} dossier={d} />
+              {tenants.map((d) => (
+                <DossierRow key={`t-${d.dossier}`} dossier={d} kind="tenant" />
+              ))}
+            </ul>
+          ) : null}
+          {landlords.length > 0 ? (
+            <ul className="mt-2 space-y-1">
+              {landlords.map((d) => (
+                <DossierRow key={`l-${d.dossier}`} dossier={d} kind="landlord" />
               ))}
             </ul>
           ) : null}
           {others.length > 0 ? (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-[#78716c]">
-                {others.length} autre(s) dossier(s) sans correspondance de nom
+                {others.length} autre(s) dossier(s) sans mention du demandeur
               </summary>
               <ul className="mt-1 space-y-1">
                 {others.map((d) => (
-                  <DossierRow key={d.dossier} dossier={d} />
+                  <DossierRow key={`o-${d.dossier}`} dossier={d} kind="other" />
                 ))}
               </ul>
             </details>
