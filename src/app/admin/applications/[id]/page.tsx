@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AdminField from "../../components/AdminField";
+import AdminCollapsible from "../../components/AdminCollapsible";
 import {
   ApplicationDetail,
   ApplicationJob,
@@ -76,20 +77,17 @@ function memberDisplayName(member: ApplicationMember): string {
 
 function MemberCard({ member }: { member: ApplicationMember }) {
   const email = member.email || member.invited_email;
+  const defaultOpen = member.role === "primary";
+
   return (
-    <article className={adminUi.cardPad}>
-      <header className="border-b border-[var(--ml-line)] pb-3">
-        <h3 className="admin-section-title text-base">
-          {memberRoleLabel(member.role)}
-        </h3>
-        <p className="mt-0.5 text-sm font-medium text-[var(--ml-ink)]">
-          {memberDisplayName(member)}
-        </p>
-        <p className="mt-1 text-xs text-[var(--ml-steel)]">
-          {memberStatusLabel(member.member_status)}
-        </p>
-      </header>
-      <dl className="mt-4 grid gap-4 sm:grid-cols-2">
+    <AdminCollapsible
+      compact
+      defaultOpen={defaultOpen}
+      title={memberDisplayName(member)}
+      subtitle={`${memberRoleLabel(member.role)} · ${memberStatusLabel(member.member_status)}`}
+      bodyClassName="!pt-0"
+    >
+      <dl className="grid gap-4 sm:grid-cols-2">
         <AdminField label="Courriel" value={email} />
         <AdminField label="Téléphone" value={member.phone} />
         <AdminField label="Date de naissance" value={member.date_of_birth} />
@@ -140,7 +138,7 @@ function MemberCard({ member }: { member: ApplicationMember }) {
           />
         )}
       </dl>
-    </article>
+    </AdminCollapsible>
   );
 }
 
@@ -225,6 +223,11 @@ export default function ApplicationDetailPage() {
     app.roommate_count ? `${app.roommate_count} colocataire(s)` : null,
   ].filter(Boolean);
 
+  const documentCount =
+    sortedMembers.reduce((count, member) => count + (member.documents?.length ?? 0), 0) +
+    (app.summary_pdf_available ? 1 : 0);
+  const talJobCount = jobs.filter((job) => job.job_type === "tal_screening").length;
+
   return (
     <>
       <Link href="/admin/applications" className={`${adminUi.link} text-sm`}>
@@ -261,7 +264,34 @@ export default function ApplicationDetailPage() {
             </div>
           ) : null}
 
-          {app.status !== "rejected" ? (
+          {app.status !== "rejected" && app.status !== "accepted" ? (
+            <details className="mt-4 rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)]">
+              <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-[var(--ml-ink)]">
+                Refuser la demande
+              </summary>
+              <div className="border-t border-[var(--ml-line)] px-4 py-4">
+                <label className="block text-sm text-[var(--ml-steel)]">
+                  Raison du refus
+                  <textarea
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    rows={2}
+                    className={adminUi.textarea}
+                  />
+                </label>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={onReject}
+                  className={`${adminUi.btnDanger} mt-3`}
+                >
+                  Rejeter
+                </button>
+              </div>
+            </details>
+          ) : null}
+
+          {app.status === "rejected" ? (
             <div className="mt-4 rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] p-4">
               <label className="block text-sm text-[var(--ml-steel)]">
                 Raison du refus
@@ -269,18 +299,10 @@ export default function ApplicationDetailPage() {
                   value={reason}
                   onChange={(e) => setReason(e.target.value)}
                   rows={2}
-                  disabled={app.status === "rejected"}
+                  disabled
                   className={adminUi.textarea}
                 />
               </label>
-              <button
-                type="button"
-                disabled={busy || app.status === "rejected"}
-                onClick={onReject}
-                className={`${adminUi.btnDanger} mt-3`}
-              >
-                Rejeter
-              </button>
             </div>
           ) : null}
 
@@ -292,18 +314,22 @@ export default function ApplicationDetailPage() {
         </div>
       </header>
 
-      <section className={adminUi.sectionGap}>
-        <h2 className={adminUi.sectionTitle}>Membres du dossier</h2>
-        {sortedMembers.length > 0 ? (
-          <div className={adminUi.dossierGrid}>
-            {sortedMembers.map((member) => (
-              <div key={member.id} className={adminUi.card}>
-                <MemberCard member={member} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className={`${adminUi.card} ${adminUi.cardPad}`}>
+      <div className={adminUi.sectionGap}>
+        <AdminCollapsible
+          title="Membres du dossier"
+          subtitle={
+            sortedMembers.length > 0
+              ? `${sortedMembers.length} membre${sortedMembers.length === 1 ? "" : "s"}`
+              : "Informations du demandeur"
+          }
+        >
+          {sortedMembers.length > 0 ? (
+            <div className="space-y-3">
+              {sortedMembers.map((member) => (
+                <MemberCard key={member.id} member={member} />
+              ))}
+            </div>
+          ) : (
             <dl className="grid gap-4 sm:grid-cols-2">
               <AdminField label="Courriel" value={app.email} />
               <AdminField label="Téléphone" value={app.phone} />
@@ -314,13 +340,17 @@ export default function ApplicationDetailPage() {
               <AdminField label="Contact RH" value={app.hr_name} />
               <AdminField label="Tél. RH" value={app.hr_phone} />
             </dl>
-          </div>
-        )}
-      </section>
+          )}
+        </AdminCollapsible>
 
-      <section className={adminUi.sectionGap}>
-        <h2 className={adminUi.sectionTitle}>Documents</h2>
-        <div className={adminUi.cardPad + " " + adminUi.card}>
+        <AdminCollapsible
+          title="Documents"
+          subtitle={
+            documentCount > 0
+              ? `${documentCount} fichier${documentCount === 1 ? "" : "s"}`
+              : "Aucun document pour le moment"
+          }
+        >
           <ApplicationDocuments
             applicationId={app.id}
             members={sortedMembers}
@@ -330,15 +360,19 @@ export default function ApplicationDetailPage() {
             memberDisplayName={memberDisplayName}
             onSummaryRegenerated={load}
           />
-        </div>
-      </section>
+        </AdminCollapsible>
 
-      <section className={adminUi.sectionGap}>
-        <h2 className={adminUi.sectionTitle}>Screening</h2>
-        <div className={adminUi.cardPad + " " + adminUi.card}>
+        <AdminCollapsible
+          title="Screening TAL"
+          subtitle={
+            talJobCount > 0
+              ? `${talJobCount} recherche${talJobCount === 1 ? "" : "s"}`
+              : "Aucun résultat pour le moment"
+          }
+        >
           <ScreeningJobs jobs={jobs} jobMemberLabel={jobMemberLabel} />
-        </div>
-      </section>
+        </AdminCollapsible>
+      </div>
     </>
   );
 }

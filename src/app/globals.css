@@ -238,6 +238,45 @@ body {
   .admin-auth-card {
     @apply admin-card admin-card-pad mt-6 space-y-4;
   }
+
+  .admin-collapsible-trigger {
+    @apply flex w-full items-center justify-between gap-3 px-4 py-3 text-left sm:px-5;
+    background-color: var(--ml-paper);
+  }
+
+  .admin-collapsible-trigger-compact {
+    @apply px-4 py-2.5 sm:px-5;
+    background-color: var(--ml-card);
+  }
+
+  .admin-collapsible-trigger:hover {
+    background-color: color-mix(in srgb, var(--ml-paper) 85%, var(--ml-line));
+  }
+
+  .admin-collapsible-chevron {
+    @apply text-sm text-[var(--ml-steel)];
+  }
+
+  .admin-tal-link {
+    @apply inline-flex shrink-0 items-center gap-1 rounded-md border px-2.5 py-1 text-xs font-semibold;
+    border-color: var(--ml-line);
+    background-color: var(--ml-card);
+    color: var(--ml-brick);
+  }
+
+  .admin-tal-link:hover {
+    border-color: var(--ml-brick);
+    background-color: #fdf6f4;
+  }
+
+  .admin-sidebar-toggle {
+    @apply mt-4 hidden w-full rounded-lg border px-2 py-2 text-center text-xs text-[#9AA7B3] transition-colors md:block;
+    border-color: #3a4c5e;
+  }
+
+  .admin-sidebar-toggle:hover {
+    @apply bg-[#243444] text-white;
+  }
 }
 
 /* react-phone-number-input — match apply form inputs */

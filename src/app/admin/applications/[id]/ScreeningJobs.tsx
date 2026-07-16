@@ -52,25 +52,27 @@ function DossierRow({
     kind === "tenant" ? "locataire" : kind === "landlord" ? "locateur" : null;
 
   return (
-    <li className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-sm">
-      <span className={emphasis}>
-        {mark} {dossier.dossier || "—"}
-      </span>
-      {roleHint ? (
-        <span className="admin-field-label !normal-case !tracking-normal">{roleHint}</span>
-      ) : null}
-      {label ? <span className="text-[var(--ml-ink)]">{label}</span> : null}
-      {dossier.case_status ? (
-        <span className="text-xs text-[var(--ml-steel)]">{dossier.case_status}</span>
-      ) : null}
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2 text-sm">
+      <div className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-1">
+        <span className={emphasis}>
+          {mark} {dossier.dossier || "—"}
+        </span>
+        {roleHint ? (
+          <span className="admin-field-label !normal-case !tracking-normal">{roleHint}</span>
+        ) : null}
+        {label ? <span className="truncate text-[var(--ml-ink)]">{label}</span> : null}
+        {dossier.case_status ? (
+          <span className="text-xs text-[var(--ml-steel)]">{dossier.case_status}</span>
+        ) : null}
+      </div>
       {dossier.detail_url ? (
         <a
           href={dossier.detail_url}
           target="_blank"
           rel="noreferrer"
-          className={adminUi.link + " text-xs"}
+          className={adminUi.talLink}
         >
-          TAL
+          Ouvrir sur le TAL ↗
         </a>
       ) : null}
     </li>
@@ -118,18 +120,24 @@ function SearchBlock({ search }: { search: TalSearch }) {
               : null}
           </p>
           {tenants.length > 0 ? (
-            <ul className="mt-2 space-y-1">
+            <div className="mt-3">
+              <p className="admin-field-label">Correspondances locataire</p>
+              <ul className="mt-1.5 space-y-2">
               {tenants.map((d) => (
                 <DossierRow key={`t-${d.dossier}`} dossier={d} kind="tenant" />
               ))}
-            </ul>
+              </ul>
+            </div>
           ) : null}
           {landlords.length > 0 ? (
-            <ul className="mt-2 space-y-1">
+            <div className="mt-3">
+              <p className="admin-field-label">Mentions locateur</p>
+              <ul className="mt-1.5 space-y-2">
               {landlords.map((d) => (
                 <DossierRow key={`l-${d.dossier}`} dossier={d} kind="landlord" />
               ))}
-            </ul>
+              </ul>
+            </div>
           ) : null}
           {others.length > 0 ? (
             <details className="mt-2">

@@ -7,11 +7,17 @@ import { AdminUser, adminMe } from "@/lib/adminApi";
 import { clearAdminToken, isAdminLoggedIn } from "@/lib/adminAuth";
 import { useAdminLocaleContext } from "./AdminLocaleContext";
 
+const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed";
+
 function roleLabel(user: AdminUser, locale: "fr" | "en"): string {
   if (user.is_super_admin) {
     return locale === "fr" ? "Superadministrateur" : "Super admin";
   }
   return locale === "fr" ? "Administrateur" : "Administrator";
+}
+
+function navShortLabel(label: string): string {
+  return label.charAt(0).toUpperCase();
 }
 
 let cachedAdminUser: AdminUser | null = null;
@@ -27,6 +33,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const [user, setUser] = useState<AdminUser | null>(cachedAdminUser);
   const [loading, setLoading] = useState(!cachedAdminUser);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setSidebarCollapsed(localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1");
+    }
+  }, []);
 
   useEffect(() => {
     if (!isAdminLoggedIn()) {
@@ -94,6 +107,14 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     router.replace("/admin/login");
   };
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed((value) => {
+      const next = !value;
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, next ? "1" : "0");
+      return next;
+    });
+  };
+
   if (loading) {
     return (
       <div className="admin-app flex min-h-screen items-center justify-center bg-[var(--ml-paper)] text-sm text-[var(--ml-steel)]">
@@ -115,10 +136,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     ? [{ href: "/admin/account", label: t("navAccount") }]
     : fullNav;
 
+  const showCollapsed = sidebarCollapsed && !mobileOpen;
+
   const navLinkClass = (href: string) => {
     const active = pathname.startsWith(href);
     return [
-      "rounded-lg px-3 py-2.5 text-sm transition-colors",
+      "rounded-lg text-sm transition-colors",
+      showCollapsed ? "flex h-10 w-10 items-center justify-center" : "px-3 py-2.5",
       active
         ? "bg-[#243444] font-semibold text-white"
         : "text-[#C5CDD6] hover:bg-[#243444]/80 hover:text-white",
@@ -127,14 +151,16 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   const sidebar = (
     <>
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className={`flex items-start justify-between gap-3 ${showCollapsed ? "justify-center" : ""}`}>
+        <div className={showCollapsed ? "text-center" : ""}>
           <p className="font-[family-name:var(--font-admin-display)] text-xl font-extrabold tracking-[0.02em] text-white">
-            {t("brand")}
+            {showCollapsed ? "ML" : t("brand")}
           </p>
-          <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[#9AA7B3]">
-            {t("slogan")}
-          </p>
+          {!showCollapsed ? (
+            <p className="mt-1 text-[10px] uppercase tracking-[0.14em] text-[#9AA7B3]">
+              {t("slogan")}
+            </p>
+          ) : null}
         </div>
         <button
           type="button"
@@ -146,35 +172,61 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </button>
       </div>
 
-      {user && (
+      {user && !showCollapsed ? (
         <div className="mt-5 rounded-lg border border-[#3A4C5E] bg-[#243444] px-3 py-2.5">
           <p className="truncate text-xs text-[#9AA7B3]">{user.email}</p>
           <p className="mt-0.5 text-sm font-medium text-white">{roleLabel(user, locale)}</p>
         </div>
-      )}
+      ) : null}
 
-      <nav className="mt-6 flex flex-1 flex-col gap-1">
+      <nav className={`mt-6 flex flex-1 flex-col gap-1 ${showCollapsed ? "items-center" : ""}`}>
         {nav.map((item) => (
-          <Link key={item.href} href={item.href} className={navLinkClass(item.href)}>
-            {item.label}
+          <Link
+            key={item.href}
+            href={item.href}
+            title={showCollapsed ? item.label : undefined}
+            className={navLinkClass(item.href)}
+          >
+            {showCollapsed ? navShortLabel(item.label) : item.label}
           </Link>
         ))}
       </nav>
 
-      <div className="mt-auto flex flex-col gap-2 border-t border-[#3A4C5E] pt-4">
+      {!mobileOpen ? (
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="admin-sidebar-toggle"
+          aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+        >
+          {sidebarCollapsed ? "→" : "← Réduire"}
+        </button>
+      ) : null}
+
+      <div
+        className={`mt-2 flex flex-col gap-2 border-t border-[#3A4C5E] pt-4 ${
+          showCollapsed ? "items-center" : ""
+        }`}
+      >
         <button
           type="button"
           onClick={toggleLocale}
-          className="rounded-lg px-3 py-2 text-left text-sm text-[#9AA7B3] hover:bg-[#243444] hover:text-white"
+          title={showCollapsed ? t("langToggle") : undefined}
+          className={`rounded-lg text-sm text-[#9AA7B3] hover:bg-[#243444] hover:text-white ${
+            showCollapsed ? "flex h-10 w-10 items-center justify-center" : "px-3 py-2 text-left"
+          }`}
         >
-          {t("langToggle")}
+          {showCollapsed ? (locale === "fr" ? "EN" : "FR") : t("langToggle")}
         </button>
         <button
           type="button"
           onClick={logout}
-          className="rounded-lg px-3 py-2 text-left text-sm text-[#9AA7B3] hover:bg-[#243444] hover:text-white"
+          title={showCollapsed ? t("logout") : undefined}
+          className={`rounded-lg text-sm text-[#9AA7B3] hover:bg-[#243444] hover:text-white ${
+            showCollapsed ? "flex h-10 w-10 items-center justify-center text-xs" : "px-3 py-2 text-left"
+          }`}
         >
-          {t("logout")}
+          {showCollapsed ? "Out" : t("logout")}
         </button>
       </div>
     </>
@@ -182,7 +234,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   return (
     <div className="admin-app flex min-h-screen bg-[var(--ml-paper)] text-[var(--ml-ink)]">
-      <aside className="hidden w-[220px] shrink-0 flex-col bg-[var(--ml-ink)] p-4 md:flex">
+      <aside
+        className={`hidden shrink-0 flex-col bg-[var(--ml-ink)] p-4 transition-[width] duration-200 md:flex ${
+          sidebarCollapsed ? "w-[72px]" : "w-[220px]"
+        }`}
+      >
         {sidebar}
       </aside>
 
