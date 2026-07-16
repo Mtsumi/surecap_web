@@ -27,6 +27,8 @@ export const adminUi = {
   table: "admin-table",
   empty: "admin-empty",
   dossierGrid: "admin-dossier-grid",
+  collapsibleTrigger: "admin-collapsible-trigger",
+  talLink: "admin-tal-link",
 } as const;
 
 export function applicationStatusClass(status: string): string {
