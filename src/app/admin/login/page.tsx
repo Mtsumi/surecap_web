@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { adminLogin } from "@/lib/adminApi";
 import { setAdminToken } from "@/lib/adminAuth";
+import { adminUi } from "@/lib/adminUi";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 
 export default function AdminLoginPage() {
@@ -14,9 +15,6 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const inputClass =
-    "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#3d5a45]";
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,61 +36,62 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-[#292524]">{t("loginTitle")}</h1>
-          <p className="mt-1 text-sm text-[#57534e]">{t("loginSubtitle")}</p>
+    <main className="admin-auth-page">
+      <div className="mx-auto w-full max-w-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ml-steel)]">
+              {t("slogan")}
+            </p>
+            <h1 className={adminUi.pageTitle}>{t("loginTitle")}</h1>
+            <p className={adminUi.pageSubtitle}>{t("loginSubtitle")}</p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className="shrink-0 text-sm text-[var(--ml-steel)] hover:underline"
+          >
+            {t("langToggle")}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={toggleLocale}
-          className="shrink-0 text-sm text-[#78716c] hover:underline"
-        >
-          {t("langToggle")}
-        </button>
+
+        {error && <p className={`${adminUi.alertError} mt-4`}>{error}</p>}
+
+        <form onSubmit={onSubmit} className="admin-auth-card">
+          <label className="block text-sm text-[var(--ml-steel)]">
+            {t("loginEmail")}
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={adminUi.input}
+            />
+          </label>
+          <label className="block text-sm text-[var(--ml-steel)]">
+            {t("loginPassword")}
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={adminUi.input}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={loading}
+            className={adminUi.btnPrimary + " w-full !py-3"}
+          >
+            {loading ? t("loginSubmitting") : t("loginSubmit")}
+          </button>
+          <p className="text-center text-sm">
+            <Link href="/admin/forgot-password" className={adminUi.link}>
+              {t("loginForgotPassword")}
+            </Link>
+          </p>
+        </form>
       </div>
-
-      {error && (
-        <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
-          {error}
-        </p>
-      )}
-
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
-        <label className="block text-sm text-[#57534e]">
-          {t("loginEmail")}
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <label className="block text-sm text-[#57534e]">
-          {t("loginPassword")}
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded bg-[#3d5a45] py-3 text-sm font-medium text-[#f4f1ec] disabled:opacity-60"
-        >
-          {loading ? t("loginSubmitting") : t("loginSubmit")}
-        </button>
-        <p className="text-center text-sm">
-          <Link href="/admin/forgot-password" className="text-[#3d5a45] hover:underline">
-            {t("loginForgotPassword")}
-          </Link>
-        </p>
-      </form>
     </main>
   );
 }

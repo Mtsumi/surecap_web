@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
+import AdminField from "../../components/AdminField";
 import AdminShell from "../../AdminShell";
 import {
   ApplicationDetail,
@@ -13,6 +15,7 @@ import {
   rejectApplication,
 } from "@/lib/adminApi";
 import { formatAddressDateRange } from "@/lib/addressFormUtils";
+import { adminUi, applicationStatusClass } from "@/lib/adminUi";
 import ApplicationDocuments from "./ApplicationDocuments";
 import ScreeningJobs from "./ScreeningJobs";
 
@@ -22,16 +25,6 @@ function formatLivedDates(
 ): string | null {
   if (!from) return null;
   return formatAddressDateRange("fr", from, to);
-}
-
-function Field({ label, value }: { label: string; value: string | null | undefined }) {
-  if (!value) return null;
-  return (
-    <div>
-      <dt className="text-xs uppercase tracking-wide text-[#a8a29e]">{label}</dt>
-      <dd className="mt-0.5 text-sm text-[#292524]">{value}</dd>
-    </div>
-  );
 }
 
 function memberRoleLabel(role: string): string {
@@ -60,6 +53,23 @@ function memberStatusLabel(status: string): string {
   }
 }
 
+function applicationStatusLabel(status: string): string {
+  switch (status) {
+    case "accepted":
+      return "Acceptée";
+    case "rejected":
+      return "Refusée";
+    case "submitted":
+      return "Soumise";
+    case "collecting":
+      return "En collecte";
+    case "draft":
+      return "Brouillon";
+    default:
+      return status;
+  }
+}
+
 function memberDisplayName(member: ApplicationMember): string {
   const legal = [member.given_name, member.family_name].filter(Boolean).join(" ");
   return legal || member.invited_name || "—";
@@ -68,17 +78,24 @@ function memberDisplayName(member: ApplicationMember): string {
 function MemberCard({ member }: { member: ApplicationMember }) {
   const email = member.email || member.invited_email;
   return (
-    <section className="rounded border border-[#e7e0d5] bg-[#fffef9] p-4">
-      <h3 className="text-sm font-medium text-[#292524]">
-        {memberRoleLabel(member.role)} — {memberDisplayName(member)}
-      </h3>
-      <p className="mt-1 text-xs text-[#78716c]">{memberStatusLabel(member.member_status)}</p>
+    <article className={adminUi.cardPad}>
+      <header className="border-b border-[var(--ml-line)] pb-3">
+        <h3 className="admin-section-title text-base">
+          {memberRoleLabel(member.role)}
+        </h3>
+        <p className="mt-0.5 text-sm font-medium text-[var(--ml-ink)]">
+          {memberDisplayName(member)}
+        </p>
+        <p className="mt-1 text-xs text-[var(--ml-steel)]">
+          {memberStatusLabel(member.member_status)}
+        </p>
+      </header>
       <dl className="mt-4 grid gap-4 sm:grid-cols-2">
-        <Field label="Courriel" value={email} />
-        <Field label="Téléphone" value={member.phone} />
-        <Field label="Date de naissance" value={member.date_of_birth} />
-        <Field label="Adresse actuelle" value={member.current_address} />
-        <Field
+        <AdminField label="Courriel" value={email} />
+        <AdminField label="Téléphone" value={member.phone} />
+        <AdminField label="Date de naissance" value={member.date_of_birth} />
+        <AdminField label="Adresse actuelle" value={member.current_address} />
+        <AdminField
           label="Dates à l'adresse actuelle"
           value={formatLivedDates(
             member.current_address_lived_from,
@@ -86,10 +103,10 @@ function MemberCard({ member }: { member: ApplicationMember }) {
           )}
         />
         {member.address_not_in_canada ? (
-          <Field label="Adresse hors Canada" value="Oui" />
+          <AdminField label="Adresse hors Canada" value="Oui" />
         ) : null}
-        <Field label="Adresse précédente" value={member.previous_address} />
-        <Field
+        <AdminField label="Adresse précédente" value={member.previous_address} />
+        <AdminField
           label="Dates à l'adresse précédente"
           value={formatLivedDates(
             member.previous_address_lived_from,
@@ -97,7 +114,7 @@ function MemberCard({ member }: { member: ApplicationMember }) {
           )}
         />
         {(member.role === "primary" || member.role === "roommate") && (
-          <Field
+          <AdminField
             label="Bail au nom du locataire"
             value={
               member.lease_in_name === null
@@ -110,18 +127,21 @@ function MemberCard({ member }: { member: ApplicationMember }) {
         )}
         {member.role === "roommate" && (
           <>
-            <Field label="Date d'emménagement" value={member.move_in_date} />
-            <Field label="Locateur" value={member.landlord_name} />
-            <Field label="Tél. locateur" value={member.landlord_phone} />
+            <AdminField label="Date d'emménagement" value={member.move_in_date} />
+            <AdminField label="Locateur" value={member.landlord_name} />
+            <AdminField label="Tél. locateur" value={member.landlord_phone} />
           </>
         )}
-        <Field label="Contact RH" value={member.hr_name} />
-        <Field label="Tél. RH" value={member.hr_phone} />
+        <AdminField label="Contact RH" value={member.hr_name} />
+        <AdminField label="Tél. RH" value={member.hr_phone} />
         {member.referral_source && (
-          <Field label="Comment nous avez-vous trouvé?" value={member.referral_source} />
+          <AdminField
+            label="Comment nous avez-vous trouvé?"
+            value={member.referral_source}
+          />
         )}
       </dl>
-    </section>
+    </article>
   );
 }
 
@@ -197,95 +217,133 @@ export default function ApplicationDetailPage() {
   if (!app) {
     return (
       <AdminShell>
-        <p className="text-sm text-[#78716c]">{error || "Chargement…"}</p>
+        <p className={adminUi.empty}>{error || "Chargement…"}</p>
       </AdminShell>
     );
   }
 
   const primaryName = [app.given_name, app.family_name].filter(Boolean).join(" ");
+  const metaParts = [
+    app.building_name,
+    app.unit_number,
+    app.has_guarantor ? "avec garant" : null,
+    app.roommate_count ? `${app.roommate_count} colocataire(s)` : null,
+  ].filter(Boolean);
 
   return (
     <AdminShell>
-      <h1 className="text-lg font-semibold text-[#292524]">
-        Demande #{app.id} — {primaryName || "Demandeur"}
-      </h1>
-      <p className="mt-1 text-sm text-[#78716c]">
-        {app.building_name} · {app.unit_number} ·{" "}
-        <span className="font-medium">{app.status}</span>
-        {app.has_guarantor ? " · avec garant" : ""}
-        {app.roommate_count ? ` · ${app.roommate_count} colocataire(s)` : ""}
-      </p>
+      <Link href="/admin/applications" className={`${adminUi.link} text-sm`}>
+        ← Demandes
+      </Link>
 
-      {error && (
-        <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
-          {error}
-        </p>
-      )}
+      <header className={`${adminUi.card} mt-4`}>
+        <div className={adminUi.cardPad}>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h1 className={adminUi.pageTitle}>
+                Demande #{app.id}
+                {primaryName ? ` — ${primaryName}` : ""}
+              </h1>
+              <p className={adminUi.pageSubtitle}>{metaParts.join(" · ")}</p>
+            </div>
+            <span className={applicationStatusClass(app.status)}>
+              {applicationStatusLabel(app.status)}
+            </span>
+          </div>
 
-      <div className="mt-6 flex flex-wrap gap-3">
-        <button
-          type="button"
-          disabled={busy || app.status === "accepted"}
-          onClick={onAccept}
-          className="rounded bg-[#3d5a45] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
-        >
-          Accepter
-        </button>
-      </div>
+          {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
 
-      <div className="mt-4 rounded border border-[#e7e0d5] bg-[#fffef9] p-4">
-        <label className="block text-sm text-[#57534e]">
-          Raison du refus
-          <textarea
-            value={reason}
-            onChange={(e) => setReason(e.target.value)}
-            rows={2}
-            className="mt-1 w-full rounded border border-[#e7e0d5] px-3 py-2 text-sm"
-          />
-        </label>
-        <button
-          type="button"
-          disabled={busy || app.status === "rejected"}
-          onClick={onReject}
-          className="mt-3 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-4 py-2 text-sm text-[#7f1d1d] disabled:opacity-50"
-        >
-          Rejeter
-        </button>
-      </div>
+          {app.status !== "accepted" && app.status !== "rejected" ? (
+            <div className="mt-5 flex flex-wrap gap-3 border-t border-[var(--ml-line)] pt-5">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={onAccept}
+                className={adminUi.btnPrimary}
+              >
+                Accepter
+              </button>
+            </div>
+          ) : null}
 
-      <h2 className="mt-10 text-base font-medium text-[#292524]">Membres du dossier</h2>
-      <div className="mt-3 space-y-4">
+          {app.status !== "rejected" ? (
+            <div className="mt-4 rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] p-4">
+              <label className="block text-sm text-[var(--ml-steel)]">
+                Raison du refus
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  rows={2}
+                  disabled={app.status === "rejected"}
+                  className={adminUi.textarea}
+                />
+              </label>
+              <button
+                type="button"
+                disabled={busy || app.status === "rejected"}
+                onClick={onReject}
+                className={`${adminUi.btnDanger} mt-3`}
+              >
+                Rejeter
+              </button>
+            </div>
+          ) : null}
+
+          {app.rejection_reason ? (
+            <div className="mt-4 border-t border-[var(--ml-line)] pt-4">
+              <AdminField label="Raison du refus" value={app.rejection_reason} />
+            </div>
+          ) : null}
+        </div>
+      </header>
+
+      <section className={adminUi.sectionGap}>
+        <h2 className={adminUi.sectionTitle}>Membres du dossier</h2>
         {sortedMembers.length > 0 ? (
-          sortedMembers.map((member) => <MemberCard key={member.id} member={member} />)
+          <div className={adminUi.dossierGrid}>
+            {sortedMembers.map((member) => (
+              <div key={member.id} className={adminUi.card}>
+                <MemberCard member={member} />
+              </div>
+            ))}
+          </div>
         ) : (
-          <dl className="grid gap-4 sm:grid-cols-2">
-            <Field label="Courriel" value={app.email} />
-            <Field label="Téléphone" value={app.phone} />
-            <Field label="Adresse" value={app.current_address} />
-            <Field label="Date d'emménagement" value={app.move_in_date} />
-            <Field label="Locateur" value={app.landlord_name} />
-            <Field label="Tél. locateur" value={app.landlord_phone} />
-            <Field label="Contact RH" value={app.hr_name} />
-            <Field label="Tél. RH" value={app.hr_phone} />
-          </dl>
+          <div className={`${adminUi.card} ${adminUi.cardPad}`}>
+            <dl className="grid gap-4 sm:grid-cols-2">
+              <AdminField label="Courriel" value={app.email} />
+              <AdminField label="Téléphone" value={app.phone} />
+              <AdminField label="Adresse" value={app.current_address} />
+              <AdminField label="Date d'emménagement" value={app.move_in_date} />
+              <AdminField label="Locateur" value={app.landlord_name} />
+              <AdminField label="Tél. locateur" value={app.landlord_phone} />
+              <AdminField label="Contact RH" value={app.hr_name} />
+              <AdminField label="Tél. RH" value={app.hr_phone} />
+            </dl>
+          </div>
         )}
-      </div>
+      </section>
 
-      <h2 className="mt-10 text-base font-medium text-[#292524]">Documents</h2>
-      <ApplicationDocuments
-        applicationId={app.id}
-        members={sortedMembers}
-        summaryPdfAvailable={Boolean(app.summary_pdf_available)}
-        dropboxDossierReady={Boolean(app.dropbox_dossier_ready)}
-        memberRoleLabel={memberRoleLabel}
-        memberDisplayName={memberDisplayName}
-        onSummaryRegenerated={load}
-      />
+      <section className={adminUi.sectionGap}>
+        <h2 className={adminUi.sectionTitle}>Documents</h2>
+        <div className={adminUi.cardPad + " " + adminUi.card}>
+          <ApplicationDocuments
+            applicationId={app.id}
+            members={sortedMembers}
+            summaryPdfAvailable={Boolean(app.summary_pdf_available)}
+            dropboxDossierReady={Boolean(app.dropbox_dossier_ready)}
+            memberRoleLabel={memberRoleLabel}
+            memberDisplayName={memberDisplayName}
+            onSummaryRegenerated={load}
+          />
+        </div>
+      </section>
 
-      <Field label="Raison du refus" value={app.rejection_reason} />
-
-      <h2 className="mt-10 text-base font-medium text-[#292524]">Tâches / screening</h2>
-      <ScreeningJobs jobs={jobs} jobMemberLabel={jobMemberLabel} />
+      <section className={adminUi.sectionGap}>
+        <h2 className={adminUi.sectionTitle}>Screening</h2>
+        <div className={adminUi.cardPad + " " + adminUi.card}>
+          <ScreeningJobs jobs={jobs} jobMemberLabel={jobMemberLabel} />
+        </div>
+      </section>
     </AdminShell>
   );
 }

@@ -11,6 +11,22 @@ import {
   type TalSearch,
 } from "@/lib/jobMessageFormat";
 import type { ApplicationJob } from "@/lib/adminApi";
+import { adminUi } from "@/lib/adminUi";
+
+function jobStatusClass(status: string): string {
+  switch (status) {
+    case "completed":
+      return "admin-status admin-status-accepted";
+    case "failed":
+      return "admin-status admin-status-rejected";
+    case "skipped":
+      return "admin-status admin-status-draft";
+    case "running":
+      return "admin-status admin-status-collecting";
+    default:
+      return "admin-status admin-status-submitted";
+  }
+}
 
 function DossierRow({
   dossier,
@@ -22,10 +38,10 @@ function DossierRow({
   const mark = kind === "tenant" ? "✓" : kind === "landlord" ? "◈" : "·";
   const emphasis =
     kind === "tenant"
-      ? "font-medium text-[#3d5a45]"
+      ? "font-medium text-[var(--ml-pine)]"
       : kind === "landlord"
-        ? "font-medium text-[#57534e]"
-        : "text-[#78716c]";
+        ? "font-medium text-[var(--ml-ink)]"
+        : "text-[var(--ml-steel)]";
   const label =
     kind === "tenant"
       ? tenantFromDossier(dossier)
@@ -40,17 +56,19 @@ function DossierRow({
       <span className={emphasis}>
         {mark} {dossier.dossier || "—"}
       </span>
-      {roleHint ? <span className="text-xs uppercase text-[#a8a29e]">{roleHint}</span> : null}
-      {label ? <span className="text-[#57534e]">{label}</span> : null}
+      {roleHint ? (
+        <span className="admin-field-label !normal-case !tracking-normal">{roleHint}</span>
+      ) : null}
+      {label ? <span className="text-[var(--ml-ink)]">{label}</span> : null}
       {dossier.case_status ? (
-        <span className="text-xs text-[#a8a29e]">{dossier.case_status}</span>
+        <span className="text-xs text-[var(--ml-steel)]">{dossier.case_status}</span>
       ) : null}
       {dossier.detail_url ? (
         <a
           href={dossier.detail_url}
           target="_blank"
           rel="noreferrer"
-          className="text-xs text-[#3d5a45] underline-offset-2 hover:underline"
+          className={adminUi.link + " text-xs"}
         >
           TAL
         </a>
@@ -70,21 +88,23 @@ function SearchBlock({ search }: { search: TalSearch }) {
   );
 
   return (
-    <div className="rounded-md border border-[#e7e0d5] bg-[#faf8f5] p-3">
-      <div className="text-sm font-medium text-[#292524]">
+    <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] p-3">
+      <div className="text-sm font-semibold text-[var(--ml-ink)]">
         {sourceLabel(search.source)}{" "}
-        <span className="font-normal text-[#78716c]">
+        <span className="font-normal text-[var(--ml-steel)]">
           ({precisionLabel(search.search_precision)})
         </span>
       </div>
       {search.input?.raw_address ? (
-        <p className="mt-0.5 text-sm text-[#57534e]">{search.input.raw_address}</p>
+        <p className="mt-0.5 text-sm text-[var(--ml-ink)]">{search.input.raw_address}</p>
       ) : null}
       {search.status !== "completed" ? (
-        <p className="mt-2 text-sm text-[#a16207]">{search.reason || search.status}</p>
+        <p className={`${adminUi.alertWarn} mt-2 !border-0 !bg-transparent !p-0`}>
+          {search.reason || search.status}
+        </p>
       ) : (
         <>
-          <p className="mt-2 text-xs text-[#78716c]">
+          <p className="mt-2 text-xs text-[var(--ml-steel)]">
             {search.dossier_count ?? dossiers.length} dossier(s)
             {typeof search.name_match_count === "number"
               ? ` · ${search.name_match_count} locataire`
@@ -113,7 +133,7 @@ function SearchBlock({ search }: { search: TalSearch }) {
           ) : null}
           {others.length > 0 ? (
             <details className="mt-2">
-              <summary className="cursor-pointer text-xs text-[#78716c]">
+              <summary className="cursor-pointer text-xs text-[var(--ml-steel)]">
                 {others.length} autre(s) dossier(s) sans mention du demandeur
               </summary>
               <ul className="mt-1 space-y-1">
@@ -133,25 +153,43 @@ function TalJobCard({ job }: { job: ApplicationJob }) {
   const tal = parseTalScreeningMessage(job.message);
   if (!tal) {
     return (
-      <p className="text-sm text-[#78716c]">{formatJobMessagePreview(job.job_type, job.message)}</p>
+      <p className={adminUi.empty}>{formatJobMessagePreview(job.job_type, job.message)}</p>
     );
   }
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="rounded bg-[#e7e0d5] px-2 py-0.5 text-xs uppercase tracking-wide text-[#57534e]">
-          {job.status}
-        </span>
-        {tal.applicant_name ? (
-          <span className="text-[#292524]">Demandeur: {tal.applicant_name}</span>
-        ) : null}
-      </div>
-      {tal.summary ? <p className="text-sm text-[#57534e]">{tal.summary}</p> : null}
+      {tal.applicant_name ? (
+        <p className="text-sm text-[var(--ml-ink)]">Demandeur: {tal.applicant_name}</p>
+      ) : null}
+      {tal.summary ? <p className="text-sm text-[var(--ml-steel)]">{tal.summary}</p> : null}
       <div className="space-y-2">
         {(tal.searches || []).map((search, idx) => (
           <SearchBlock key={`${search.source}-${idx}`} search={search} />
         ))}
       </div>
+    </div>
+  );
+}
+
+function JobRow({ job }: { job: ApplicationJob }) {
+  const isTal = job.job_type === "tal_screening";
+  return (
+    <div className="border-b border-[var(--ml-line)] py-4 last:border-b-0">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-medium text-[var(--ml-ink)]">
+          {job.job_type === "tal_screening" ? "TAL" : job.job_type}
+        </span>
+        <span className={jobStatusClass(job.status)}>{job.status}</span>
+      </div>
+      {isTal ? (
+        <div className="mt-3">
+          <TalJobCard job={job} />
+        </div>
+      ) : (
+        <p className={`${adminUi.empty} mt-2`}>
+          {formatJobMessagePreview(job.job_type, job.message)}
+        </p>
+      )}
     </div>
   );
 }
@@ -164,36 +202,34 @@ export default function ScreeningJobs({
   jobMemberLabel: (memberId: number) => string;
 }) {
   if (jobs.length === 0) {
-    return <p className="mt-2 text-sm text-[#78716c]">Aucune tâche pour cette demande.</p>;
+    return <p className={adminUi.empty}>Aucune tâche pour cette demande.</p>;
   }
 
+  const byMember = new Map<number, ApplicationJob[]>();
+  for (const job of jobs) {
+    const list = byMember.get(job.application_member_id) ?? [];
+    list.push(job);
+    byMember.set(job.application_member_id, list);
+  }
+
+  const groups = Array.from(byMember.entries());
+
   return (
-    <div className="mt-3 space-y-4">
-      {jobs.map((job) => {
-        const isTal = job.job_type === "tal_screening";
-        return (
-          <div key={job.id} className="border-b border-[#f0ebe3] pb-4 last:border-0">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <div>
-                <p className="text-sm font-medium text-[#292524]">{job.job_type}</p>
-                <p className="text-xs text-[#a8a29e]">
-                  {jobMemberLabel(job.application_member_id)} · {job.status}
-                </p>
-              </div>
-              {!isTal ? (
-                <p className="max-w-xl text-right text-sm text-[#78716c]">
-                  {formatJobMessagePreview(job.job_type, job.message)}
-                </p>
-              ) : null}
-            </div>
-            {isTal ? (
-              <div className="mt-3">
-                <TalJobCard job={job} />
-              </div>
-            ) : null}
+    <div className="space-y-4">
+      {groups.map(([memberId, memberJobs]) => (
+        <div key={memberId} className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)]">
+          <div className="admin-card-header">
+            <p className="text-sm font-semibold text-[var(--ml-ink)]">
+              {jobMemberLabel(memberId)}
+            </p>
           </div>
-        );
-      })}
+          <div className="px-4 sm:px-5">
+            {memberJobs.map((job) => (
+              <JobRow key={job.id} job={job} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
