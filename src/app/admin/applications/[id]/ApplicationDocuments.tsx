@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { ApplicationMember } from "@/lib/adminApi";
 import { regenerateApplicationSummary } from "@/lib/adminApi";
+import { adminUi } from "@/lib/adminUi";
 import {
   MemberDocument,
   documentTypeLabel,
@@ -133,37 +134,39 @@ function DocumentPreviewModal({
       onClick={onClose}
     >
       <div
-        className="flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden rounded-lg bg-white shadow-xl"
+        className="admin-card flex max-h-[92vh] w-full max-w-5xl flex-col overflow-hidden shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between gap-3 border-b border-[#e7e0d5] px-4 py-3">
+        <div className="admin-card-header flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <h3 className="truncate text-sm font-medium text-[#292524]">{target.title}</h3>
-            <p className="truncate text-xs text-[#78716c]">{filename}</p>
+            <h3 className="truncate text-sm font-semibold text-[var(--ml-ink)]">
+              {target.title}
+            </h3>
+            <p className="truncate text-xs text-[var(--ml-steel)]">{filename}</p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
               onClick={() => void onDownload()}
-              className="rounded border border-[#e7e0d5] px-3 py-1.5 text-xs font-medium text-[#3d5a45] hover:bg-[#f5f2eb]"
+              className={adminUi.btnSecondary + " !px-3 !py-1.5 !text-xs"}
             >
               Télécharger
             </button>
             <button
               type="button"
               onClick={onClose}
-              className="rounded px-2 py-1 text-lg leading-none text-[#78716c] hover:bg-[#f5f2eb]"
+              className="rounded px-2 py-1 text-lg leading-none text-[var(--ml-steel)] hover:bg-[var(--ml-paper)]"
               aria-label="Fermer"
             >
               ×
             </button>
           </div>
         </div>
-        <div className="flex min-h-[50vh] flex-1 items-center justify-center overflow-auto bg-[#faf8f4] p-4">
+        <div className="flex min-h-[50vh] flex-1 items-center justify-center overflow-auto bg-[var(--ml-paper)] p-4">
           {loading ? (
-            <p className="text-sm text-[#78716c]">Chargement…</p>
+            <p className={adminUi.empty}>Chargement…</p>
           ) : error ? (
-            <p className="max-w-md text-center text-sm text-[#b91c1c]">{error}</p>
+            <p className={`${adminUi.alertError} max-w-md text-center`}>{error}</p>
           ) : blobUrl && previewAsImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -175,14 +178,14 @@ function DocumentPreviewModal({
             <object
               data={blobUrl}
               type="application/pdf"
-              className="h-[75vh] w-full rounded border border-[#e7e0d5] bg-white"
+              className="h-[75vh] w-full rounded border border-[var(--ml-line)] bg-white"
             >
-              <p className="p-4 text-center text-sm text-[#78716c]">
+              <p className={`${adminUi.empty} p-4 text-center`}>
                 Aperçu PDF indisponible dans ce navigateur. Utilisez Télécharger.
               </p>
             </object>
           ) : blobUrl ? (
-            <p className="text-sm text-[#78716c]">
+            <p className={adminUi.empty}>
               Aperçu non disponible pour ce type de fichier. Utilisez Télécharger.
             </p>
           ) : null}
@@ -210,9 +213,7 @@ export default function ApplicationDocuments({
   const hasMemberDocs = membersWithDocs.length > 0;
 
   if (!summaryPdfAvailable && !hasMemberDocs && !dropboxDossierReady) {
-    return (
-      <p className="mt-2 text-sm text-[#78716c]">Aucun document téléversé pour cette demande.</p>
-    );
+    return <p className={adminUi.empty}>Aucun document téléversé pour cette demande.</p>;
   }
 
   const onDownloadMember = async (document: MemberDocument) => {
@@ -262,126 +263,126 @@ export default function ApplicationDocuments({
 
   return (
     <>
-      <p className="mt-2 text-xs text-[#78716c]">
+      <p className="text-xs text-[var(--ml-steel)]">
         Les fichiers sont chargés depuis Dropbox à la demande (aperçu ou téléchargement).
       </p>
 
-      {error ? (
-        <p className="mt-3 rounded border border-[#fecaca] bg-[#fef2f2] px-3 py-2 text-sm text-[#b91c1c]">
-          {error}
-        </p>
-      ) : null}
+      {error ? <p className={`${adminUi.alertError} mt-3`}>{error}</p> : null}
 
       {dropboxDossierReady && !summaryPdfAvailable ? (
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <p className="text-sm text-[#78716c]">Le résumé PDF n&apos;a pas encore été généré.</p>
+          <p className={adminUi.empty}>Le résumé PDF n&apos;a pas encore été généré.</p>
           <button
             type="button"
             disabled={regeneratingSummary}
             onClick={() => void onRegenerateSummary()}
-            className="rounded border border-[#e7e0d5] px-3 py-1.5 text-xs font-medium text-[#3d5a45] hover:bg-[#f5f2eb] disabled:opacity-50"
+            className={adminUi.btnSecondary + " !px-3 !py-1.5 !text-xs"}
           >
             {regeneratingSummary ? "Génération…" : "Générer le résumé PDF"}
           </button>
         </div>
       ) : null}
 
-      <table className="mt-4 w-full text-left text-sm">
-        <thead>
-          <tr className="border-b border-[#e7e0d5] text-xs uppercase text-[#a8a29e]">
-            <th className="py-2 pr-3">Membre</th>
-            <th className="py-2 pr-3">Type</th>
-            <th className="py-2 pr-3">Fichier</th>
-            <th className="py-2 pr-3">Taille</th>
-            <th className="py-2 text-right">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {summaryPdfAvailable ? (
-            <tr className="border-b border-[#f0ebe3]">
-              <td className="py-2 pr-3 text-[#57534e]">Dossier</td>
-              <td className="py-2 pr-3 text-[#57534e]">Résumé</td>
-              <td className="py-2 pr-3 text-[#78716c]">application_summary.pdf</td>
-              <td className="py-2 pr-3 text-[#a8a29e]">—</td>
-              <td className="py-2 text-right">
-                <div className="flex justify-end gap-3">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setPreview({
-                        kind: "summary",
-                        title: "Résumé du dossier",
-                        filename: "application_summary.pdf",
-                        contentType: "application/pdf",
-                      })
-                    }
-                    className="text-xs font-medium text-[#57534e] underline-offset-2 hover:underline"
-                  >
-                    Aperçu
-                  </button>
-                  <button
-                    type="button"
-                    disabled={busyKey === "summary"}
-                    onClick={() => void onDownloadSummary()}
-                    className="text-xs font-medium text-[#3d5a45] underline-offset-2 hover:underline disabled:opacity-50"
-                  >
-                    {busyKey === "summary" ? "…" : "Télécharger"}
-                  </button>
-                </div>
-              </td>
+      <div className={`${adminUi.tableWrap} mt-4`}>
+        <table className={adminUi.table}>
+          <thead>
+            <tr>
+              <th>Membre</th>
+              <th>Type</th>
+              <th>Fichier</th>
+              <th>Taille</th>
+              <th className="text-right">Actions</th>
             </tr>
-          ) : null}
+          </thead>
+          <tbody>
+            {summaryPdfAvailable ? (
+              <tr>
+                <td>Dossier</td>
+                <td>Résumé</td>
+                <td className="text-[var(--ml-steel)]">application_summary.pdf</td>
+                <td className="text-[var(--ml-steel)]">—</td>
+                <td className="text-right">
+                  <div className="flex justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setPreview({
+                          kind: "summary",
+                          title: "Résumé du dossier",
+                          filename: "application_summary.pdf",
+                          contentType: "application/pdf",
+                        })
+                      }
+                      className={adminUi.link + " text-xs font-medium"}
+                    >
+                      Aperçu
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busyKey === "summary"}
+                      onClick={() => void onDownloadSummary()}
+                      className={adminUi.link + " text-xs font-medium disabled:opacity-50"}
+                    >
+                      {busyKey === "summary" ? "…" : "Télécharger"}
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ) : null}
 
-          {membersWithDocs.map((member) => {
-            const memberLabel = `${memberRoleLabel(member.role)} — ${memberDisplayName(member)}`;
-            return (member.documents ?? []).map((document) => {
-              const label = documentTypeLabel(document.document_type);
-              const key = `doc-${document.id}`;
-              return (
-                <tr key={document.id} className="border-b border-[#f0ebe3]">
-                  <td className="py-2 pr-3 text-[#57534e]">{memberLabel}</td>
-                  <td className="py-2 pr-3 text-[#57534e]">{label}</td>
-                  <td
-                    className="max-w-[12rem] truncate py-2 pr-3 text-[#78716c]"
-                    title={document.original_filename}
-                  >
-                    {document.original_filename}
-                  </td>
-                  <td className="py-2 pr-3 text-[#a8a29e]">{formatFileSize(document.byte_size)}</td>
-                  <td className="py-2 text-right">
-                    <div className="flex justify-end gap-3">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          setPreview({
-                            kind: "member",
-                            document,
-                            title: label,
-                          })
-                        }
-                        className="text-xs font-medium text-[#57534e] underline-offset-2 hover:underline"
-                      >
-                        Aperçu
-                      </button>
-                      <button
-                        type="button"
-                        disabled={busyKey === key}
-                        onClick={() => void onDownloadMember(document)}
-                        className="text-xs font-medium text-[#3d5a45] underline-offset-2 hover:underline disabled:opacity-50"
-                      >
-                        {busyKey === key ? "…" : "Télécharger"}
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            });
-          })}
-        </tbody>
-      </table>
+            {membersWithDocs.map((member) => {
+              const memberLabel = `${memberRoleLabel(member.role)} — ${memberDisplayName(member)}`;
+              return (member.documents ?? []).map((document) => {
+                const label = documentTypeLabel(document.document_type);
+                const key = `doc-${document.id}`;
+                return (
+                  <tr key={document.id}>
+                    <td>{memberLabel}</td>
+                    <td>{label}</td>
+                    <td
+                      className="max-w-[12rem] truncate text-[var(--ml-steel)]"
+                      title={document.original_filename}
+                    >
+                      {document.original_filename}
+                    </td>
+                    <td className="text-[var(--ml-steel)]">
+                      {formatFileSize(document.byte_size)}
+                    </td>
+                    <td className="text-right">
+                      <div className="flex justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPreview({
+                              kind: "member",
+                              document,
+                              title: label,
+                            })
+                          }
+                          className={adminUi.link + " text-xs font-medium"}
+                        >
+                          Aperçu
+                        </button>
+                        <button
+                          type="button"
+                          disabled={busyKey === key}
+                          onClick={() => void onDownloadMember(document)}
+                          className={adminUi.link + " text-xs font-medium disabled:opacity-50"}
+                        >
+                          {busyKey === key ? "…" : "Télécharger"}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              });
+            })}
+          </tbody>
+        </table>
+      </div>
 
       {!summaryPdfAvailable && !hasMemberDocs && dropboxDossierReady ? (
-        <p className="mt-4 text-sm text-[#78716c]">Aucun document membre pour cette demande.</p>
+        <p className={`${adminUi.empty} mt-4`}>Aucun document membre pour cette demande.</p>
       ) : null}
 
       {preview ? (

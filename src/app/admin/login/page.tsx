@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { adminLogin } from "@/lib/adminApi";
 import { setAdminToken } from "@/lib/adminAuth";
+import { adminUi } from "@/lib/adminUi";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 
 export default function AdminLoginPage() {
@@ -14,9 +15,6 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const inputClass =
-    "mt-1 w-full rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2.5 text-sm text-[var(--ml-ink)] outline-none focus:border-[var(--ml-ink)]";
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,17 +36,15 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="admin-app flex min-h-screen flex-col justify-center bg-[var(--ml-paper)] px-5">
+    <main className="admin-auth-page">
       <div className="mx-auto w-full max-w-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ml-steel)]">
               {t("slogan")}
             </p>
-            <h1 className="mt-1 font-[family-name:var(--font-admin-display)] text-2xl font-extrabold tracking-[0.02em] text-[var(--ml-ink)]">
-              {t("loginTitle")}
-            </h1>
-            <p className="mt-1 text-sm text-[var(--ml-steel)]">{t("loginSubtitle")}</p>
+            <h1 className={adminUi.pageTitle}>{t("loginTitle")}</h1>
+            <p className={adminUi.pageSubtitle}>{t("loginSubtitle")}</p>
           </div>
           <button
             type="button"
@@ -59,16 +55,9 @@ export default function AdminLoginPage() {
           </button>
         </div>
 
-        {error && (
-          <p className="mt-4 rounded-lg border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
-            {error}
-          </p>
-        )}
+        {error && <p className={`${adminUi.alertError} mt-4`}>{error}</p>}
 
-        <form
-          onSubmit={onSubmit}
-          className="mt-6 space-y-4 rounded-xl border border-[var(--ml-line)] bg-[var(--ml-card)] p-5"
-        >
+        <form onSubmit={onSubmit} className="admin-auth-card">
           <label className="block text-sm text-[var(--ml-steel)]">
             {t("loginEmail")}
             <input
@@ -76,7 +65,7 @@ export default function AdminLoginPage() {
               required
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
+              className={adminUi.input}
             />
           </label>
           <label className="block text-sm text-[var(--ml-steel)]">
@@ -86,21 +75,18 @@ export default function AdminLoginPage() {
               required
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={inputClass}
+              className={adminUi.input}
             />
           </label>
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-[var(--ml-ink)] py-3 text-sm font-semibold text-white disabled:opacity-60"
+            className={adminUi.btnPrimary + " w-full !py-3"}
           >
             {loading ? t("loginSubmitting") : t("loginSubmit")}
           </button>
           <p className="text-center text-sm">
-            <Link
-              href="/admin/forgot-password"
-              className="text-[var(--ml-brick)] hover:underline"
-            >
+            <Link href="/admin/forgot-password" className={adminUi.link}>
               {t("loginForgotPassword")}
             </Link>
           </p>

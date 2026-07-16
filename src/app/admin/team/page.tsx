@@ -8,6 +8,7 @@ import {
   listAdminUsers,
   updateAdminUser,
 } from "@/lib/adminApi";
+import { adminUi } from "@/lib/adminUi";
 
 export default function TeamPage() {
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -55,59 +56,57 @@ export default function TeamPage() {
 
   return (
     <AdminShell>
-      <h1 className="text-lg font-semibold text-[#292524]">Équipe admin</h1>
-      <p className="mt-1 text-sm text-[#78716c]">Super admin seulement</p>
+      <h1 className={adminUi.pageTitle}>Équipe admin</h1>
+      <p className={adminUi.pageSubtitle}>Super admin seulement</p>
 
-      {error && <p className="mt-4 text-sm text-[#7f1d1d]">{error}</p>}
-      {message && <p className="mt-4 text-sm text-[#1a3d22]">{message}</p>}
+      {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
+      {message ? <p className={`${adminUi.alertSuccess} mt-4`}>{message}</p> : null}
 
-      <form
-        onSubmit={onCreate}
-        className="mt-6 space-y-3 rounded border border-[#e7e0d5] bg-[#fffef9] p-4"
-      >
-        <h2 className="text-sm font-medium text-[#292524]">Ajouter un admin</h2>
-        <input
-          type="email"
-          required
-          placeholder="Courriel"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          className="w-full rounded border border-[#e7e0d5] px-3 py-2 text-sm"
-        />
-        <input
-          type="password"
-          required
-          minLength={8}
-          placeholder="Mot de passe temporaire"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          className="w-full rounded border border-[#e7e0d5] px-3 py-2 text-sm"
-        />
-        <label className="flex items-center gap-2 text-sm text-[#57534e]">
+      <form onSubmit={onCreate} className={`${adminUi.cardPad} ${adminUi.card} mt-6 space-y-4`}>
+        <h2 className={adminUi.sectionTitle}>Ajouter un admin</h2>
+        <label className="block text-sm text-[var(--ml-steel)]">
+          Courriel
+          <input
+            type="email"
+            required
+            placeholder="Courriel"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={adminUi.input}
+          />
+        </label>
+        <label className="block text-sm text-[var(--ml-steel)]">
+          Mot de passe temporaire
+          <input
+            type="password"
+            required
+            minLength={8}
+            placeholder="Mot de passe temporaire"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={adminUi.input}
+          />
+        </label>
+        <label className="flex items-center gap-2 text-sm text-[var(--ml-ink)]">
           <input
             type="checkbox"
             checked={isSuper}
             onChange={(e) => setIsSuper(e.target.checked)}
+            className="h-4 w-4 rounded border-[var(--ml-line)]"
           />
           Super admin
         </label>
-        <button
-          type="submit"
-          className="rounded bg-[#3d5a45] px-4 py-2 text-sm font-medium text-white"
-        >
+        <button type="submit" className={adminUi.btnPrimary}>
           Créer et envoyer le courriel
         </button>
       </form>
 
-      <ul className="mt-8 divide-y divide-[#ebe5db] rounded border border-[#e7e0d5] bg-[#fffef9]">
+      <ul className={`${adminUi.list} mt-8`}>
         {users.map((u) => (
-          <li
-            key={u.id}
-            className="flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-          >
+          <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 !py-4">
             <div>
-              <p className="font-medium text-[#292524]">{u.email}</p>
-              <p className="text-xs text-[#78716c]">
+              <p className="font-semibold text-[var(--ml-ink)]">{u.email}</p>
+              <p className="text-xs text-[var(--ml-steel)]">
                 {u.is_super_admin ? "Super admin" : "Admin"}
                 {!u.active && " · Inactif"}
               </p>
@@ -116,7 +115,7 @@ export default function TeamPage() {
               <button
                 type="button"
                 onClick={() => deactivate(u)}
-                className="text-sm text-[#7f1d1d] hover:underline"
+                className={adminUi.btnDanger + " !px-3 !py-1.5 !text-xs"}
               >
                 Désactiver
               </button>

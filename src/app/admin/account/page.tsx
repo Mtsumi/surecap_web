@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { changeAdminPassword } from "@/lib/adminApi";
 import AdminShell from "../AdminShell";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
+import { adminUi } from "@/lib/adminUi";
 
 function AccountForm() {
   const router = useRouter();
@@ -17,9 +18,6 @@ function AccountForm() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-
-  const inputClass =
-    "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#3d5a45]";
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -47,20 +45,12 @@ function AccountForm() {
 
   return (
     <>
-      {required && (
-        <p className="mt-4 rounded border border-[#e7d9b8] bg-[#fff8e8] px-3 py-2 text-sm text-[#57534e]">
-          {t("accountRequiredBanner")}
-        </p>
-      )}
+      {required && <p className={`${adminUi.alertWarn} mt-4`}>{t("accountRequiredBanner")}</p>}
 
-      {error && (
-        <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
-          {error}
-        </p>
-      )}
+      {error && <p className={`${adminUi.alertError} mt-4`}>{error}</p>}
 
-      <form onSubmit={onSubmit} className="mt-6 max-w-md space-y-4">
-        <label className="block text-sm text-[#57534e]">
+      <form onSubmit={onSubmit} className={`${adminUi.cardPad} ${adminUi.card} mt-6 max-w-md space-y-4`}>
+        <label className="block text-sm text-[var(--ml-steel)]">
           {t("accountCurrentPassword")}
           <input
             type="password"
@@ -68,10 +58,10 @@ function AccountForm() {
             autoComplete="current-password"
             value={currentPassword}
             onChange={(e) => setCurrentPassword(e.target.value)}
-            className={inputClass}
+            className={adminUi.input}
           />
         </label>
-        <label className="block text-sm text-[#57534e]">
+        <label className="block text-sm text-[var(--ml-steel)]">
           {t("accountNewPassword")}
           <input
             type="password"
@@ -80,10 +70,10 @@ function AccountForm() {
             autoComplete="new-password"
             value={newPassword}
             onChange={(e) => setNewPassword(e.target.value)}
-            className={inputClass}
+            className={adminUi.input}
           />
         </label>
-        <label className="block text-sm text-[#57534e]">
+        <label className="block text-sm text-[var(--ml-steel)]">
           {t("accountConfirmPassword")}
           <input
             type="password"
@@ -92,14 +82,10 @@ function AccountForm() {
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(e) => setConfirmPassword(e.target.value)}
-            className={inputClass}
+            className={adminUi.input}
           />
         </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-[#f4f1ec] disabled:opacity-60"
-        >
+        <button type="submit" disabled={loading} className={adminUi.btnPrimary}>
           {loading ? t("accountSubmitting") : t("accountSubmit")}
         </button>
       </form>
@@ -112,10 +98,10 @@ export default function AdminAccountPage() {
 
   return (
     <AdminShell>
-      <h1 className="text-lg font-semibold text-[#292524]">{t("accountTitle")}</h1>
-      <p className="mt-1 text-sm text-[#78716c]">{t("accountSubtitle")}</p>
+      <h1 className={adminUi.pageTitle}>{t("accountTitle")}</h1>
+      <p className={adminUi.pageSubtitle}>{t("accountSubtitle")}</p>
 
-      <Suspense fallback={<p className="mt-6 text-sm text-[#78716c]">{t("loading")}</p>}>
+      <Suspense fallback={<p className={`${adminUi.empty} mt-6`}>{t("loading")}</p>}>
         <AccountForm />
       </Suspense>
     </AdminShell>

@@ -12,8 +12,9 @@ import {
 } from "@/lib/adminApi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 
-const inputClass =
-  "mt-1 w-full min-w-0 rounded border border-[#e7e0d5] bg-white px-2 py-2 text-sm outline-none focus:border-[#3d5a45]";
+import { adminUi } from "@/lib/adminUi";
+
+const inputClass = adminUi.input + " min-w-0 !px-2 !py-2";
 
 function parseRentDraft(draft: string): number | null | "invalid" {
   const trimmed = draft.trim();
@@ -145,21 +146,21 @@ function UnitRow({
         <div className="flex items-start gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-              <p className="font-medium text-[#292524]">{unit.unit_number}</p>
+              <p className="font-semibold text-[var(--ml-ink)]">{unit.unit_number}</p>
               <ForRentBadge forRent={unit.for_rent} t={t} />
             </div>
             <dl className="mt-2 grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs text-[#78716c]">{t("buildingsRent")}</dt>
-                <dd className="mt-0.5 text-[#292524]">
+                <dt className="admin-field-label">{t("buildingsRent")}</dt>
+                <dd className="admin-field-value">
                   {unit.rent != null
                     ? `${unit.rent} ${t("buildingsRentSuffix")}`
                     : t("buildingsNotSet")}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-[#78716c]">{t("buildingsAvailableDate")}</dt>
-                <dd className="mt-0.5 break-words text-[#292524]">
+                <dt className="admin-field-label">{t("buildingsAvailableDate")}</dt>
+                <dd className="admin-field-value break-words">
                   {unit.available_date || t("buildingsNotSet")}
                 </dd>
               </div>
@@ -169,7 +170,7 @@ function UnitRow({
             type="button"
             onClick={onStartEdit}
             aria-label={`${t("buildingsEdit")} ${unit.unit_number}`}
-            className="shrink-0 rounded border border-[#e7e0d5] bg-white p-2 text-[#57534e] hover:border-[#3d5a45] hover:text-[#3d5a45]"
+            className={adminUi.btnSecondary + " !p-2"}
           >
             <PencilIcon />
           </button>
@@ -179,14 +180,14 @@ function UnitRow({
   }
 
   return (
-    <li className="border-l-2 border-[#3d5a45] bg-[#faf8f4] px-3 py-4 sm:px-4">
+    <li className="border-l-2 border-[var(--ml-ink)] bg-[var(--ml-paper)] px-3 py-4 sm:px-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="font-medium text-[#292524]">{unit.unit_number}</p>
-        <span className="text-xs text-[#78716c]">{t("buildingsEdit")}</span>
+        <p className="font-semibold text-[var(--ml-ink)]">{unit.unit_number}</p>
+        <span className="text-xs text-[var(--ml-steel)]">{t("buildingsEdit")}</span>
       </div>
 
       <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <label className="block text-xs text-[#78716c]">
+        <label className="block admin-field-label">
           {t("buildingsRent")}
           <input
             type="number"
@@ -198,7 +199,7 @@ function UnitRow({
             className={inputClass}
           />
         </label>
-        <label className="block text-xs text-[#78716c]">
+        <label className="block admin-field-label">
           {t("buildingsAvailableDate")}
           <input
             type="text"
@@ -210,12 +211,12 @@ function UnitRow({
         </label>
       </div>
 
-      <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[#57534e]">
+      <label className="mt-3 flex cursor-pointer items-center gap-2 text-sm text-[var(--ml-ink)]">
         <input
           type="checkbox"
           checked={forRentDraft}
           onChange={(e) => setForRentDraft(e.target.checked)}
-          className="h-4 w-4 rounded border-[#d6d0c4] text-[#3d5a45] focus:ring-[#3d5a45]"
+          className="h-4 w-4 rounded border-[var(--ml-line)]"
         />
         {t("buildingsForRent")}
       </label>
@@ -225,7 +226,7 @@ function UnitRow({
           type="button"
           onClick={handleCancel}
           disabled={saving}
-          className="w-full rounded border border-[#d6d0c4] bg-white px-3 py-2 text-sm font-medium text-[#57534e] disabled:opacity-60 sm:w-auto"
+          className={adminUi.btnSecondary + " w-full sm:w-auto"}
         >
           {t("buildingsCancel")}
         </button>
@@ -233,7 +234,7 @@ function UnitRow({
           type="button"
           onClick={saveDetails}
           disabled={saving}
-          className="w-full rounded-lg bg-[var(--ml-ink)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto"
+          className={adminUi.btnPrimary + " w-full sm:w-auto"}
         >
           {saving ? t("buildingsSaving") : t("buildingsSave")}
         </button>
@@ -283,15 +284,9 @@ export default function BuildingsAdminPage() {
 
   return (
     <AdminShell>
-      <h1 className="admin-display text-2xl font-extrabold tracking-tight text-[var(--ml-ink)]">
-        {t("buildingsTitle")}
-      </h1>
+      <h1 className={adminUi.pageTitle}>{t("buildingsTitle")}</h1>
 
-      {error && (
-        <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
-          {error}
-        </p>
-      )}
+      {error && <p className={`${adminUi.alertError} mt-4`}>{error}</p>}
 
       <div className="-mx-1 mt-6 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
         {buildings.map((b) => (
@@ -302,11 +297,9 @@ export default function BuildingsAdminPage() {
               setError(null);
               setSelectedId(b.id);
             }}
-            className={`shrink-0 rounded border px-3 py-2 text-sm ${
-              selectedId === b.id
-                ? "border-[#3d5a45] bg-[#f6faf6] text-[#1a3d22]"
-                : "border-[#e7e0d5] bg-white text-[#57534e]"
-            }`}
+            className={
+              selectedId === b.id ? adminUi.chipActive : adminUi.chip
+            }
           >
             {b.name}
           </button>
@@ -314,11 +307,11 @@ export default function BuildingsAdminPage() {
       </div>
 
       {loadingUnits ? (
-        <p className="mt-6 text-sm text-[#78716c]">{t("loading")}</p>
+        <p className={`${adminUi.empty} mt-6`}>{t("loading")}</p>
       ) : units.length === 0 ? (
-        <p className="mt-6 text-sm text-[#78716c]">{t("buildingsEmptyUnits")}</p>
+        <p className={`${adminUi.empty} mt-6`}>{t("buildingsEmptyUnits")}</p>
       ) : (
-        <ul className="mt-6 divide-y divide-[#ebe5db] rounded border border-[#e7e0d5] bg-[#fffef9]">
+        <ul className={`${adminUi.list} mt-6`}>
           {units.map((u) => (
             <UnitRow
               key={u.id}

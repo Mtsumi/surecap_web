@@ -5,18 +5,11 @@ import { useEffect, useState } from "react";
 import AdminShell from "../AdminShell";
 import { ApplicationListItem, listApplications } from "@/lib/adminApi";
 
+import { adminUi, applicationStatusClass } from "@/lib/adminUi";
+
 function statusBadge(status: string) {
-  const colors: Record<string, string> = {
-    accepted: "bg-[#e4f3eb] text-[var(--ml-pine)]",
-    rejected: "bg-[#fdf5f5] text-[#7f1d1d]",
-    submitted: "bg-[#eef2f7] text-[var(--ml-ink)]",
-    collecting: "bg-[#fbf3e3] text-[var(--ml-amber)]",
-    draft: "bg-[var(--ml-paper)] text-[var(--ml-steel)]",
-  };
   return (
-    <span
-      className={`rounded-md px-2 py-0.5 text-xs font-semibold ${colors[status] || colors.draft}`}
-    >
+    <span className={applicationStatusClass(status)}>
       {status}
     </span>
   );
@@ -40,26 +33,24 @@ export default function ApplicationsPage() {
 
   return (
     <AdminShell>
-      <h1 className="admin-display text-2xl font-extrabold tracking-tight text-[var(--ml-ink)]">
-        Demandes
-      </h1>
-      <p className="mt-1 text-sm text-[var(--ml-steel)]">
+      <h1 className={adminUi.pageTitle}>Demandes</h1>
+      <p className={adminUi.pageSubtitle}>
         {total} soumise{total === 1 ? "" : "s"} (brouillons exclus)
       </p>
 
-      {error && <p className="mt-4 text-sm text-[#7f1d1d]">{error}</p>}
-      {loading && <p className="mt-6 text-sm text-[var(--ml-steel)]">Chargement…</p>}
+      {error && <p className={`${adminUi.alertError} mt-4`}>{error}</p>}
+      {loading && <p className={`${adminUi.empty} mt-6`}>Chargement…</p>}
 
       {!loading && items.length === 0 && (
-        <p className="mt-6 text-sm text-[var(--ml-steel)]">Aucune demande pour le moment.</p>
+        <p className={`${adminUi.empty} mt-6`}>Aucune demande pour le moment.</p>
       )}
 
-      <ul className="mt-6 divide-y divide-[var(--ml-line)] overflow-hidden rounded-xl border border-[var(--ml-line)] bg-[var(--ml-card)]">
+      <ul className={`${adminUi.list} mt-6`}>
         {items.map((app) => (
-          <li key={app.id}>
+          <li key={app.id} className="!p-0">
             <Link
               href={`/admin/applications/${app.id}`}
-              className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 transition-colors hover:bg-[var(--ml-paper)]"
+              className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 transition-colors hover:bg-[var(--ml-paper)] sm:px-5"
             >
               <div>
                 <p className="font-semibold text-[var(--ml-ink)]">
