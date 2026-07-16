@@ -54,8 +54,8 @@ function ForRentBadge({
     <span
       className={`inline-flex shrink-0 rounded px-2 py-0.5 text-xs font-medium ${
         forRent
-          ? "bg-[#3d5a45] text-white"
-          : "border border-[#d6d0c4] text-[#57534e]"
+          ? "bg-[var(--ml-pine)] text-white"
+          : "border border-[var(--ml-line)] text-[var(--ml-steel)]"
       }`}
     >
       {forRent ? t("buildingsForRent") : t("buildingsNotForRent")}
@@ -233,7 +233,7 @@ function UnitRow({
           type="button"
           onClick={saveDetails}
           disabled={saving}
-          className="w-full rounded bg-[#3d5a45] px-3 py-2 text-sm font-medium text-[#f4f1ec] disabled:opacity-60 sm:w-auto"
+          className="w-full rounded-lg bg-[var(--ml-ink)] px-3 py-2 text-sm font-semibold text-white disabled:opacity-60 sm:w-auto"
         >
           {saving ? t("buildingsSaving") : t("buildingsSave")}
         </button>
@@ -283,7 +283,9 @@ export default function BuildingsAdminPage() {
 
   return (
     <AdminShell>
-      <h1 className="text-lg font-semibold text-[#292524]">{t("buildingsTitle")}</h1>
+      <h1 className="admin-display text-2xl font-extrabold tracking-tight text-[var(--ml-ink)]">
+        {t("buildingsTitle")}
+      </h1>
 
       {error && (
         <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">

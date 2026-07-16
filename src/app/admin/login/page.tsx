@@ -16,7 +16,7 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false);
 
   const inputClass =
-    "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-sm outline-none focus:border-[#3d5a45]";
+    "mt-1 w-full rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2.5 text-sm text-[var(--ml-ink)] outline-none focus:border-[var(--ml-ink)]";
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
@@ -38,61 +38,74 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center px-5">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-xl font-semibold text-[#292524]">{t("loginTitle")}</h1>
-          <p className="mt-1 text-sm text-[#57534e]">{t("loginSubtitle")}</p>
+    <main className="admin-app flex min-h-screen flex-col justify-center bg-[var(--ml-paper)] px-5">
+      <div className="mx-auto w-full max-w-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.14em] text-[var(--ml-steel)]">
+              {t("slogan")}
+            </p>
+            <h1 className="mt-1 font-[family-name:var(--font-admin-display)] text-2xl font-extrabold tracking-[0.02em] text-[var(--ml-ink)]">
+              {t("loginTitle")}
+            </h1>
+            <p className="mt-1 text-sm text-[var(--ml-steel)]">{t("loginSubtitle")}</p>
+          </div>
+          <button
+            type="button"
+            onClick={toggleLocale}
+            className="shrink-0 text-sm text-[var(--ml-steel)] hover:underline"
+          >
+            {t("langToggle")}
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={toggleLocale}
-          className="shrink-0 text-sm text-[#78716c] hover:underline"
+
+        {error && (
+          <p className="mt-4 rounded-lg border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
+            {error}
+          </p>
+        )}
+
+        <form
+          onSubmit={onSubmit}
+          className="mt-6 space-y-4 rounded-xl border border-[var(--ml-line)] bg-[var(--ml-card)] p-5"
         >
-          {t("langToggle")}
-        </button>
+          <label className="block text-sm text-[var(--ml-steel)]">
+            {t("loginEmail")}
+            <input
+              type="email"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <label className="block text-sm text-[var(--ml-steel)]">
+            {t("loginPassword")}
+            <input
+              type="password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className={inputClass}
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full rounded-lg bg-[var(--ml-ink)] py-3 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {loading ? t("loginSubmitting") : t("loginSubmit")}
+          </button>
+          <p className="text-center text-sm">
+            <Link
+              href="/admin/forgot-password"
+              className="text-[var(--ml-brick)] hover:underline"
+            >
+              {t("loginForgotPassword")}
+            </Link>
+          </p>
+        </form>
       </div>
-
-      {error && (
-        <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
-          {error}
-        </p>
-      )}
-
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
-        <label className="block text-sm text-[#57534e]">
-          {t("loginEmail")}
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <label className="block text-sm text-[#57534e]">
-          {t("loginPassword")}
-          <input
-            type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className={inputClass}
-          />
-        </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded bg-[#3d5a45] py-3 text-sm font-medium text-[#f4f1ec] disabled:opacity-60"
-        >
-          {loading ? t("loginSubmitting") : t("loginSubmit")}
-        </button>
-        <p className="text-center text-sm">
-          <Link href="/admin/forgot-password" className="text-[#3d5a45] hover:underline">
-            {t("loginForgotPassword")}
-          </Link>
-        </p>
-      </form>
     </main>
   );
 }

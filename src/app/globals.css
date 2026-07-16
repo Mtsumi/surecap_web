@@ -9,6 +9,27 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Montreal Living admin (Steve mock tokens) */
+.admin-app {
+  --ml-ink: #1b2733;
+  --ml-brick: #b5462e;
+  --ml-paper: #f4f3ef;
+  --ml-card: #ffffff;
+  --ml-steel: #5b6b7a;
+  --ml-line: #e3e1da;
+  --ml-pine: #2e7d5b;
+  --ml-amber: #b07c1f;
+  font-family: var(--font-admin-body), "Source Sans 3", ui-sans-serif, sans-serif;
+  background-color: var(--ml-paper);
+  color: var(--ml-ink);
+}
+
+.admin-app h1,
+.admin-app h2,
+.admin-app .admin-display {
+  font-family: var(--font-admin-display), Archivo, ui-sans-serif, sans-serif;
+}
+
 /* react-phone-number-input — match apply form inputs */
 .phone-field {
   @apply mt-1 flex w-full items-center gap-2 rounded border border-[#e7e0d5] bg-white px-2 py-1.5 text-base transition;

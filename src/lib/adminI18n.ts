@@ -3,7 +3,8 @@ import type { Locale } from "./i18n";
 /** Admin UI copy — French is the default product language; English for dev/ops toggle. */
 export const adminMessages = {
   fr: {
-    brand: "SureCap Admin",
+    brand: "Montreal Living",
+    slogan: "Service · Style · Location",
     loading: "Chargement…",
     logout: "Déconnexion",
     langToggle: "English",
@@ -11,7 +12,7 @@ export const adminMessages = {
     navBuildings: "Immeubles",
     navTeam: "Équipe",
     navAccount: "Mon compte",
-    loginTitle: "SureCap Admin",
+    loginTitle: "Montreal Living",
     loginSubtitle: "Connexion administrateur",
     loginEmail: "Courriel",
     loginPassword: "Mot de passe",
@@ -63,7 +64,8 @@ export const adminMessages = {
     buildingsGenericError: "Une erreur est survenue.",
   },
   en: {
-    brand: "SureCap Admin",
+    brand: "Montreal Living",
+    slogan: "Service · Style · Location",
     loading: "Loading…",
     logout: "Log out",
     langToggle: "Français",
@@ -71,7 +73,7 @@ export const adminMessages = {
     navBuildings: "Buildings",
     navTeam: "Team",
     navAccount: "My account",
-    loginTitle: "SureCap Admin",
+    loginTitle: "Montreal Living",
     loginSubtitle: "Administrator sign-in",
     loginEmail: "Email",
     loginPassword: "Password",
