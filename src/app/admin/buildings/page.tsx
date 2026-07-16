@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import AdminShell from "../AdminShell";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import {
   BuildingAdmin,
@@ -283,7 +282,7 @@ export default function BuildingsAdminPage() {
   };
 
   return (
-    <AdminShell>
+    <>
       <h1 className={adminUi.pageTitle}>{t("buildingsTitle")}</h1>
 
       {error && <p className={`${adminUi.alertError} mt-4`}>{error}</p>}
@@ -306,12 +305,14 @@ export default function BuildingsAdminPage() {
         ))}
       </div>
 
-      {loadingUnits ? (
+      {loadingUnits && units.length > 0 ? (
         <p className={`${adminUi.empty} mt-6`}>{t("loading")}</p>
-      ) : units.length === 0 ? (
+      ) : null}
+
+      {units.length === 0 && !loadingUnits ? (
         <p className={`${adminUi.empty} mt-6`}>{t("buildingsEmptyUnits")}</p>
-      ) : (
-        <ul className={`${adminUi.list} mt-6`}>
+      ) : units.length > 0 ? (
+        <ul className={`${adminUi.list} mt-6 ${loadingUnits ? "pointer-events-none opacity-60" : ""}`}>
           {units.map((u) => (
             <UnitRow
               key={u.id}
@@ -328,7 +329,7 @@ export default function BuildingsAdminPage() {
             />
           ))}
         </ul>
-      )}
-    </AdminShell>
+      ) : null}
+    </>
   );
 }

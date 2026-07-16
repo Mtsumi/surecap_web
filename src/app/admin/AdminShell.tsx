@@ -14,12 +14,18 @@ function roleLabel(user: AdminUser, locale: "fr" | "en"): string {
   return locale === "fr" ? "Administrateur" : "Administrator";
 }
 
+let cachedAdminUser: AdminUser | null = null;
+
+export function clearCachedAdminUser(): void {
+  cachedAdminUser = null;
+}
+
 export default function AdminShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { t, toggleLocale, locale } = useAdminLocaleContext();
-  const [user, setUser] = useState<AdminUser | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState<AdminUser | null>(cachedAdminUser);
+  const [loading, setLoading] = useState(!cachedAdminUser);
   const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
@@ -27,22 +33,63 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       router.replace("/admin/login");
       return;
     }
+
+    let cancelled = false;
+
+    if (cachedAdminUser) {
+      setUser(cachedAdminUser);
+      setLoading(false);
+      adminMe()
+        .then((me) => {
+          if (cancelled) return;
+          cachedAdminUser = me;
+          setUser(me);
+        })
+        .catch(() => {
+          if (!cancelled) {
+            clearCachedAdminUser();
+            router.replace("/admin/login");
+          }
+        });
+      return () => {
+        cancelled = true;
+      };
+    }
+
     adminMe()
       .then((me) => {
+        if (cancelled) return;
+        cachedAdminUser = me;
         setUser(me);
-        if (me.must_change_password && !pathname.startsWith("/admin/account")) {
-          router.replace("/admin/account?required=1");
-        }
+        setLoading(false);
       })
-      .catch(() => router.replace("/admin/login"))
-      .finally(() => setLoading(false));
-  }, [router, pathname]);
+      .catch(() => {
+        if (!cancelled) router.replace("/admin/login");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [router]);
+
+  useEffect(() => {
+    if (
+      user?.must_change_password &&
+      !pathname.startsWith("/admin/account")
+    ) {
+      router.replace("/admin/account?required=1");
+    }
+  }, [user, pathname, router]);
 
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
   const logout = () => {
+    clearCachedAdminUser();
     clearAdminToken();
     router.replace("/admin/login");
   };

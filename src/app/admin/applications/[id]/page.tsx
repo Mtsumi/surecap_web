@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import AdminField from "../../components/AdminField";
-import AdminShell from "../../AdminShell";
 import {
   ApplicationDetail,
   ApplicationJob,
@@ -215,11 +214,7 @@ export default function ApplicationDetailPage() {
   };
 
   if (!app) {
-    return (
-      <AdminShell>
-        <p className={adminUi.empty}>{error || "Chargement…"}</p>
-      </AdminShell>
-    );
+    return <p className={adminUi.empty}>{error || "Chargement…"}</p>;
   }
 
   const primaryName = [app.given_name, app.family_name].filter(Boolean).join(" ");
@@ -231,7 +226,7 @@ export default function ApplicationDetailPage() {
   ].filter(Boolean);
 
   return (
-    <AdminShell>
+    <>
       <Link href="/admin/applications" className={`${adminUi.link} text-sm`}>
         ← Demandes
       </Link>
@@ -344,6 +339,6 @@ export default function ApplicationDetailPage() {
           <ScreeningJobs jobs={jobs} jobMemberLabel={jobMemberLabel} />
         </div>
       </section>
-    </AdminShell>
+    </>
   );
 }

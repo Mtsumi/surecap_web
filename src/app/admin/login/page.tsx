@@ -6,6 +6,7 @@ import { FormEvent, useState } from "react";
 import { adminLogin } from "@/lib/adminApi";
 import { setAdminToken } from "@/lib/adminAuth";
 import { adminUi } from "@/lib/adminUi";
+import { clearCachedAdminUser } from "../AdminShell";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 
 export default function AdminLoginPage() {
@@ -22,6 +23,7 @@ export default function AdminLoginPage() {
     setError(null);
     try {
       const res = await adminLogin(email.trim(), password);
+      clearCachedAdminUser();
       setAdminToken(res.access_token);
       if (res.must_change_password) {
         router.replace("/admin/account?required=1");
