@@ -93,7 +93,7 @@ body {
   }
 
   .admin-btn {
-    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition disabled:opacity-50;
+    @apply inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold disabled:opacity-50;
   }
 
   .admin-btn-primary {
@@ -102,7 +102,7 @@ body {
   }
 
   .admin-btn-primary:hover:not(:disabled) {
-    @apply opacity-90;
+    background-color: #243444;
   }
 
   .admin-btn-secondary {
