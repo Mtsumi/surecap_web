@@ -1,7 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import AdminShell from "../AdminShell";
 import {
   AdminUser,
   createAdminUser,
@@ -55,7 +54,7 @@ export default function TeamPage() {
   };
 
   return (
-    <AdminShell>
+    <>
       <h1 className={adminUi.pageTitle}>Équipe admin</h1>
       <p className={adminUi.pageSubtitle}>Super admin seulement</p>
 
@@ -123,6 +122,6 @@ export default function TeamPage() {
           </li>
         ))}
       </ul>
-    </AdminShell>
+    </>
   );
 }

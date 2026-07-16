@@ -3,7 +3,6 @@
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { changeAdminPassword } from "@/lib/adminApi";
-import AdminShell from "../AdminShell";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
 
@@ -97,13 +96,13 @@ export default function AdminAccountPage() {
   const { t } = useAdminLocaleContext();
 
   return (
-    <AdminShell>
+    <>
       <h1 className={adminUi.pageTitle}>{t("accountTitle")}</h1>
       <p className={adminUi.pageSubtitle}>{t("accountSubtitle")}</p>
 
       <Suspense fallback={<p className={`${adminUi.empty} mt-6`}>{t("loading")}</p>}>
         <AccountForm />
       </Suspense>
-    </AdminShell>
+    </>
   );
 }

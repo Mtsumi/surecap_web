@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import AdminShell from "../AdminShell";
 import { ApplicationListItem, listApplications } from "@/lib/adminApi";
 
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
@@ -32,7 +31,7 @@ export default function ApplicationsPage() {
   }, []);
 
   return (
-    <AdminShell>
+    <>
       <h1 className={adminUi.pageTitle}>Demandes</h1>
       <p className={adminUi.pageSubtitle}>
         {total} soumise{total === 1 ? "" : "s"} (brouillons exclus)
@@ -66,6 +65,6 @@ export default function ApplicationsPage() {
           </li>
         ))}
       </ul>
-    </AdminShell>
+    </>
   );
 }
