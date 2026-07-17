@@ -210,11 +210,16 @@ export default function StepDocumentUpload(props: Props) {
           }}
           className="mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-base text-[#292524] outline-none focus:border-[#3d5a45] disabled:opacity-60"
         >
-          <option value="passport">{t(locale, "idPassport")}</option>
-          <option value="medicare">{t(locale, "idMedicare")}</option>
           <option value="driver_licence">{t(locale, "idDriverLicence")}</option>
+          <option value="medicare">{t(locale, "idMedicare")}</option>
+          <option value="passport">{t(locale, "idPassport")}</option>
         </select>
       </label>
+      {idKind === "driver_licence" && (
+        <p className="mt-2 text-sm leading-relaxed text-[#78716c]">
+          {t(locale, "idDriverLicenceHint")}
+        </p>
+      )}
 
       <div className="mt-4 space-y-3">
         {slots.map((slot) => {

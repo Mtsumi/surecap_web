@@ -16,8 +16,8 @@ export type MemberDocument = {
 export type DocumentDisposition = "inline" | "attachment";
 
 const DOCUMENT_TYPE_LABELS: Record<string, string> = {
-  id_driver_licence_front: "Permis (recto)",
-  id_driver_licence_back: "Permis (verso)",
+  id_driver_licence_front: "Permis canadien (recto)",
+  id_driver_licence_back: "Permis canadien (verso)",
   id_medicare: "Carte RAMQ",
   id_passport: "Passeport",
   pay_slip_1: "Talons de paie",
