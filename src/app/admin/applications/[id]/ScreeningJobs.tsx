@@ -2,11 +2,15 @@
 
 import {
   formatJobMessagePreview,
+  idExtractFlagLabel,
+  idScreeningContextLabel,
   landlordFromDossier,
+  parseIdDocumentExtractMessage,
   parseTalScreeningMessage,
   precisionLabel,
   sourceLabel,
   tenantFromDossier,
+  jobTypeLabel,
   type TalDossier,
   type TalSearch,
 } from "@/lib/jobMessageFormat";
@@ -157,6 +161,101 @@ function SearchBlock({ search }: { search: TalSearch }) {
   );
 }
 
+function IdExtractFlags({
+  summary,
+}: {
+  summary: NonNullable<ReturnType<typeof parseTalScreeningMessage>>["id_extract"];
+}) {
+  if (!summary) return null;
+  const flags = summary.flags || [];
+  return (
+    <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] p-3 text-sm">
+      <p className="font-semibold text-[var(--ml-ink)]">Vérification pièce d&apos;identité</p>
+      <p className="mt-1 text-[var(--ml-steel)]">
+        {idScreeningContextLabel(summary.screening_context)}
+        {summary.pdf417_ok ? ` · PDF417 (${summary.pdf417_variant || "ok"})` : ""}
+      </p>
+      {(summary.ocr_name || summary.barcode_name) && (
+        <p className="mt-2 text-[var(--ml-ink)]">
+          Nom lu: {summary.barcode_name || summary.ocr_name}
+          {summary.name_mismatch ? (
+            <span className={`${adminUi.alertWarn} ml-2 !inline !border-0 !bg-transparent !p-0`}>
+              ≠ formulaire
+            </span>
+          ) : null}
+        </p>
+      )}
+      {summary.address_sources && summary.address_sources.length > 0 ? (
+        <p className="mt-1 text-xs text-[var(--ml-steel)]">
+          Adresses ID utilisées pour TAL:{" "}
+          {summary.address_sources.map((s) => sourceLabel(s)).join(" · ")}
+        </p>
+      ) : null}
+      {flags.length > 0 ? (
+        <ul className="mt-2 space-y-1 text-xs text-[var(--ml-steel)]">
+          {flags.map((flag) => (
+            <li key={flag}>• {idExtractFlagLabel(flag)}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function IdExtractJobCard({ job }: { job: ApplicationJob }) {
+  const payload = parseIdDocumentExtractMessage(job.message);
+  if (!payload) {
+    return (
+      <p className={adminUi.empty}>{formatJobMessagePreview(job.job_type, job.message)}</p>
+    );
+  }
+  const flags = payload.flags || [];
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="text-[var(--ml-steel)]">
+        {idScreeningContextLabel(payload.screening_context)}
+        {payload.pdf417_ok ? ` · PDF417 (${payload.pdf417_variant || "ok"})` : ""}
+      </p>
+      {(payload.ocr_name || payload.barcode_name) && (
+        <p className="text-[var(--ml-ink)]">
+          Nom: {payload.barcode_name || payload.ocr_name}
+          {payload.name_mismatch ? (
+            <span className={`${adminUi.alertWarn} ml-2 !inline !border-0 !bg-transparent !p-0`}>
+              différent du formulaire
+            </span>
+          ) : null}
+        </p>
+      )}
+      {payload.addresses && payload.addresses.length > 0 ? (
+        <div>
+          <p className="admin-field-label">Adresses extraites</p>
+          <ul className="mt-1 space-y-1 text-[var(--ml-ink)]">
+            {payload.addresses.map((addr) => (
+              <li key={`${addr.source}-${addr.raw_address}`}>
+                {sourceLabel(addr.source)} — {addr.raw_address}
+                {addr.tal_ready ? "" : " (non utilisée pour TAL)"}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
+      {(payload.blur_front || payload.blur_back) && (
+        <p className="text-xs text-[var(--ml-steel)]">
+          Flou: recto {payload.blur_front?.quality || "—"} · verso{" "}
+          {payload.blur_back?.quality || "—"}
+        </p>
+      )}
+      {flags.length > 0 ? (
+        <ul className="space-y-1 text-xs text-[var(--ml-steel)]">
+          {flags.map((flag) => (
+            <li key={flag}>• {idExtractFlagLabel(flag)}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function TalJobCard({ job }: { job: ApplicationJob }) {
   const tal = parseTalScreeningMessage(job.message);
   if (!tal) {
@@ -170,6 +269,11 @@ function TalJobCard({ job }: { job: ApplicationJob }) {
         <p className="text-sm text-[var(--ml-ink)]">Demandeur: {tal.applicant_name}</p>
       ) : null}
       {tal.summary ? <p className="text-sm text-[var(--ml-steel)]">{tal.summary}</p> : null}
+      {tal.id_extract ? (
+        <div className="mt-2">
+          <IdExtractFlags summary={tal.id_extract} />
+        </div>
+      ) : null}
       <div className="space-y-2">
         {(tal.searches || []).map((search, idx) => (
           <SearchBlock key={`${search.source}-${idx}`} search={search} />
@@ -181,17 +285,22 @@ function TalJobCard({ job }: { job: ApplicationJob }) {
 
 function JobRow({ job }: { job: ApplicationJob }) {
   const isTal = job.job_type === "tal_screening";
+  const isIdExtract = job.job_type === "id_document_extract";
   return (
     <div className="border-b border-[var(--ml-line)] py-4 last:border-b-0">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-[var(--ml-ink)]">
-          {job.job_type === "tal_screening" ? "TAL" : job.job_type}
+          {jobTypeLabel(job.job_type)}
         </span>
         <span className={jobStatusClass(job.status)}>{job.status}</span>
       </div>
       {isTal ? (
         <div className="mt-3">
           <TalJobCard job={job} />
+        </div>
+      ) : isIdExtract ? (
+        <div className="mt-3">
+          <IdExtractJobCard job={job} />
         </div>
       ) : (
         <p className={`${adminUi.empty} mt-2`}>
