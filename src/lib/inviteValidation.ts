@@ -3,6 +3,7 @@
 import {
   ApplyValidationCode,
   addressFieldErrors,
+  validateDateOfBirth,
   validateEmailFormat,
   validatePhoneFormat,
   validatePhones,
@@ -108,6 +109,9 @@ export function inviteeFieldErrors(
 
   const emailError = validateInviteeEmailMatch(invitedEmail, fields.email);
   if (emailError) errors.email = emailError;
+
+  const dobError = validateDateOfBirth(fields.date_of_birth);
+  if (dobError) errors.date_of_birth = dobError;
 
   const phoneFields: (keyof InviteeFormFields)[] =
     role === "guarantor"

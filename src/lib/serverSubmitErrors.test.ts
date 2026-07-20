@@ -88,6 +88,19 @@ describe("mapServerSubmitError", () => {
     expect(result?.fieldErrors.roommate_email_0).toBe("duplicate_email");
     expect(result?.fieldErrors.roommate_email_1).toBe("duplicate_email");
   });
+
+  it("routes date of birth errors to personal", () => {
+    expect(mapServerSubmitError("Date of birth cannot be in the future", baseInput())).toEqual({
+      step: "personal",
+      fieldErrors: { date_of_birth: "date_of_birth_invalid" },
+      messageKey: "validationDateOfBirthInvalid",
+    });
+    expect(mapServerSubmitError("Applicant must be at least 18 years old", baseInput())).toEqual({
+      step: "personal",
+      fieldErrors: { date_of_birth: "date_of_birth_underage" },
+      messageKey: "validationDateOfBirthUnderage",
+    });
+  });
 });
 
 describe("mapPydanticValidationErrors", () => {

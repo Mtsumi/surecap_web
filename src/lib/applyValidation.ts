@@ -19,7 +19,9 @@ export type ApplyValidationCode =
   | "address_date_required"
   | "invalid_address_date_range"
   | "address_date_in_future"
-  | "address_dates_chain";
+  | "address_dates_chain"
+  | "date_of_birth_invalid"
+  | "date_of_birth_underage";
 
 export type ApplyFormStep = "personal" | "addresses" | "housing" | "references" | "other";
 
@@ -40,6 +42,7 @@ export type ApplyValidationInput = {
   unit_earliest_move_in?: string | null;
   unit_available_date?: string | null;
   email: string;
+  date_of_birth?: string;
   roommates: { email: string }[];
   includeGuarantor: boolean;
   guarantor: { email: string; phone: string } | null;
@@ -57,6 +60,34 @@ function localDateString(): string {
   const m = String(d.getMonth() + 1).padStart(2, "0");
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
+}
+
+/** Latest DOB (YYYY-MM-DD) that makes the person at least 18 today (local calendar). */
+export function adultMaxDateOfBirthString(today = localDateString()): string {
+  const [y, m, d] = today.split("-").map(Number);
+  return `${y - 18}-${String(m).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+}
+
+export function validateDateOfBirth(
+  value: string,
+  today = localDateString()
+): ApplyValidationCode | null {
+  const trimmed = value.trim();
+  if (!trimmed) return "required";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return "date_of_birth_invalid";
+  const [y, m, d] = trimmed.split("-").map(Number);
+  const dob = new Date(y, m - 1, d);
+  if (
+    Number.isNaN(dob.getTime()) ||
+    dob.getFullYear() !== y ||
+    dob.getMonth() !== m - 1 ||
+    dob.getDate() !== d
+  ) {
+    return "date_of_birth_invalid";
+  }
+  if (trimmed > today) return "date_of_birth_invalid";
+  if (trimmed > adultMaxDateOfBirthString(today)) return "date_of_birth_underage";
+  return null;
 }
 
 function tomorrowDateString(): string {
@@ -368,6 +399,11 @@ export function stepForValidationCode(code: ApplyValidationCode): ApplyFormStep 
 export function findFirstValidationIssue(
   input: ApplyValidationInput
 ): { code: ApplyValidationCode; step: ApplyFormStep } | null {
+  if (input.date_of_birth !== undefined) {
+    const dob = validateDateOfBirth(input.date_of_birth);
+    if (dob) return { code: dob, step: "personal" };
+  }
+
   const personal = validatePersonalStep(input.email);
   if (personal) return { code: personal, step: "personal" };
 
@@ -517,8 +553,16 @@ export function incomeFieldErrors(
   return errors;
 }
 
-export function personalFieldErrors(email: string, phone?: string): ApplyFieldErrors {
+export function personalFieldErrors(
+  email: string,
+  phone?: string,
+  dateOfBirth?: string
+): ApplyFieldErrors {
   const errors: ApplyFieldErrors = {};
+  if (dateOfBirth !== undefined) {
+    const dobCode = validateDateOfBirth(dateOfBirth);
+    if (dobCode) errors.date_of_birth = dobCode;
+  }
   const emailCode = validatePersonalStep(email);
   if (emailCode) errors.email = emailCode;
   if (phone !== undefined) {
