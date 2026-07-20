@@ -56,6 +56,7 @@ function inviteToValidationInput(
   return {
     move_in_date: form.move_in_date,
     email: form.email,
+    date_of_birth: form.date_of_birth,
     phone: form.phone,
     roommates: [],
     includeGuarantor: false,
@@ -336,6 +337,22 @@ export function mapServerSubmitError(
       step: "personal",
       fieldErrors: {},
       messageKey: "idUploadRequired",
+    };
+  }
+
+  if (trimmed === "Date of birth cannot be in the future") {
+    return {
+      step: "personal",
+      fieldErrors: { date_of_birth: "date_of_birth_invalid" },
+      messageKey: "validationDateOfBirthInvalid",
+    };
+  }
+
+  if (trimmed === "Applicant must be at least 18 years old") {
+    return {
+      step: "personal",
+      fieldErrors: { date_of_birth: "date_of_birth_underage" },
+      messageKey: "validationDateOfBirthUnderage",
     };
   }
 

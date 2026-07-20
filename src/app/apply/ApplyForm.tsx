@@ -57,6 +57,7 @@ import {
   addressFieldErrors,
   validateEmailUniqueness,
   validatePhones,
+  adultMaxDateOfBirthString,
 } from "@/lib/applyValidation";
 import { mapSubmitError } from "@/lib/serverSubmitErrors";
 
@@ -72,6 +73,8 @@ const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   invalid_address_date_range: "validationInvalidAddressDateRange",
   address_date_in_future: "validationAddressDateInFuture",
   address_dates_chain: "validationAddressDatesChain",
+  date_of_birth_invalid: "validationDateOfBirthInvalid",
+  date_of_birth_underage: "validationDateOfBirthUnderage",
 };
 
 type Step =
@@ -419,7 +422,7 @@ export default function ApplyForm() {
     const input = validationInput();
     switch (formStep) {
       case "personal":
-        return personalFieldErrors(input.email, form.phone);
+        return personalFieldErrors(input.email, form.phone, form.date_of_birth);
       case "addresses":
         return addressFieldErrors(input);
       case "housing":
@@ -576,6 +579,7 @@ export default function ApplyForm() {
     unit_earliest_move_in: selectedUnit?.earliest_move_in_date ?? null,
     unit_available_date: selectedUnit?.available_date ?? null,
     email: form.email,
+    date_of_birth: form.date_of_birth,
     phone: form.phone,
     roommates: form.renting_with_others ? roommates : [],
     includeGuarantor,
@@ -619,7 +623,7 @@ export default function ApplyForm() {
     if (issue) {
       const errors =
         issue.step === "personal"
-          ? personalFieldErrors(input.email, input.phone)
+          ? personalFieldErrors(input.email, input.phone, form.date_of_birth)
           : issue.step === "addresses"
             ? addressFieldErrors(input)
             : issue.step === "housing"
@@ -911,7 +915,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (blockWithFieldErrors(personalFieldErrors(form.email, form.phone))) return;
+              if (blockWithFieldErrors(personalFieldErrors(form.email, form.phone, form.date_of_birth))) return;
               if (!draftSession) {
                 setError(t(locale, "error"));
                 return;
@@ -979,10 +983,12 @@ export default function ApplyForm() {
               <input
                 type="date"
                 required
+                max={adultMaxDateOfBirthString()}
                 value={form.date_of_birth}
                 onChange={(e) => setField("date_of_birth", e.target.value)}
-                className={inputClass}
+                className={inputClassFor("date_of_birth")}
               />
+              {fieldHint("date_of_birth")}
             </label>
             <div id="apply-field-email">
             <label className="block text-sm text-[#57534e]">

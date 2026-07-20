@@ -25,6 +25,7 @@ import {
 import {
   ApplyValidationCode,
   addressFieldErrors,
+  adultMaxDateOfBirthString,
   validatePhoneFormat,
   validatePhones,
 } from "@/lib/applyValidation";
@@ -57,6 +58,8 @@ const VALIDATION_MESSAGE: Record<
   invalid_address_date_range: "validationInvalidAddressDateRange",
   address_date_in_future: "validationAddressDateInFuture",
   address_dates_chain: "validationAddressDatesChain",
+  date_of_birth_invalid: "validationDateOfBirthInvalid",
+  date_of_birth_underage: "validationDateOfBirthUnderage",
   invite_email_mismatch: "validationInviteEmailMismatch",
 };
 
@@ -563,9 +566,10 @@ export default function InviteForm({ token }: Props) {
             <input
               type="date"
               required
+              max={adultMaxDateOfBirthString()}
               value={form.date_of_birth}
               onChange={(e) => setField("date_of_birth", e.target.value)}
-              className={inputClass}
+              className={inputClassFor("date_of_birth")}
             />
             {fieldHint("date_of_birth")}
           </label>

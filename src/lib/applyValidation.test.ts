@@ -17,6 +17,8 @@ import {
   stepForValidationCode,
   unitEarliestMoveIn,
   validateApplyForm,
+  validateDateOfBirth,
+  adultMaxDateOfBirthString,
   validateEmailFormat,
   validateEmailUniqueness,
   validateHousingStep,
@@ -295,6 +297,12 @@ describe("field error maps", () => {
       email: "invalid_email",
       phone: "invalid_phone",
     });
+    expect(personalFieldErrors("ok@example.com", "5145550100", "2099-01-01")).toEqual({
+      date_of_birth: "date_of_birth_invalid",
+    });
+    expect(personalFieldErrors("ok@example.com", "5145550100", "2015-01-01")).toEqual({
+      date_of_birth: "date_of_birth_underage",
+    });
     expect(referencesFieldErrors("5145550100", "5145550100")).toEqual({
       landlord_phone: "landlord_hr_same_phone",
       hr_phone: "landlord_hr_same_phone",
@@ -308,5 +316,15 @@ describe("field error maps", () => {
         hr_phone: "",
       })
     ).toEqual({ hr_phone: "required" });
+  });
+
+  it("validateDateOfBirth and findFirstValidationIssue reject underage / future DOB", () => {
+    expect(validateDateOfBirth("2099-01-01", "2026-07-20")).toBe("date_of_birth_invalid");
+    expect(validateDateOfBirth("2010-07-20", "2026-07-20")).toBe("date_of_birth_underage");
+    expect(validateDateOfBirth("2008-07-20", "2026-07-20")).toBeNull();
+    expect(adultMaxDateOfBirthString("2026-07-20")).toBe("2008-07-20");
+    expect(
+      findFirstValidationIssue(baseInput({ date_of_birth: "2015-01-01" }))
+    ).toEqual({ code: "date_of_birth_underage", step: "personal" });
   });
 });

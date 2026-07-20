@@ -102,6 +102,15 @@ describe("inviteeFieldErrors", () => {
     expect(errors.hr_phone).toBe("landlord_hr_same_phone");
   });
 
+  it("flags underage date of birth", () => {
+    const errors = inviteeFieldErrors(
+      "roommate",
+      roommateFields({ date_of_birth: "2015-01-01" }),
+      "roommate@example.com"
+    );
+    expect(errors.date_of_birth).toBe("date_of_birth_underage");
+  });
+
   it("firstInviteeErrorKey returns first key", () => {
     expect(firstInviteeErrorKey({ email: "required", phone: "invalid_phone" })).toBe("email");
     expect(firstInviteeErrorKey({})).toBeNull();
