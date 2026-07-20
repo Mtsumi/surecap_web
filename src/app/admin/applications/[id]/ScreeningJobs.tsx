@@ -2,12 +2,15 @@
 
 import {
   formatJobMessagePreview,
+  formatSearchAddress,
+  formatTalScreeningPreview,
   idExtractFlagLabel,
   idScreeningContextLabel,
   landlordFromDossier,
   parseIdDocumentExtractMessage,
   parseTalScreeningMessage,
   precisionLabel,
+  pluralCount,
   sourceLabel,
   tenantFromDossier,
   jobTypeLabel,
@@ -16,6 +19,8 @@ import {
 } from "@/lib/jobMessageFormat";
 import type { ApplicationJob } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
+import type { Locale } from "@/lib/i18n";
+import { useAdminLocaleContext } from "../../AdminLocaleContext";
 
 function jobStatusClass(status: string): string {
   switch (status) {
@@ -32,13 +37,80 @@ function jobStatusClass(status: string): string {
   }
 }
 
+function copy(locale: Locale) {
+  if (locale === "en") {
+    return {
+      noJobs: "No jobs for this application.",
+      applicant: "Applicant",
+      openTal: "Open on TAL ↗",
+      tenantMatches: "Tenant matches",
+      landlordMentions: "Landlord mentions",
+      otherDossiers: (n: number) =>
+        `${pluralCount(n, "other dossier", "other dossiers")} with no applicant mention`,
+      noDossiers: "No dossiers found",
+      dossiers: (n: number) => pluralCount(n, "dossier", "dossiers"),
+      tenants: (n: number) => pluralCount(n, "tenant", "tenants"),
+      landlords: (n: number) => pluralCount(n, "landlord", "landlords"),
+      roleTenant: "tenant",
+      roleLandlord: "landlord",
+      detailSkipped: "Detail page not loaded",
+      detailError: "Detail page error",
+      detailTruncated: "Building search truncated — some dossier details were skipped",
+      idCheck: "ID verification",
+      idAddressesUsed: "ID addresses used for TAL",
+      extractedAddresses: "Extracted addresses",
+      notUsedForTal: "not used for TAL",
+      blur: "Blur",
+      front: "front",
+      back: "back",
+      nameRead: "Name read",
+      name: "Name",
+      formMismatch: "≠ form",
+      formDiffers: "differs from form",
+    };
+  }
+  return {
+    noJobs: "Aucune tâche pour cette demande.",
+    applicant: "Demandeur",
+    openTal: "Ouvrir sur le TAL ↗",
+    tenantMatches: "Correspondances locataire",
+    landlordMentions: "Mentions locateur",
+    otherDossiers: (n: number) =>
+      `${pluralCount(n, "autre dossier", "autres dossiers")} sans mention du demandeur`,
+    noDossiers: "Aucun dossier trouvé",
+    dossiers: (n: number) => pluralCount(n, "dossier", "dossiers"),
+    tenants: (n: number) => pluralCount(n, "locataire", "locataires"),
+    landlords: (n: number) => pluralCount(n, "locateur", "locateurs"),
+    roleTenant: "locataire",
+    roleLandlord: "locateur",
+    detailSkipped: "Page détail non chargée",
+    detailError: "Erreur page détail",
+    detailTruncated:
+      "Recherche immeuble tronquée — certains détails de dossiers ont été omis",
+    idCheck: "Vérification pièce d'identité",
+    idAddressesUsed: "Adresses ID utilisées pour TAL",
+    extractedAddresses: "Adresses extraites",
+    notUsedForTal: "non utilisée pour TAL",
+    blur: "Flou",
+    front: "recto",
+    back: "verso",
+    nameRead: "Nom lu",
+    name: "Nom",
+    formMismatch: "≠ formulaire",
+    formDiffers: "différent du formulaire",
+  };
+}
+
 function DossierRow({
   dossier,
   kind,
+  locale,
 }: {
   dossier: TalDossier;
   kind: "tenant" | "landlord" | "other";
+  locale: Locale;
 }) {
+  const c = copy(locale);
   const mark = kind === "tenant" ? "✓" : kind === "landlord" ? "◈" : "·";
   const emphasis =
     kind === "tenant"
@@ -53,7 +125,7 @@ function DossierRow({
         ? landlordFromDossier(dossier)
         : tenantFromDossier(dossier);
   const roleHint =
-    kind === "tenant" ? "locataire" : kind === "landlord" ? "locateur" : null;
+    kind === "tenant" ? c.roleTenant : kind === "landlord" ? c.roleLandlord : null;
 
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2 text-sm">
@@ -68,6 +140,14 @@ function DossierRow({
         {dossier.case_status ? (
           <span className="text-xs text-[var(--ml-steel)]">{dossier.case_status}</span>
         ) : null}
+        {dossier.detail_skipped ? (
+          <span className="text-xs text-[var(--ml-steel)]">{c.detailSkipped}</span>
+        ) : null}
+        {dossier.detail_error ? (
+          <span className={`${adminUi.alertWarn} !inline !border-0 !bg-transparent !p-0 text-xs`}>
+            {c.detailError}: {dossier.detail_error}
+          </span>
+        ) : null}
       </div>
       {dossier.detail_url ? (
         <a
@@ -76,14 +156,15 @@ function DossierRow({
           rel="noreferrer"
           className={adminUi.talLink}
         >
-          Ouvrir sur le TAL ↗
+          {c.openTal}
         </a>
       ) : null}
     </li>
   );
 }
 
-function SearchBlock({ search }: { search: TalSearch }) {
+function SearchBlock({ search, locale }: { search: TalSearch; locale: Locale }) {
+  const c = copy(locale);
   const dossiers = search.dossiers || [];
   const tenants = dossiers.filter((d) => d.name_match === true);
   const landlords = dossiers.filter(
@@ -92,17 +173,19 @@ function SearchBlock({ search }: { search: TalSearch }) {
   const others = dossiers.filter(
     (d) => d.name_match !== true && d.landlord_match !== true
   );
+  const dossierCount = search.dossier_count ?? dossiers.length;
+  const addressLine = formatSearchAddress(search.input, locale);
 
   return (
     <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] p-3">
       <div className="text-sm font-semibold text-[var(--ml-ink)]">
-        {sourceLabel(search.source)}{" "}
+        {sourceLabel(search.source, locale)}{" "}
         <span className="font-normal text-[var(--ml-steel)]">
-          ({precisionLabel(search.search_precision)})
+          ({precisionLabel(search.search_precision, locale)})
         </span>
       </div>
-      {search.input?.raw_address ? (
-        <p className="mt-0.5 text-sm text-[var(--ml-ink)]">{search.input.raw_address}</p>
+      {addressLine ? (
+        <p className="mt-0.5 text-sm text-[var(--ml-ink)]">{addressLine}</p>
       ) : null}
       {search.status !== "completed" ? (
         <p className={`${adminUi.alertWarn} mt-2 !border-0 !bg-transparent !p-0`}>
@@ -111,46 +194,69 @@ function SearchBlock({ search }: { search: TalSearch }) {
       ) : (
         <>
           <p className="mt-2 text-xs text-[var(--ml-steel)]">
-            {search.dossier_count ?? dossiers.length} dossier(s)
+            {c.dossiers(dossierCount)}
             {typeof search.name_match_count === "number"
-              ? ` · ${search.name_match_count} locataire`
+              ? ` · ${c.tenants(search.name_match_count)}`
               : null}
             {typeof search.landlord_mention_count === "number" &&
             search.landlord_mention_count > 0
-              ? ` · ${search.landlord_mention_count} locateur`
+              ? ` · ${c.landlords(search.landlord_mention_count)}`
               : null}
             {typeof search.elapsed_seconds === "number"
               ? ` · ~${Math.round(search.elapsed_seconds)}s`
               : null}
           </p>
+          {search.building_detail_truncated ? (
+            <p className={`${adminUi.alertWarn} mt-2 !border-0 !bg-transparent !p-0 text-xs`}>
+              {c.detailTruncated}
+            </p>
+          ) : null}
+          {dossierCount === 0 && tenants.length === 0 && landlords.length === 0 ? (
+            <p className={`${adminUi.empty} mt-2`}>{c.noDossiers}</p>
+          ) : null}
           {tenants.length > 0 ? (
             <div className="mt-3">
-              <p className="admin-field-label">Correspondances locataire</p>
+              <p className="admin-field-label">{c.tenantMatches}</p>
               <ul className="mt-1.5 space-y-2">
-              {tenants.map((d) => (
-                <DossierRow key={`t-${d.dossier}`} dossier={d} kind="tenant" />
-              ))}
+                {tenants.map((d) => (
+                  <DossierRow
+                    key={`t-${d.dossier}`}
+                    dossier={d}
+                    kind="tenant"
+                    locale={locale}
+                  />
+                ))}
               </ul>
             </div>
           ) : null}
           {landlords.length > 0 ? (
             <div className="mt-3">
-              <p className="admin-field-label">Mentions locateur</p>
+              <p className="admin-field-label">{c.landlordMentions}</p>
               <ul className="mt-1.5 space-y-2">
-              {landlords.map((d) => (
-                <DossierRow key={`l-${d.dossier}`} dossier={d} kind="landlord" />
-              ))}
+                {landlords.map((d) => (
+                  <DossierRow
+                    key={`l-${d.dossier}`}
+                    dossier={d}
+                    kind="landlord"
+                    locale={locale}
+                  />
+                ))}
               </ul>
             </div>
           ) : null}
           {others.length > 0 ? (
             <details className="mt-2">
               <summary className="cursor-pointer text-xs text-[var(--ml-steel)]">
-                {others.length} autre(s) dossier(s) sans mention du demandeur
+                {c.otherDossiers(others.length)}
               </summary>
               <ul className="mt-1 space-y-1">
                 {others.map((d) => (
-                  <DossierRow key={`o-${d.dossier}`} dossier={d} kind="other" />
+                  <DossierRow
+                    key={`o-${d.dossier}`}
+                    dossier={d}
+                    kind="other"
+                    locale={locale}
+                  />
                 ))}
               </ul>
             </details>
@@ -163,38 +269,41 @@ function SearchBlock({ search }: { search: TalSearch }) {
 
 function IdExtractFlags({
   summary,
+  locale,
 }: {
   summary: NonNullable<ReturnType<typeof parseTalScreeningMessage>>["id_extract"];
+  locale: Locale;
 }) {
   if (!summary) return null;
+  const c = copy(locale);
   const flags = summary.flags || [];
   return (
     <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] p-3 text-sm">
-      <p className="font-semibold text-[var(--ml-ink)]">Vérification pièce d&apos;identité</p>
+      <p className="font-semibold text-[var(--ml-ink)]">{c.idCheck}</p>
       <p className="mt-1 text-[var(--ml-steel)]">
-        {idScreeningContextLabel(summary.screening_context)}
+        {idScreeningContextLabel(summary.screening_context, locale)}
         {summary.pdf417_ok ? ` · PDF417 (${summary.pdf417_variant || "ok"})` : ""}
       </p>
       {(summary.ocr_name || summary.barcode_name) && (
         <p className="mt-2 text-[var(--ml-ink)]">
-          Nom lu: {summary.barcode_name || summary.ocr_name}
+          {c.nameRead}: {summary.barcode_name || summary.ocr_name}
           {summary.name_mismatch ? (
             <span className={`${adminUi.alertWarn} ml-2 !inline !border-0 !bg-transparent !p-0`}>
-              ≠ formulaire
+              {c.formMismatch}
             </span>
           ) : null}
         </p>
       )}
       {summary.address_sources && summary.address_sources.length > 0 ? (
         <p className="mt-1 text-xs text-[var(--ml-steel)]">
-          Adresses ID utilisées pour TAL:{" "}
-          {summary.address_sources.map((s) => sourceLabel(s)).join(" · ")}
+          {c.idAddressesUsed}:{" "}
+          {summary.address_sources.map((s) => sourceLabel(s, locale)).join(" · ")}
         </p>
       ) : null}
       {flags.length > 0 ? (
         <ul className="mt-2 space-y-1 text-xs text-[var(--ml-steel)]">
           {flags.map((flag) => (
-            <li key={flag}>• {idExtractFlagLabel(flag)}</li>
+            <li key={flag}>• {idExtractFlagLabel(flag, locale)}</li>
           ))}
         </ul>
       ) : null}
@@ -202,38 +311,41 @@ function IdExtractFlags({
   );
 }
 
-function IdExtractJobCard({ job }: { job: ApplicationJob }) {
+function IdExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
+  const c = copy(locale);
   const payload = parseIdDocumentExtractMessage(job.message);
   if (!payload) {
     return (
-      <p className={adminUi.empty}>{formatJobMessagePreview(job.job_type, job.message)}</p>
+      <p className={adminUi.empty}>
+        {formatJobMessagePreview(job.job_type, job.message, locale)}
+      </p>
     );
   }
   const flags = payload.flags || [];
   return (
     <div className="space-y-3 text-sm">
       <p className="text-[var(--ml-steel)]">
-        {idScreeningContextLabel(payload.screening_context)}
+        {idScreeningContextLabel(payload.screening_context, locale)}
         {payload.pdf417_ok ? ` · PDF417 (${payload.pdf417_variant || "ok"})` : ""}
       </p>
       {(payload.ocr_name || payload.barcode_name) && (
         <p className="text-[var(--ml-ink)]">
-          Nom: {payload.barcode_name || payload.ocr_name}
+          {c.name}: {payload.barcode_name || payload.ocr_name}
           {payload.name_mismatch ? (
             <span className={`${adminUi.alertWarn} ml-2 !inline !border-0 !bg-transparent !p-0`}>
-              différent du formulaire
+              {c.formDiffers}
             </span>
           ) : null}
         </p>
       )}
       {payload.addresses && payload.addresses.length > 0 ? (
         <div>
-          <p className="admin-field-label">Adresses extraites</p>
+          <p className="admin-field-label">{c.extractedAddresses}</p>
           <ul className="mt-1 space-y-1 text-[var(--ml-ink)]">
             {payload.addresses.map((addr) => (
               <li key={`${addr.source}-${addr.raw_address}`}>
-                {sourceLabel(addr.source)} — {addr.raw_address}
-                {addr.tal_ready ? "" : " (non utilisée pour TAL)"}
+                {sourceLabel(addr.source, locale)} — {addr.raw_address}
+                {addr.tal_ready ? "" : ` (${c.notUsedForTal})`}
               </li>
             ))}
           </ul>
@@ -241,14 +353,14 @@ function IdExtractJobCard({ job }: { job: ApplicationJob }) {
       ) : null}
       {(payload.blur_front || payload.blur_back) && (
         <p className="text-xs text-[var(--ml-steel)]">
-          Flou: recto {payload.blur_front?.quality || "—"} · verso{" "}
+          {c.blur}: {c.front} {payload.blur_front?.quality || "—"} · {c.back}{" "}
           {payload.blur_back?.quality || "—"}
         </p>
       )}
       {flags.length > 0 ? (
         <ul className="space-y-1 text-xs text-[var(--ml-steel)]">
           {flags.map((flag) => (
-            <li key={flag}>• {idExtractFlagLabel(flag)}</li>
+            <li key={flag}>• {idExtractFlagLabel(flag, locale)}</li>
           ))}
         </ul>
       ) : null}
@@ -256,55 +368,62 @@ function IdExtractJobCard({ job }: { job: ApplicationJob }) {
   );
 }
 
-function TalJobCard({ job }: { job: ApplicationJob }) {
+function TalJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
+  const c = copy(locale);
   const tal = parseTalScreeningMessage(job.message);
   if (!tal) {
     return (
-      <p className={adminUi.empty}>{formatJobMessagePreview(job.job_type, job.message)}</p>
+      <p className={adminUi.empty}>
+        {formatJobMessagePreview(job.job_type, job.message, locale)}
+      </p>
     );
   }
   return (
     <div className="space-y-3">
       {tal.applicant_name ? (
-        <p className="text-sm text-[var(--ml-ink)]">Demandeur: {tal.applicant_name}</p>
+        <p className="text-sm text-[var(--ml-ink)]">
+          {c.applicant}: {tal.applicant_name}
+        </p>
       ) : null}
-      {tal.summary ? <p className="text-sm text-[var(--ml-steel)]">{tal.summary}</p> : null}
+      <p className="text-sm text-[var(--ml-steel)]">
+        {formatTalScreeningPreview(tal, locale)}
+      </p>
       {tal.id_extract ? (
         <div className="mt-2">
-          <IdExtractFlags summary={tal.id_extract} />
+          <IdExtractFlags summary={tal.id_extract} locale={locale} />
         </div>
       ) : null}
       <div className="space-y-2">
         {(tal.searches || []).map((search, idx) => (
-          <SearchBlock key={`${search.source}-${idx}`} search={search} />
+          <SearchBlock key={`${search.source}-${idx}`} search={search} locale={locale} />
         ))}
       </div>
     </div>
   );
 }
 
-function JobRow({ job }: { job: ApplicationJob }) {
+function JobRow({ job, locale }: { job: ApplicationJob; locale: Locale }) {
   const isTal = job.job_type === "tal_screening";
   const isIdExtract = job.job_type === "id_document_extract";
   return (
     <div className="border-b border-[var(--ml-line)] py-4 last:border-b-0">
       <div className="flex flex-wrap items-center gap-2">
         <span className="text-sm font-medium text-[var(--ml-ink)]">
-          {jobTypeLabel(job.job_type)}
+          {jobTypeLabel(job.job_type, locale)}
         </span>
         <span className={jobStatusClass(job.status)}>{job.status}</span>
       </div>
       {isTal ? (
         <div className="mt-3">
-          <TalJobCard job={job} />
+          <TalJobCard job={job} locale={locale} />
         </div>
       ) : isIdExtract ? (
         <div className="mt-3">
-          <IdExtractJobCard job={job} />
+          <IdExtractJobCard job={job} locale={locale} />
         </div>
       ) : (
         <p className={`${adminUi.empty} mt-2`}>
-          {formatJobMessagePreview(job.job_type, job.message)}
+          {formatJobMessagePreview(job.job_type, job.message, locale)}
         </p>
       )}
     </div>
@@ -318,8 +437,11 @@ export default function ScreeningJobs({
   jobs: ApplicationJob[];
   jobMemberLabel: (memberId: number) => string;
 }) {
+  const { locale } = useAdminLocaleContext();
+  const c = copy(locale);
+
   if (jobs.length === 0) {
-    return <p className={adminUi.empty}>Aucune tâche pour cette demande.</p>;
+    return <p className={adminUi.empty}>{c.noJobs}</p>;
   }
 
   const byMember = new Map<number, ApplicationJob[]>();
@@ -342,7 +464,7 @@ export default function ScreeningJobs({
           </div>
           <div className="px-4 sm:px-5">
             {memberJobs.map((job) => (
-              <JobRow key={job.id} job={job} />
+              <JobRow key={job.id} job={job} locale={locale} />
             ))}
           </div>
         </div>

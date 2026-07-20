@@ -1,5 +1,7 @@
 /** Format application screening job messages for admin UI. */
 
+import type { Locale } from "./i18n";
+
 export type TalMatchedParty = {
   role?: string;
   name?: string;
@@ -105,7 +107,19 @@ export function parseIdDocumentExtractMessage(
   }
 }
 
-export function idExtractFlagLabel(flag: string): string {
+export function idExtractFlagLabel(flag: string, locale: Locale = "fr"): string {
+  if (locale === "en") {
+    if (flag === "blur_front") return "Front photo blurry";
+    if (flag === "blur_back") return "Back photo blurry";
+    if (flag === "non_canadian_id_context") return "Non-Canadian ID (passport)";
+    if (flag === "address_not_in_canada") return "Address outside Canada (form)";
+    if (flag === "name_only_verification") return "Name verification only";
+    if (flag === "name_not_extracted") return "Name not read from ID";
+    if (flag === "barcode_ocr_name_mismatch") return "PDF417 name ≠ OCR";
+    if (flag.startsWith("address_skip:"))
+      return `ID address skipped (${flag.split(":").slice(1).join(":")})`;
+    return flag.replaceAll("_", " ");
+  }
   if (flag === "blur_front") return "Photo recto floue";
   if (flag === "blur_back") return "Photo verso floue";
   if (flag === "non_canadian_id_context") return "Pièce non canadienne (passeport)";
@@ -113,21 +127,9 @@ export function idExtractFlagLabel(flag: string): string {
   if (flag === "name_only_verification") return "Vérification du nom seulement";
   if (flag === "name_not_extracted") return "Nom non lu sur la pièce";
   if (flag === "barcode_ocr_name_mismatch") return "Nom PDF417 ≠ OCR";
-  if (flag.startsWith("address_skip:")) return `Adresse ID ignorée (${flag.split(":").slice(1).join(":")})`;
+  if (flag.startsWith("address_skip:"))
+    return `Adresse ID ignorée (${flag.split(":").slice(1).join(":")})`;
   return flag.replaceAll("_", " ");
-}
-
-export function idScreeningContextLabel(context: string | undefined): string {
-  switch (context) {
-    case "canadian":
-      return "Permis / carte canadienne";
-    case "passport_only":
-      return "Passeport (nom seulement)";
-    case "none":
-      return "Aucune pièce";
-    default:
-      return context || "—";
-  }
 }
 
 export function parseTalScreeningMessage(message: string | null | undefined): TalScreeningPayload | null {
@@ -145,23 +147,77 @@ export function parseTalScreeningMessage(message: string | null | undefined): Ta
   }
 }
 
-export function formatJobMessagePreview(jobType: string, message: string | null): string {
+/** Prefer full address; fall back to postal / civic / apt parts. */
+export function formatSearchAddress(
+  input: TalSearch["input"] | undefined,
+  locale: Locale = "fr"
+): string | null {
+  if (!input) return null;
+  const raw = input.raw_address?.trim();
+  if (raw) return raw;
+  const aptWord = locale === "fr" ? "app." : "apt";
+  const parts: string[] = [];
+  if (input.civic?.trim()) parts.push(input.civic.trim());
+  if (input.apartment != null && String(input.apartment).trim()) {
+    parts.push(`${aptWord} ${String(input.apartment).trim()}`);
+  }
+  if (input.postal?.trim()) parts.push(input.postal.trim().toUpperCase());
+  return parts.length ? parts.join(" · ") : null;
+}
+
+export function pluralCount(count: number, one: string, other: string): string {
+  return `${count} ${count === 1 ? one : other}`;
+}
+
+/** Locale-aware TAL preview — avoid raw English API summaries when searches exist. */
+export function formatTalScreeningPreview(
+  payload: TalScreeningPayload,
+  locale: Locale = "fr"
+): string {
+  const searches = payload.searches || [];
+  if (searches.length === 0) {
+    if (payload.summary?.trim()) return payload.summary.trim();
+    return locale === "fr" ? "Aucun résultat TAL" : "No TAL results";
+  }
+  const completed = searches.filter((s) => s.status === "completed").length;
+  const dossiers = searches.reduce(
+    (sum, s) => sum + (s.dossier_count ?? s.dossiers?.length ?? 0),
+    0
+  );
+  const tenantHits = searches.reduce((sum, s) => sum + (s.name_match_count ?? 0), 0);
+  if (locale === "fr") {
+    return `${pluralCount(searches.length, "adresse", "adresses")} · ${completed}/${searches.length} terminée(s) · ${pluralCount(dossiers, "dossier", "dossiers")}${tenantHits ? ` · ${pluralCount(tenantHits, "locataire", "locataires")}` : ""}`;
+  }
+  return `${pluralCount(searches.length, "address", "addresses")} · ${completed}/${searches.length} completed · ${pluralCount(dossiers, "dossier", "dossiers")}${tenantHits ? ` · ${pluralCount(tenantHits, "tenant match", "tenant matches")}` : ""}`;
+}
+
+export function formatJobMessagePreview(
+  jobType: string,
+  message: string | null,
+  locale: Locale = "fr"
+): string {
   if (!message) return "—";
   if (jobType === "tal_screening") {
     const tal = parseTalScreeningMessage(message);
-    if (tal?.summary) return tal.summary;
+    if (tal) return formatTalScreeningPreview(tal, locale);
   }
   if (jobType === "id_document_extract") {
     const idExtract = parseIdDocumentExtractMessage(message);
     if (idExtract) {
-      const flags = idExtract.flags?.length ? ` · ${idExtract.flags.length} signal(s)` : "";
+      const flagWord =
+        locale === "fr"
+          ? pluralCount(idExtract.flags?.length || 0, "signal", "signaux")
+          : pluralCount(idExtract.flags?.length || 0, "flag", "flags");
+      const flags = idExtract.flags?.length ? ` · ${flagWord}` : "";
       if (idExtract.name_mismatch) {
-        return `Nom différent du formulaire${flags}`;
+        return locale === "fr"
+          ? `Nom différent du formulaire${flags}`
+          : `Name differs from form${flags}`;
       }
       if (idExtract.pdf417_ok) {
-        return `PDF417 lu (${idExtract.pdf417_variant || "ok"})${flags}`;
+        return `PDF417 (${idExtract.pdf417_variant || "ok"})${flags}`;
       }
-      return `${idScreeningContextLabel(idExtract.screening_context)}${flags}`;
+      return `${idScreeningContextLabel(idExtract.screening_context, locale)}${flags}`;
     }
   }
   if (message.trim().startsWith("{")) {
@@ -171,12 +227,30 @@ export function formatJobMessagePreview(jobType: string, message: string | null)
     } catch {
       /* fall through */
     }
-    return "Résultat détaillé (voir ci-dessous)";
+    return locale === "fr"
+      ? "Résultat détaillé (voir ci-dessous)"
+      : "Detailed result (see below)";
   }
   return message.length > 180 ? `${message.slice(0, 177)}…` : message;
 }
 
-export function sourceLabel(source: string | undefined): string {
+export function sourceLabel(source: string | undefined, locale: Locale = "fr"): string {
+  if (locale === "en") {
+    switch (source) {
+      case "current_address":
+        return "Current address";
+      case "previous_address":
+        return "Previous address";
+      case "id_pdf417_address":
+        return "Licence address (PDF417)";
+      case "id_front_ocr_address":
+        return "Licence address (front OCR)";
+      case "id_sticker_address":
+        return "SAAQ sticker address";
+      default:
+        return source || "Address";
+    }
+  }
   switch (source) {
     case "current_address":
       return "Adresse actuelle";
@@ -193,24 +267,34 @@ export function sourceLabel(source: string | undefined): string {
   }
 }
 
-export function jobTypeLabel(jobType: string): string {
+export function jobTypeLabel(jobType: string, locale: Locale = "fr"): string {
   switch (jobType) {
     case "tal_screening":
       return "TAL";
     case "id_document_extract":
-      return "Pièce d'identité";
+      return locale === "fr" ? "Pièce d'identité" : "ID document";
     case "soquij_screening":
       return "SOQUIJ";
     case "admin_notify":
-      return "Notification admin";
+      return locale === "fr" ? "Notification admin" : "Admin notification";
     case "applicant_confirmation":
-      return "Confirmation demandeur";
+      return locale === "fr" ? "Confirmation demandeur" : "Applicant confirmation";
     default:
       return jobType;
   }
 }
 
-export function precisionLabel(precision: string | undefined): string {
+export function precisionLabel(precision: string | undefined, locale: Locale = "fr"): string {
+  if (locale === "en") {
+    switch (precision) {
+      case "unit":
+        return "unit";
+      case "building":
+        return "building";
+      default:
+        return precision || "—";
+    }
+  }
   switch (precision) {
     case "unit":
       return "unité";
@@ -218,6 +302,34 @@ export function precisionLabel(precision: string | undefined): string {
       return "immeuble";
     default:
       return precision || "—";
+  }
+}
+
+export function idScreeningContextLabel(
+  context: string | undefined,
+  locale: Locale = "fr"
+): string {
+  if (locale === "en") {
+    switch (context) {
+      case "canadian":
+        return "Canadian licence / card";
+      case "passport_only":
+        return "Passport (name only)";
+      case "none":
+        return "No ID";
+      default:
+        return context || "—";
+    }
+  }
+  switch (context) {
+    case "canadian":
+      return "Permis / carte canadienne";
+    case "passport_only":
+      return "Passeport (nom seulement)";
+    case "none":
+      return "Aucune pièce";
+    default:
+      return context || "—";
   }
 }
 
