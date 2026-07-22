@@ -6,8 +6,10 @@ import {
   formatTalScreeningPreview,
   idExtractFlagLabel,
   idScreeningContextLabel,
+  incomeExtractFlagLabel,
   landlordFromDossier,
   parseIdDocumentExtractMessage,
+  parseIncomeDocumentExtractMessage,
   parseTalScreeningMessage,
   precisionLabel,
   pluralCount,
@@ -67,6 +69,16 @@ function copy(locale: Locale) {
       name: "Name",
       formMismatch: "≠ form",
       formDiffers: "differs from form",
+      incomeTitle: "Payslip check",
+      incomeReadPath: "Read path",
+      incomeEmployee: "Employee (slip)",
+      incomeEmployer: "Employer (slip)",
+      incomeNet: "Net pay",
+      incomeGross: "Gross",
+      incomeRateHours: "Rate / hours",
+      incomePeriod: "Pay period",
+      incomePayDate: "Pay date",
+      incomeNotPayslip: "Not recognized as a payslip",
     };
   }
   return {
@@ -98,6 +110,16 @@ function copy(locale: Locale) {
     name: "Nom",
     formMismatch: "≠ formulaire",
     formDiffers: "différent du formulaire",
+    incomeTitle: "Vérification talon de paie",
+    incomeReadPath: "Lecture",
+    incomeEmployee: "Employé (talon)",
+    incomeEmployer: "Employeur (talon)",
+    incomeNet: "Paie nette",
+    incomeGross: "Brut",
+    incomeRateHours: "Taux / heures",
+    incomePeriod: "Période",
+    incomePayDate: "Date de paie",
+    incomeNotPayslip: "Non reconnu comme talon de paie",
   };
 }
 
@@ -368,6 +390,70 @@ function IdExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Locale
   );
 }
 
+function IncomeExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
+  const c = copy(locale);
+  const payload = parseIncomeDocumentExtractMessage(job.message);
+  if (!payload) {
+    return (
+      <p className={adminUi.empty}>
+        {formatJobMessagePreview(job.job_type, job.message, locale)}
+      </p>
+    );
+  }
+  const flags = payload.flags || [];
+  const period =
+    payload.pay_period_start || payload.pay_period_end
+      ? `${payload.pay_period_start || "—"} → ${payload.pay_period_end || "—"}`
+      : null;
+  return (
+    <div className="space-y-3 text-sm">
+      <p className="font-semibold text-[var(--ml-ink)]">{c.incomeTitle}</p>
+      <p className="text-[var(--ml-steel)]">
+        {c.incomeReadPath}: {payload.read_path || "—"}
+        {payload.payslip_like === false ? ` · ${c.incomeNotPayslip}` : ""}
+      </p>
+      {payload.employee_name ? (
+        <p className="text-[var(--ml-ink)]">
+          {c.incomeEmployee}: {payload.employee_name}
+        </p>
+      ) : null}
+      {payload.employer_name ? (
+        <p className="text-[var(--ml-ink)]">
+          {c.incomeEmployer}: {payload.employer_name}
+        </p>
+      ) : null}
+      {payload.net_pay != null ? (
+        <p className="text-[var(--ml-ink)]">
+          {c.incomeNet}: {payload.net_pay}
+          {payload.gross_pay != null ? ` · ${c.incomeGross}: ${payload.gross_pay}` : ""}
+        </p>
+      ) : null}
+      {payload.hourly_rate != null || payload.hours != null ? (
+        <p className="text-xs text-[var(--ml-steel)]">
+          {c.incomeRateHours}: {payload.hourly_rate ?? "—"} / {payload.hours ?? "—"}
+        </p>
+      ) : null}
+      {period ? (
+        <p className="text-xs text-[var(--ml-steel)]">
+          {c.incomePeriod}: {period}
+        </p>
+      ) : null}
+      {payload.pay_date ? (
+        <p className="text-xs text-[var(--ml-steel)]">
+          {c.incomePayDate}: {payload.pay_date}
+        </p>
+      ) : null}
+      {flags.length > 0 ? (
+        <ul className="space-y-1 text-xs text-[var(--ml-steel)]">
+          {flags.map((flag) => (
+            <li key={flag}>• {incomeExtractFlagLabel(flag, locale)}</li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
 function TalJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
   const c = copy(locale);
   const tal = parseTalScreeningMessage(job.message);
@@ -405,6 +491,7 @@ function TalJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
 function JobRow({ job, locale }: { job: ApplicationJob; locale: Locale }) {
   const isTal = job.job_type === "tal_screening";
   const isIdExtract = job.job_type === "id_document_extract";
+  const isIncomeExtract = job.job_type === "income_document_extract";
   return (
     <div className="border-b border-[var(--ml-line)] py-4 last:border-b-0">
       <div className="flex flex-wrap items-center gap-2">
@@ -420,6 +507,10 @@ function JobRow({ job, locale }: { job: ApplicationJob; locale: Locale }) {
       ) : isIdExtract ? (
         <div className="mt-3">
           <IdExtractJobCard job={job} locale={locale} />
+        </div>
+      ) : isIncomeExtract ? (
+        <div className="mt-3">
+          <IncomeExtractJobCard job={job} locale={locale} />
         </div>
       ) : (
         <p className={`${adminUi.empty} mt-2`}>
