@@ -413,7 +413,7 @@ export function idScreeningContextLabel(
   if (locale === "en") {
     switch (context) {
       case "canadian":
-        return "Canadian licence / card";
+        return "Canadian ID (licence / RAMQ)";
       case "passport_only":
         return "Passport (name only)";
       case "none":
@@ -424,7 +424,7 @@ export function idScreeningContextLabel(
   }
   switch (context) {
     case "canadian":
-      return "Permis / carte canadienne";
+      return "Pièce canadienne (permis / RAMQ)";
     case "passport_only":
       return "Passeport (nom seulement)";
     case "none":
