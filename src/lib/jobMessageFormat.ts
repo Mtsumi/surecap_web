@@ -90,6 +90,23 @@ export type IdExtractSummary = {
   address_sources?: string[];
 };
 
+export type IncomeDocumentExtractPayload = {
+  document_type?: string;
+  read_path?: string;
+  employee_name?: string | null;
+  employer_name?: string | null;
+  pay_period_start?: string | null;
+  pay_period_end?: string | null;
+  pay_date?: string | null;
+  hourly_rate?: number | null;
+  hours?: number | null;
+  gross_pay?: number | null;
+  net_pay?: number | null;
+  payslip_like?: boolean;
+  flags?: string[];
+  qc_markers?: string[];
+};
+
 export function parseIdDocumentExtractMessage(
   message: string | null | undefined
 ): IdDocumentExtractPayload | null {
@@ -130,6 +147,84 @@ export function idExtractFlagLabel(flag: string, locale: Locale = "fr"): string 
   if (flag.startsWith("address_skip:"))
     return `Adresse ID ignorée (${flag.split(":").slice(1).join(":")})`;
   return flag.replaceAll("_", " ");
+}
+
+export function parseIncomeDocumentExtractMessage(
+  message: string | null | undefined
+): IncomeDocumentExtractPayload | null {
+  if (!message?.trim().startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(message) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    const obj = parsed as Record<string, unknown>;
+    if (
+      !("read_path" in obj) &&
+      !("payslip_like" in obj) &&
+      !("net_pay" in obj) &&
+      !("employee_name" in obj)
+    ) {
+      return null;
+    }
+    // Avoid mistaking ID extract payloads
+    if ("screening_context" in obj || "addresses" in obj) return null;
+    return parsed as IncomeDocumentExtractPayload;
+  } catch {
+    return null;
+  }
+}
+
+export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): string {
+  const fr: Record<string, string> = {
+    payslip_not_recognized: "Ne ressemble pas à un talon de paie",
+    name_mismatch_payslip_form: "Nom du talon ≠ formulaire",
+    employer_mismatch_form: "Employeur du talon ≠ contact RH",
+    net_vs_declared_income: "Net du talon ≠ revenu déclaré",
+    pay_math_inconsistent: "Calcul heures × taux incohérent",
+    payslip_stale_or_future: "Date de paie trop ancienne ou future",
+    income_doc_missing: "Talon de paie manquant",
+    income_doc_unreadable: "Talon illisible",
+  };
+  const en: Record<string, string> = {
+    payslip_not_recognized: "Does not look like a payslip",
+    name_mismatch_payslip_form: "Payslip name ≠ form",
+    employer_mismatch_form: "Payslip employer ≠ HR contact",
+    net_vs_declared_income: "Payslip net ≠ declared income",
+    pay_math_inconsistent: "Hours × rate math inconsistent",
+    payslip_stale_or_future: "Pay date too old or in the future",
+    income_doc_missing: "Payslip missing",
+    income_doc_unreadable: "Payslip unreadable",
+  };
+  const map = locale === "en" ? en : fr;
+  return map[flag] || flag.replaceAll("_", " ");
+}
+
+export function formatIncomeExtractPreview(
+  payload: IncomeDocumentExtractPayload,
+  locale: Locale = "fr"
+): string {
+  const flags = payload.flags?.length
+    ? ` · ${payload.flags.length} ${locale === "fr" ? "signal(s)" : "flag(s)"}`
+    : "";
+  if (payload.flags?.includes("income_doc_missing")) {
+    return locale === "fr" ? `Talon manquant${flags}` : `Payslip missing${flags}`;
+  }
+  if (payload.flags?.includes("payslip_not_recognized")) {
+    return locale === "fr"
+      ? `Document non reconnu comme talon${flags}`
+      : `Not recognized as payslip${flags}`;
+  }
+  const bits: string[] = [];
+  if (payload.employer_name) bits.push(payload.employer_name);
+  if (payload.net_pay != null) {
+    bits.push(
+      locale === "fr" ? `net ${payload.net_pay}` : `net ${payload.net_pay}`
+    );
+  }
+  if (payload.read_path) bits.push(payload.read_path);
+  if (bits.length === 0) {
+    return locale === "fr" ? `Vérification revenu${flags}` : `Income check${flags}`;
+  }
+  return `${bits.join(" · ")}${flags}`;
 }
 
 export function parseTalScreeningMessage(message: string | null | undefined): TalScreeningPayload | null {
@@ -220,6 +315,10 @@ export function formatJobMessagePreview(
       return `${idScreeningContextLabel(idExtract.screening_context, locale)}${flags}`;
     }
   }
+  if (jobType === "income_document_extract") {
+    const income = parseIncomeDocumentExtractMessage(message);
+    if (income) return formatIncomeExtractPreview(income, locale);
+  }
   if (message.trim().startsWith("{")) {
     try {
       const parsed = JSON.parse(message) as { summary?: string };
@@ -273,6 +372,8 @@ export function jobTypeLabel(jobType: string, locale: Locale = "fr"): string {
       return "TAL";
     case "id_document_extract":
       return locale === "fr" ? "Pièce d'identité" : "ID document";
+    case "income_document_extract":
+      return locale === "fr" ? "Talon de paie" : "Payslip";
     case "soquij_screening":
       return "SOQUIJ";
     case "admin_notify":

@@ -3,7 +3,9 @@ import {
   formatJobMessagePreview,
   formatSearchAddress,
   formatTalScreeningPreview,
+  incomeExtractFlagLabel,
   parseIdDocumentExtractMessage,
+  parseIncomeDocumentExtractMessage,
   parseTalScreeningMessage,
   pluralCount,
   sourceLabel,
@@ -85,6 +87,23 @@ describe("jobMessageFormat", () => {
     expect(formatJobMessagePreview("id_document_extract", message, "en")).toContain(
       "Name differs"
     );
+  });
+
+  it("parses income_document_extract JSON and formats preview", () => {
+    const message = JSON.stringify({
+      document_type: "pay_slip_1",
+      read_path: "pdf_text",
+      employee_name: "Cherief, Anis",
+      employer_name: "Etalex inc.",
+      net_pay: 736.65,
+      payslip_like: true,
+      flags: ["name_mismatch_payslip_form"],
+    });
+    expect(parseIncomeDocumentExtractMessage(message)?.employer_name).toBe("Etalex inc.");
+    expect(formatJobMessagePreview("income_document_extract", message, "fr")).toContain(
+      "Etalex"
+    );
+    expect(incomeExtractFlagLabel("payslip_not_recognized", "en")).toContain("payslip");
   });
 
   it("labels address sources in French and English", () => {
