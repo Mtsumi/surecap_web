@@ -7,7 +7,8 @@ export function applicationStatusLabel(status: string): string {
     case "rejected":
       return "Refusée";
     case "submitted":
-      return "Soumise";
+      // Avoid "Soumise" — correct for une demande but reads as “submissive”.
+      return "Envoyée";
     case "collecting":
       return "En collecte";
     case "draft":
@@ -20,7 +21,7 @@ export function applicationStatusLabel(status: string): string {
 export function memberStatusLabel(status: string): string {
   switch (status) {
     case "submitted":
-      return "Soumis";
+      return "Envoyé";
     case "invited":
       return "Invité (en attente)";
     case "draft":
