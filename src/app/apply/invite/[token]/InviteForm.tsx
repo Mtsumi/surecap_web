@@ -26,6 +26,7 @@ import {
   ApplyValidationCode,
   addressFieldErrors,
   adultMaxDateOfBirthString,
+  validateDateOfBirth,
   validatePhoneFormat,
   validatePhones,
 } from "@/lib/applyValidation";
@@ -568,9 +569,20 @@ export default function InviteForm({ token }: Props) {
               required
               max={adultMaxDateOfBirthString()}
               value={form.date_of_birth}
-              onChange={(e) => setField("date_of_birth", e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                setForm((prev) => ({ ...prev, date_of_birth: value }));
+                const code = value ? validateDateOfBirth(value) : null;
+                setFieldErrors((prev) => {
+                  const next = { ...prev };
+                  if (code) next.date_of_birth = code;
+                  else delete next.date_of_birth;
+                  return next;
+                });
+              }}
               className={inputClassFor("date_of_birth")}
             />
+            <p className="mt-1 text-xs text-[#78716c]">{t(locale, "dateOfBirthHint")}</p>
             {fieldHint("date_of_birth")}
           </label>
           <label className="block text-sm text-[#57534e]">

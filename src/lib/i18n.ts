@@ -136,6 +136,7 @@ export const messages = {
       "Your previous address must end on or before you started living at your current address.",
     validationDateOfBirthInvalid: "Please enter a valid date of birth.",
     validationDateOfBirthUnderage: "Applicants must be at least 18 years old.",
+    dateOfBirthHint: "You must be at least 18 years old.",
     inviteTitleRoommate: "Co-tenant application",
     inviteTitleGuarantor: "Guarantor section",
     inviteSubtitle:
@@ -295,6 +296,7 @@ export const messages = {
       "Votre adresse précédente doit se terminer au plus tard à la date de début de votre adresse actuelle.",
     validationDateOfBirthInvalid: "Veuillez entrer une date de naissance valide.",
     validationDateOfBirthUnderage: "Les demandeurs doivent avoir au moins 18 ans.",
+    dateOfBirthHint: "Vous devez avoir au moins 18 ans.",
     inviteTitleRoommate: "Demande de colocation",
     inviteTitleGuarantor: "Section garant",
     inviteSubtitle:
