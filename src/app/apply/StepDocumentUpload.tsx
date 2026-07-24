@@ -199,6 +199,9 @@ export default function StepDocumentUpload(props: Props) {
       <p className="mt-1 text-sm leading-relaxed text-[#57534e]">
         {t(locale, "uploadDocumentsHint")}
       </p>
+      <p className="mt-2 text-sm leading-relaxed text-[#78716c]">
+        {t(locale, "idUploadLaterHint")}
+      </p>
 
       <label className="mt-4 block text-sm text-[#57534e]">
         {t(locale, "idDocumentType")}

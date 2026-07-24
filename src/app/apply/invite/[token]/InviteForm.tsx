@@ -293,17 +293,6 @@ export default function InviteForm({ token }: Props) {
       return false;
     }
     if (
-      current === "personal" &&
-      context.upload_token &&
-      !idUploadComplete(
-        idKind,
-        idDocuments.map((doc) => doc.document_type)
-      )
-    ) {
-      setError(t(locale, "idUploadRequired"));
-      return false;
-    }
-    if (
       current === "references" &&
       context.upload_token &&
       !incomeUploadComplete(

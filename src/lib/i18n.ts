@@ -108,7 +108,9 @@ export const messages = {
     uploadFailed: "Upload failed. Please try again.",
     uploadedFiles: "Files on file",
     idUploadComplete: "Both sides of your licence are saved.",
-    idUploadRequired: "Please upload your ID document before continuing.",
+    idUploadRequired: "Please upload your ID before submitting.",
+    idUploadLaterHint:
+      "Don't have your ID with you? Continue for now — come back on this phone/browser to upload before you submit. On mobile you can take a photo.",
     loading: "Loading…",
     error: "Something went wrong. Please try again.",
     langToggle: "Français",
@@ -261,7 +263,9 @@ export const messages = {
     uploadedFiles: "Fichiers enregistrés",
     idUploadComplete: "Les deux côtés de votre permis sont enregistrés.",
     idUploadRequired:
-      "Veuillez téléverser votre pièce d'identité avant de continuer.",
+      "Veuillez téléverser votre pièce d'identité avant d'envoyer la demande.",
+    idUploadLaterHint:
+      "Pas de pièce d'identité sous la main? Continuez — revenez sur ce téléphone/navigateur pour la téléverser avant d'envoyer. Sur mobile, vous pouvez prendre une photo.",
     loading: "Chargement…",
     error: "Une erreur s'est produite. Veuillez réessayer.",
     langToggle: "English",
