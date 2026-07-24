@@ -58,6 +58,7 @@ import {
   validateEmailUniqueness,
   validatePhones,
   adultMaxDateOfBirthString,
+  validateDateOfBirth,
 } from "@/lib/applyValidation";
 import { mapSubmitError } from "@/lib/serverSubmitErrors";
 
@@ -978,6 +979,7 @@ export default function ApplyForm() {
                 className={inputClass}
               />
             </label>
+            <div id="apply-field-date_of_birth">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "dateOfBirth")}
               <input
@@ -985,11 +987,30 @@ export default function ApplyForm() {
                 required
                 max={adultMaxDateOfBirthString()}
                 value={form.date_of_birth}
-                onChange={(e) => setField("date_of_birth", e.target.value)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  setForm((f) => ({ ...f, date_of_birth: value }));
+                  setError(null);
+                  setErrorStep(null);
+                  setFieldValidation(
+                    "date_of_birth",
+                    value ? validateDateOfBirth(value) : null
+                  );
+                }}
+                onBlur={() => {
+                  if (form.date_of_birth) {
+                    setFieldValidation(
+                      "date_of_birth",
+                      validateDateOfBirth(form.date_of_birth)
+                    );
+                  }
+                }}
                 className={inputClassFor("date_of_birth")}
               />
+              <p className="mt-1 text-xs text-[#78716c]">{t(locale, "dateOfBirthHint")}</p>
               {fieldHint("date_of_birth")}
             </label>
+            </div>
             <div id="apply-field-email">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "email")}
