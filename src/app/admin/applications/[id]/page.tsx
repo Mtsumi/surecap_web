@@ -16,6 +16,7 @@ import {
 } from "@/lib/adminApi";
 import { formatAddressDateRange } from "@/lib/addressFormUtils";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
+import { applicationStatusLabel, memberStatusLabel } from "@/lib/adminStatus";
 import ApplicationDocuments from "./ApplicationDocuments";
 import ScreeningJobs from "./ScreeningJobs";
 
@@ -37,36 +38,6 @@ function memberRoleLabel(role: string): string {
       return "Garant";
     default:
       return role;
-  }
-}
-
-function memberStatusLabel(status: string): string {
-  switch (status) {
-    case "submitted":
-      return "Soumis";
-    case "invited":
-      return "Invité (en attente)";
-    case "draft":
-      return "Brouillon";
-    default:
-      return status;
-  }
-}
-
-function applicationStatusLabel(status: string): string {
-  switch (status) {
-    case "accepted":
-      return "Acceptée";
-    case "rejected":
-      return "Refusée";
-    case "submitted":
-      return "Soumise";
-    case "collecting":
-      return "En collecte";
-    case "draft":
-      return "Brouillon";
-    default:
-      return status;
   }
 }
 

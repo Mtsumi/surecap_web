@@ -456,19 +456,6 @@ export default function ApplyForm() {
           return;
         }
         if (
-          FORM_STEPS[i] === "personal" &&
-          !idUploadComplete(
-            idKind,
-            idDocuments.map((doc) => doc.document_type)
-          )
-        ) {
-          setError(t(locale, "idUploadRequired"));
-          setErrorStep("personal");
-          setStep("personal");
-          persistProgress("personal");
-          return;
-        }
-        if (
           FORM_STEPS[i] === "references" &&
           !incomeUploadComplete(
             form.employment_type,
@@ -919,15 +906,6 @@ export default function ApplyForm() {
               if (blockWithFieldErrors(personalFieldErrors(form.email, form.phone, form.date_of_birth))) return;
               if (!draftSession) {
                 setError(t(locale, "error"));
-                return;
-              }
-              if (
-                !idUploadComplete(
-                  idKind,
-                  idDocuments.map((doc) => doc.document_type)
-                )
-              ) {
-                setError(t(locale, "idUploadRequired"));
                 return;
               }
               setError(null);

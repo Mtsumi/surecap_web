@@ -5,11 +5,12 @@ import { useEffect, useState } from "react";
 import { ApplicationListItem, listApplications } from "@/lib/adminApi";
 
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
+import { applicationStatusLabel } from "@/lib/adminStatus";
 
 function statusBadge(status: string) {
   return (
     <span className={applicationStatusClass(status)}>
-      {status}
+      {applicationStatusLabel(status)}
     </span>
   );
 }
