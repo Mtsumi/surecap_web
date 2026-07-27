@@ -105,6 +105,8 @@ export type IncomeDocumentExtractPayload = {
   payslip_like?: boolean;
   flags?: string[];
   qc_markers?: string[];
+  slip_count?: number;
+  slips?: Array<Record<string, unknown>>;
 };
 
 export function parseIdDocumentExtractMessage(
@@ -183,6 +185,10 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
     payslip_stale_or_future: "Date de paie trop ancienne ou future",
     income_doc_missing: "Talon de paie manquant",
     income_doc_unreadable: "Talon illisible",
+    income_doc_partial: "Moins de 3 talons",
+    payslip_net_inconsistent_across_slips: "Nets incohérents entre talons",
+    employer_mismatch_across_slips: "Employeurs différents entre talons",
+    payslip_partial_not_recognized: "Au moins un talon non reconnu",
   };
   const en: Record<string, string> = {
     payslip_not_recognized: "Does not look like a payslip",
@@ -193,6 +199,10 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
     payslip_stale_or_future: "Pay date too old or in the future",
     income_doc_missing: "Payslip missing",
     income_doc_unreadable: "Payslip unreadable",
+    income_doc_partial: "Fewer than 3 payslips",
+    payslip_net_inconsistent_across_slips: "Nets inconsistent across slips",
+    employer_mismatch_across_slips: "Employers differ across slips",
+    payslip_partial_not_recognized: "At least one slip not recognized",
   };
   const map = locale === "en" ? en : fr;
   return map[flag] || flag.replaceAll("_", " ");
@@ -214,6 +224,11 @@ export function formatIncomeExtractPreview(
       : `Not recognized as payslip${flags}`;
   }
   const bits: string[] = [];
+  if (payload.slip_count && payload.slip_count > 1) {
+    bits.push(
+      locale === "fr" ? `${payload.slip_count} talons` : `${payload.slip_count} slips`
+    );
+  }
   if (payload.employer_name) bits.push(payload.employer_name);
   if (payload.net_pay != null) {
     bits.push(

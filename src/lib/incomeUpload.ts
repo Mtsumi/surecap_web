@@ -3,7 +3,7 @@
 export type EmploymentType = "employed" | "self_employed" | "other";
 
 export const INCOME_DOCUMENT_SLOTS: Record<EmploymentType, readonly string[]> = {
-  employed: ["pay_slip_1"],
+  employed: ["pay_slip_1", "pay_slip_2", "pay_slip_3"],
   self_employed: ["notice_of_assessment_year_1"],
   other: ["proof_of_income"],
 };

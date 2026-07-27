@@ -9,7 +9,11 @@ import {
 
 describe("incomeUpload", () => {
   it("maps employment types to document slots", () => {
-    expect(incomeSlotsForType("employed")).toEqual(["pay_slip_1"]);
+    expect(incomeSlotsForType("employed")).toEqual([
+      "pay_slip_1",
+      "pay_slip_2",
+      "pay_slip_3",
+    ]);
     expect(incomeSlotsForType("self_employed")).toEqual([
       "notice_of_assessment_year_1",
     ]);
@@ -17,14 +21,22 @@ describe("incomeUpload", () => {
   });
 
   it("detects complete income uploads", () => {
-    expect(incomeUploadComplete("employed", ["pay_slip_1"])).toBe(true);
+    expect(
+      incomeUploadComplete("employed", ["pay_slip_1", "pay_slip_2", "pay_slip_3"])
+    ).toBe(true);
+    expect(incomeUploadComplete("employed", ["pay_slip_1"])).toBe(false);
     expect(incomeUploadComplete("employed", [])).toBe(false);
   });
 
   it("drops stale income docs when employment type changes", () => {
     expect(
-      staleIncomeDocumentTypes("self_employed", ["pay_slip_1", "id_passport"])
-    ).toEqual(["pay_slip_1"]);
+      staleIncomeDocumentTypes("self_employed", [
+        "pay_slip_1",
+        "pay_slip_2",
+        "pay_slip_3",
+        "id_passport",
+      ])
+    ).toEqual(["pay_slip_1", "pay_slip_2", "pay_slip_3"]);
   });
 
   it("parses monthly net income", () => {

@@ -20,7 +20,9 @@ import {
 import { Locale, MessageKey, t } from "@/lib/i18n";
 
 const SLOT_LABEL: Record<string, MessageKey> = {
-  pay_slip_1: "incomePaySlip",
+  pay_slip_1: "incomePaySlip1",
+  pay_slip_2: "incomePaySlip2",
+  pay_slip_3: "incomePaySlip3",
   notice_of_assessment_year_1: "incomeNoa",
   proof_of_income: "incomeProof",
 };

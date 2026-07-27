@@ -410,6 +410,7 @@ function IncomeExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Lo
       <p className="font-semibold text-[var(--ml-ink)]">{c.incomeTitle}</p>
       <p className="text-[var(--ml-steel)]">
         {c.incomeReadPath}: {payload.read_path || "—"}
+        {payload.slip_count ? ` · ${payload.slip_count} ${locale === "fr" ? "talon(s)" : "slip(s)"}` : ""}
         {payload.payslip_like === false ? ` · ${c.incomeNotPayslip}` : ""}
       </p>
       {payload.employee_name ? (
