@@ -112,8 +112,7 @@ export const messages = {
     idUploadRequired: "Please upload your ID before submitting.",
     idUploadLaterHint:
       "Don't have your ID with you? Continue for now — come back on this phone/browser to upload before you submit. On mobile you can take a photo.",
-    idUploadCameraHint:
-      "Use your phone camera for ID photos (PDF uploads are not accepted). Photos are compressed before upload.",
+    idUploadCameraHint: "Take a photo of your ID with your phone camera (images only, no PDF).",
     idUploadImageOnly: "Please take or choose a photo of your ID (images only).",
     loading: "Loading…",
     error: "Something went wrong. Please try again.",
@@ -276,7 +275,7 @@ export const messages = {
     idUploadLaterHint:
       "Pas de pièce d'identité sous la main? Continuez — revenez sur ce téléphone/navigateur pour la téléverser avant d'envoyer. Sur mobile, vous pouvez prendre une photo.",
     idUploadCameraHint:
-      "Utilisez l'appareil photo pour la pièce d'identité (pas de PDF). Les photos sont compressées avant l'envoi.",
+      "Prenez une photo de votre pièce d'identité avec l'appareil photo (images seulement, pas de PDF).",
     idUploadImageOnly:
       "Veuillez prendre ou choisir une photo de votre pièce d'identité (images seulement).",
     loading: "Chargement…",
