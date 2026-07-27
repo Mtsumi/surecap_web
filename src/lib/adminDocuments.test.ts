@@ -11,7 +11,7 @@ import {
 describe("adminDocuments", () => {
   it("labels known document types in French", () => {
     expect(documentTypeLabel("id_passport")).toBe("Passeport");
-    expect(documentTypeLabel("pay_slip_1")).toBe("Talons de paie");
+    expect(documentTypeLabel("pay_slip_1")).toBe("Talons de paie (1)");
   });
 
   it("formats file sizes", () => {
