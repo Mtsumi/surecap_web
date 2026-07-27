@@ -42,6 +42,7 @@ export const messages = {
     addRoommate: "Add another roommate",
     removeRoommate: "Remove",
     guarantorOptional: "Guarantor (optional)",
+    guarantorRecommendedTitle: "Guarantor recommended (Quebec)",
     guarantorName: "Guarantor name",
     guarantorPhone: "Guarantor phone",
     includeGuarantor: "Add a guarantor",
@@ -111,6 +112,9 @@ export const messages = {
     idUploadRequired: "Please upload your ID before submitting.",
     idUploadLaterHint:
       "Don't have your ID with you? Continue for now — come back on this phone/browser to upload before you submit. On mobile you can take a photo.",
+    idUploadCameraHint:
+      "Use your phone camera for ID photos (PDF uploads are not accepted). Photos are compressed before upload.",
+    idUploadImageOnly: "Please take or choose a photo of your ID (images only).",
     loading: "Loading…",
     error: "Something went wrong. Please try again.",
     langToggle: "Français",
@@ -139,6 +143,10 @@ export const messages = {
     validationDateOfBirthInvalid: "Please enter a valid date of birth.",
     validationDateOfBirthUnderage: "Applicants must be at least 18 years old.",
     dateOfBirthHint: "You must be at least 18 years old.",
+    validationGuarantorRequiredAbroad:
+      "Because your address is outside Canada, a Quebec guarantor is recommended (not required). You can still submit without one for review.",
+    validationGuarantorAddressQuebec:
+      "If you add a guarantor, their address must be in Quebec (for legal enforcement).",
     inviteTitleRoommate: "Co-tenant application",
     inviteTitleGuarantor: "Guarantor section",
     inviteSubtitle:
@@ -196,6 +204,7 @@ export const messages = {
     addRoommate: "Ajouter un colocataire",
     removeRoommate: "Retirer",
     guarantorOptional: "Garant (facultatif)",
+    guarantorRecommendedTitle: "Garant recommandé (Québec)",
     guarantorName: "Nom du garant",
     guarantorPhone: "Téléphone du garant",
     includeGuarantor: "Ajouter un garant",
@@ -266,6 +275,10 @@ export const messages = {
       "Veuillez téléverser votre pièce d'identité avant d'envoyer la demande.",
     idUploadLaterHint:
       "Pas de pièce d'identité sous la main? Continuez — revenez sur ce téléphone/navigateur pour la téléverser avant d'envoyer. Sur mobile, vous pouvez prendre une photo.",
+    idUploadCameraHint:
+      "Utilisez l'appareil photo pour la pièce d'identité (pas de PDF). Les photos sont compressées avant l'envoi.",
+    idUploadImageOnly:
+      "Veuillez prendre ou choisir une photo de votre pièce d'identité (images seulement).",
     loading: "Chargement…",
     error: "Une erreur s'est produite. Veuillez réessayer.",
     langToggle: "English",
@@ -301,6 +314,10 @@ export const messages = {
     validationDateOfBirthInvalid: "Veuillez entrer une date de naissance valide.",
     validationDateOfBirthUnderage: "Les demandeurs doivent avoir au moins 18 ans.",
     dateOfBirthHint: "Vous devez avoir au moins 18 ans.",
+    validationGuarantorRequiredAbroad:
+      "Comme votre adresse est hors du Canada, un garant au Québec est recommandé (pas obligatoire). Vous pouvez quand même envoyer la demande pour révision.",
+    validationGuarantorAddressQuebec:
+      "Si vous ajoutez un garant, son adresse doit être au Québec (poursuites possibles).",
     inviteTitleRoommate: "Demande de colocation",
     inviteTitleGuarantor: "Section garant",
     inviteSubtitle:

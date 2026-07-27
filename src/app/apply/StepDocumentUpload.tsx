@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  ACCEPTED_UPLOAD_TYPES,
+  ACCEPTED_ID_UPLOAD_TYPES,
   ID_DOCUMENT_SLOTS,
   IdDocumentKind,
   idSlotsForKind,
   staleIdDocumentTypes,
 } from "@/lib/documentUpload";
+import { compressImageForUpload } from "@/lib/compressImage";
 import {
   MemberDocument,
   deleteInviteDocument,
@@ -127,9 +128,14 @@ export default function StepDocumentUpload(props: Props) {
 
   const handleFile = async (documentType: string, file: File | null) => {
     if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError(t(locale, "idUploadImageOnly"));
+      return;
+    }
     setError(null);
     setBusySlot(documentType);
     try {
+      const uploadFile = await compressImageForUpload(file);
       const saved =
         props.mode === "member"
           ? await uploadMemberDocument(
@@ -137,9 +143,9 @@ export default function StepDocumentUpload(props: Props) {
               props.memberId,
               props.uploadToken,
               documentType,
-              file
+              uploadFile
             )
-          : await uploadInviteDocument(props.inviteToken, documentType, file);
+          : await uploadInviteDocument(props.inviteToken, documentType, uploadFile);
       publishDocuments(
         [...documents.filter((doc) => doc.document_type !== documentType), saved].sort(
           (a, b) => a.document_type.localeCompare(b.document_type)
@@ -202,6 +208,9 @@ export default function StepDocumentUpload(props: Props) {
       <p className="mt-2 text-sm leading-relaxed text-[#78716c]">
         {t(locale, "idUploadLaterHint")}
       </p>
+      <p className="mt-1 text-sm leading-relaxed text-[#78716c]">
+        {t(locale, "idUploadCameraHint")}
+      </p>
 
       <label className="mt-4 block text-sm text-[#57534e]">
         {t(locale, "idDocumentType")}
@@ -246,7 +255,8 @@ export default function StepDocumentUpload(props: Props) {
                   </span>
                   <input
                     type="file"
-                    accept={ACCEPTED_UPLOAD_TYPES}
+                    accept={ACCEPTED_ID_UPLOAD_TYPES}
+                    capture="environment"
                     disabled={busy}
                     onChange={(e) => {
                       const file = e.target.files?.[0] ?? null;

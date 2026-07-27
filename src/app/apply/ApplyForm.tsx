@@ -76,6 +76,8 @@ const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   address_dates_chain: "validationAddressDatesChain",
   date_of_birth_invalid: "validationDateOfBirthInvalid",
   date_of_birth_underage: "validationDateOfBirthUnderage",
+  guarantor_required_abroad: "validationGuarantorRequiredAbroad",
+  guarantor_address_not_quebec: "validationGuarantorAddressQuebec",
 };
 
 type Step =
@@ -572,6 +574,7 @@ export default function ApplyForm() {
     roommates: form.renting_with_others ? roommates : [],
     includeGuarantor,
     guarantor: includeGuarantor ? guarantor : null,
+    address_not_in_canada: form.address_not_in_canada,
     landlord_phone: form.landlord_phone,
     landlord_name: form.landlord_name,
     hr_phone: form.hr_phone,
@@ -1116,6 +1119,10 @@ export default function ApplyForm() {
                     address_not_in_canada: checked,
                     current_place_id: checked ? "" : prev.current_place_id,
                   }));
+                  // Soft nudge only — applicant can still uncheck guarantor.
+                  if (checked) {
+                    setIncludeGuarantor(true);
+                  }
                 }}
                 className="mt-1"
               />
@@ -1448,8 +1455,15 @@ export default function ApplyForm() {
             )}
             <div className="rounded border border-[#e7e0d5] bg-[#fffef9] p-4">
               <h3 className="text-sm font-medium text-[#292524]">
-                {t(locale, "guarantorOptional")}
+                {form.address_not_in_canada
+                  ? t(locale, "guarantorRecommendedTitle")
+                  : t(locale, "guarantorOptional")}
               </h3>
+              {form.address_not_in_canada ? (
+                <p className="mt-2 text-sm text-[#78716c]">
+                  {t(locale, "validationGuarantorRequiredAbroad")}
+                </p>
+              ) : null}
               <label className="mt-3 flex items-center gap-2 text-sm text-[#292524]">
                 <input
                   type="checkbox"
