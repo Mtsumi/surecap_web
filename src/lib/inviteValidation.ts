@@ -10,6 +10,7 @@ import {
 } from "./applyValidation";
 import { parseMonthlyNetIncome, type EmploymentType } from "./incomeUpload";
 import { toAddressValidationInput } from "./addressFormUtils";
+import { addressLooksQuebec } from "./quebecAddress";
 
 export type InviteeRole = "roommate" | "guarantor";
 
@@ -136,6 +137,12 @@ export function inviteeFieldErrors(
       toAddressValidationInput(fields, { requireLeaseInName: role === "roommate" })
     )
   );
+
+  if (role === "guarantor") {
+    if (fields.address_not_in_canada || !addressLooksQuebec(fields.current_address)) {
+      errors.current_address = "guarantor_address_not_quebec";
+    }
+  }
 
   return errors;
 }

@@ -21,7 +21,9 @@ export type ApplyValidationCode =
   | "address_date_in_future"
   | "address_dates_chain"
   | "date_of_birth_invalid"
-  | "date_of_birth_underage";
+  | "date_of_birth_underage"
+  | "guarantor_required_abroad"
+  | "guarantor_address_not_quebec";
 
 export type ApplyFormStep = "personal" | "addresses" | "housing" | "references" | "other";
 
@@ -46,6 +48,7 @@ export type ApplyValidationInput = {
   roommates: { email: string }[];
   includeGuarantor: boolean;
   guarantor: { email: string; phone: string } | null;
+  address_not_in_canada?: boolean;
   phone: string;
   landlord_name: string;
   landlord_phone: string;
@@ -445,6 +448,7 @@ export function housingFieldErrors(
     | "includeGuarantor"
     | "guarantor"
     | "phone"
+    | "address_not_in_canada"
   >
 ): ApplyFieldErrors {
   const errors: ApplyFieldErrors = {};

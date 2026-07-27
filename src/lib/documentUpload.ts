@@ -11,6 +11,9 @@ export const ID_DOCUMENT_SLOTS: Record<IdDocumentKind, readonly string[]> = {
 export const ACCEPTED_UPLOAD_TYPES =
   "application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp";
 
+/** ID / medicare / licence: camera or image only (no PDF). */
+export const ACCEPTED_ID_UPLOAD_TYPES = "image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp";
+
 const ID_TYPES = new Set(
   Object.values(ID_DOCUMENT_SLOTS).flatMap((slots) => [...slots])
 );

@@ -61,6 +61,8 @@ const VALIDATION_MESSAGE: Record<
   address_dates_chain: "validationAddressDatesChain",
   date_of_birth_invalid: "validationDateOfBirthInvalid",
   date_of_birth_underage: "validationDateOfBirthUnderage",
+  guarantor_required_abroad: "validationGuarantorRequiredAbroad",
+  guarantor_address_not_quebec: "validationGuarantorAddressQuebec",
   invite_email_mismatch: "validationInviteEmailMismatch",
 };
 
@@ -654,6 +656,7 @@ export default function InviteForm({ token }: Props) {
             continueTo(steps[stepIndex + 1]);
           }}
         >
+          {role !== "guarantor" ? (
           <label className="flex items-start gap-2 text-sm text-[#292524]">
             <input
               type="checkbox"
@@ -670,22 +673,27 @@ export default function InviteForm({ token }: Props) {
             />
             <span>{t(locale, "addressNotInCanada")}</span>
           </label>
+          ) : (
+            <p className="text-sm text-[#78716c]">
+              {t(locale, "validationGuarantorAddressQuebec")}
+            </p>
+          )}
           <AddressAutocomplete
             locale={locale}
             label={t(locale, "currentAddress")}
             value={form.current_address}
-            manualOnly={form.address_not_in_canada}
+            manualOnly={role !== "guarantor" && form.address_not_in_canada}
             onChange={(address, placeId) => {
               setField("current_address", address);
-              if (!form.address_not_in_canada && placeId) {
+              if ((role === "guarantor" || !form.address_not_in_canada) && placeId) {
                 setField("current_place_id", placeId);
               }
             }}
             required
-            inputClass={inputClass}
+            inputClass={inputClassFor("current_address")}
           />
           {fieldHint("current_address")}
-          {!form.address_not_in_canada ? (
+          {!(role !== "guarantor" && form.address_not_in_canada) ? (
             <label className="block text-sm text-[#57534e]">
               {t(locale, "addressApartment")}
               <input

@@ -356,6 +356,14 @@ export function mapServerSubmitError(
     };
   }
 
+  if (trimmed === "Guarantor address must be in Quebec") {
+    return {
+      step: "addresses",
+      fieldErrors: { current_address: "guarantor_address_not_quebec" },
+      messageKey: "validationGuarantorAddressQuebec",
+    };
+  }
+
   return null;
 }
 
