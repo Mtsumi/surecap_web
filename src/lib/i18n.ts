@@ -148,8 +148,12 @@ export const messages = {
     dateOfBirthHint: "You must be at least 18 years old.",
     validationGuarantorRequiredAbroad:
       "Because your address is outside Canada, a Quebec guarantor is recommended (not required). You can still submit without one for review.",
+    guarantorQcAddressRecommended:
+      "A Quebec address is recommended for guarantors (easier to enforce), but you can still submit if your guarantor lives elsewhere.",
+    guarantorQcAddressNudge:
+      "This address is outside Quebec. You can still submit — our team will review whether the guarantor is acceptable.",
     validationGuarantorAddressQuebec:
-      "If you add a guarantor, their address must be in Quebec (for legal enforcement).",
+      "A Quebec guarantor address is recommended (not required). You can still submit for review.",
     inviteTitleRoommate: "Co-tenant application",
     inviteTitleGuarantor: "Guarantor section",
     inviteSubtitle:
@@ -322,8 +326,12 @@ export const messages = {
     dateOfBirthHint: "Vous devez avoir au moins 18 ans.",
     validationGuarantorRequiredAbroad:
       "Comme votre adresse est hors du Canada, un garant au Québec est recommandé (pas obligatoire). Vous pouvez quand même envoyer la demande pour révision.",
+    guarantorQcAddressRecommended:
+      "Une adresse au Québec est recommandée pour les garants (poursuites plus simples), mais vous pouvez soumettre si le garant habite ailleurs.",
+    guarantorQcAddressNudge:
+      "Cette adresse est hors du Québec. Vous pouvez quand même soumettre — notre équipe évaluera si le garant est acceptable.",
     validationGuarantorAddressQuebec:
-      "Si vous ajoutez un garant, son adresse doit être au Québec (poursuites possibles).",
+      "Une adresse de garant au Québec est recommandée (pas obligatoire). Vous pouvez soumettre pour révision.",
     inviteTitleRoommate: "Demande de colocation",
     inviteTitleGuarantor: "Section garant",
     inviteSubtitle:

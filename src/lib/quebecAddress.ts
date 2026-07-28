@@ -15,3 +15,14 @@ export function addressLooksQuebec(address: string): boolean {
   if (!m) return false;
   return QC_POSTAL_FIRST.has(m[1][0].toUpperCase());
 }
+
+/** True when a guarantor address is outside Quebec (for soft UI nudges, not blocking). */
+export function guarantorAddressOutsideQuebec(
+  address: string,
+  addressNotInCanada: boolean
+): boolean {
+  if (addressNotInCanada) return true;
+  const raw = address.trim();
+  if (!raw) return false;
+  return !addressLooksQuebec(raw);
+}
