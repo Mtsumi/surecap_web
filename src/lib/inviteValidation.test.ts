@@ -111,6 +111,17 @@ describe("inviteeFieldErrors", () => {
     expect(errors.date_of_birth).toBe("date_of_birth_underage");
   });
 
+  it("does not block guarantor with address outside Quebec", () => {
+    const errors = inviteeFieldErrors(
+      "guarantor",
+      guarantorFields({
+        current_address: "Main St, Vancouver, BC, Canada",
+      }),
+      "guarantor@example.com"
+    );
+    expect(errors.current_address).toBeUndefined();
+  });
+
   it("firstInviteeErrorKey returns first key", () => {
     expect(firstInviteeErrorKey({ email: "required", phone: "invalid_phone" })).toBe("email");
     expect(firstInviteeErrorKey({})).toBeNull();

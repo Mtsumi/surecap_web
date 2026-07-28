@@ -16,6 +16,7 @@ import {
 } from "@/lib/adminApi";
 import { formatAddressDateRange } from "@/lib/addressFormUtils";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
+import { guarantorAddressOutsideQuebec } from "@/lib/quebecAddress";
 import { applicationStatusLabel, memberStatusLabel } from "@/lib/adminStatus";
 import ApplicationDocuments from "./ApplicationDocuments";
 import ScreeningJobs from "./ScreeningJobs";
@@ -72,6 +73,17 @@ function MemberCard({ member }: { member: ApplicationMember }) {
         />
         {member.address_not_in_canada ? (
           <AdminField label="Adresse hors Canada" value="Oui" />
+        ) : null}
+        {member.role === "guarantor" &&
+        guarantorAddressOutsideQuebec(
+          member.current_address || "",
+          Boolean(member.address_not_in_canada)
+        ) ? (
+          <div className="sm:col-span-2">
+            <p className={`${adminUi.alertWarn} text-sm`}>
+              Garant hors Québec — vérification manuelle recommandée (poursuites limitées).
+            </p>
+          </div>
         ) : null}
         <AdminField label="Adresse précédente" value={member.previous_address} />
         <AdminField

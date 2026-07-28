@@ -38,6 +38,7 @@ import {
   inviteeFieldErrors,
 } from "@/lib/inviteValidation";
 import { mapInviteServerSubmitError } from "@/lib/serverSubmitErrors";
+import { guarantorAddressOutsideQuebec } from "@/lib/quebecAddress";
 
 type Step = "personal" | "addresses" | "references" | "review" | "done";
 
@@ -675,7 +676,7 @@ export default function InviteForm({ token }: Props) {
           </label>
           ) : (
             <p className="text-sm text-[#78716c]">
-              {t(locale, "validationGuarantorAddressQuebec")}
+              {t(locale, "guarantorQcAddressRecommended")}
             </p>
           )}
           <AddressAutocomplete
@@ -693,6 +694,15 @@ export default function InviteForm({ token }: Props) {
             inputClass={inputClassFor("current_address")}
           />
           {fieldHint("current_address")}
+          {role === "guarantor" &&
+          guarantorAddressOutsideQuebec(
+            form.current_address,
+            form.address_not_in_canada
+          ) ? (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+              {t(locale, "guarantorQcAddressNudge")}
+            </p>
+          ) : null}
           {!(role !== "guarantor" && form.address_not_in_canada) ? (
             <label className="block text-sm text-[#57534e]">
               {t(locale, "addressApartment")}
