@@ -8,6 +8,7 @@ import {
   incomeUploadComplete,
   staleIncomeDocumentTypes,
 } from "@/lib/incomeUpload";
+import { compressImageForUpload } from "@/lib/compressImage";
 import {
   MemberDocument,
   deleteInviteDocument,
@@ -138,6 +139,8 @@ export default function StepIncomeUpload(props: Props) {
     setError(null);
     setBusySlot(documentType);
     try {
+      // Same as ID: phone camera JPEGs often exceed mobile/proxy body limits.
+      const uploadFile = await compressImageForUpload(file);
       const saved =
         props.mode === "member"
           ? await uploadMemberDocument(
@@ -145,9 +148,9 @@ export default function StepIncomeUpload(props: Props) {
               props.memberId,
               props.uploadToken,
               documentType,
-              file
+              uploadFile
             )
-          : await uploadInviteDocument(props.inviteToken, documentType, file);
+          : await uploadInviteDocument(props.inviteToken, documentType, uploadFile);
       publishDocuments(
         [...documents.filter((doc) => doc.document_type !== documentType), saved].sort(
           (a, b) => a.document_type.localeCompare(b.document_type)
