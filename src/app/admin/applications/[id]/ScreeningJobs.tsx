@@ -21,6 +21,14 @@ import {
 } from "@/lib/jobMessageFormat";
 import type { ApplicationJob } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
+import {
+  inconclusiveReviewBody,
+  inconclusiveReviewTitle,
+  incomeSlipSlotLabel,
+  isIdExtractInconclusive,
+  isIncomeExtractInconclusive,
+  slipRecognizedLabel,
+} from "@/lib/documentExtractReview";
 import type { Locale } from "@/lib/i18n";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 
@@ -289,6 +297,23 @@ function SearchBlock({ search, locale }: { search: TalSearch; locale: Locale }) 
   );
 }
 
+function ManualReviewBanner({
+  kind,
+  locale,
+}: {
+  kind: "income" | "id";
+  locale: Locale;
+}) {
+  return (
+    <div className={`${adminUi.alertWarn} text-sm`}>
+      <p className="font-semibold text-[var(--ml-ink)]">
+        {inconclusiveReviewTitle(locale)}
+      </p>
+      <p className="mt-1 text-[var(--ml-steel)]">{inconclusiveReviewBody(kind, locale)}</p>
+    </div>
+  );
+}
+
 function IdExtractFlags({
   summary,
   locale,
@@ -299,8 +324,14 @@ function IdExtractFlags({
   if (!summary) return null;
   const c = copy(locale);
   const flags = summary.flags || [];
+  const inconclusive = isIdExtractInconclusive(summary);
   return (
     <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] p-3 text-sm">
+      {inconclusive ? (
+        <div className="mb-3">
+          <ManualReviewBanner kind="id" locale={locale} />
+        </div>
+      ) : null}
       <p className="font-semibold text-[var(--ml-ink)]">{c.idCheck}</p>
       <p className="mt-1 text-[var(--ml-steel)]">
         {idScreeningContextLabel(summary.screening_context, locale)}
@@ -344,8 +375,10 @@ function IdExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Locale
     );
   }
   const flags = payload.flags || [];
+  const inconclusive = isIdExtractInconclusive(payload);
   return (
     <div className="space-y-3 text-sm">
+      {inconclusive ? <ManualReviewBanner kind="id" locale={locale} /> : null}
       <p className="text-[var(--ml-steel)]">
         {idScreeningContextLabel(payload.screening_context, locale)}
         {payload.pdf417_ok ? ` · PDF417 (${payload.pdf417_variant || "ok"})` : ""}
@@ -401,18 +434,66 @@ function IncomeExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Lo
     );
   }
   const flags = payload.flags || [];
+  const inconclusive = isIncomeExtractInconclusive(payload);
   const period =
     payload.pay_period_start || payload.pay_period_end
       ? `${payload.pay_period_start || "—"} → ${payload.pay_period_end || "—"}`
       : null;
   return (
     <div className="space-y-3 text-sm">
+      {inconclusive ? <ManualReviewBanner kind="income" locale={locale} /> : null}
       <p className="font-semibold text-[var(--ml-ink)]">{c.incomeTitle}</p>
       <p className="text-[var(--ml-steel)]">
         {c.incomeReadPath}: {payload.read_path || "—"}
         {payload.slip_count ? ` · ${payload.slip_count} ${locale === "fr" ? "talon(s)" : "slip(s)"}` : ""}
         {payload.payslip_like === false ? ` · ${c.incomeNotPayslip}` : ""}
       </p>
+      {payload.slips && payload.slips.length > 0 ? (
+        <ul className="space-y-2">
+          {payload.slips.map((slip) => {
+            const slipFlags = (slip.flags as string[] | undefined) ?? [];
+            const slipInconclusive =
+              slip.payslip_like === false ||
+              slipFlags.some((flag) =>
+                [
+                  "income_doc_unreadable",
+                  "payslip_not_recognized",
+                  "income_doc_missing",
+                ].includes(flag)
+              );
+            return (
+              <li
+                key={String(slip.document_type)}
+                className={`rounded-md border p-2 text-xs ${
+                  slipInconclusive
+                    ? "border-amber-300 bg-amber-50 text-amber-950"
+                    : "border-[var(--ml-line)] bg-[var(--ml-paper)] text-[var(--ml-steel)]"
+                }`}
+              >
+                <p className="font-medium text-[var(--ml-ink)]">
+                  {incomeSlipSlotLabel(String(slip.document_type), locale)} —{" "}
+                  {slipRecognizedLabel(Boolean(slip.payslip_like), locale)}
+                </p>
+                {slip.employer_name ? (
+                  <p className="mt-1">{slip.employer_name as string}</p>
+                ) : null}
+                {slip.net_pay != null ? (
+                  <p className="mt-1">
+                    {c.incomeNet}: {String(slip.net_pay)}
+                  </p>
+                ) : null}
+                {slipFlags.length > 0 ? (
+                  <ul className="mt-1 space-y-0.5">
+                    {slipFlags.map((flag) => (
+                      <li key={flag}>• {incomeExtractFlagLabel(flag, locale)}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
       {payload.employee_name ? (
         <p className="text-[var(--ml-ink)]">
           {c.incomeEmployee}: {payload.employee_name}

@@ -218,10 +218,20 @@ export function formatIncomeExtractPreview(
   if (payload.flags?.includes("income_doc_missing")) {
     return locale === "fr" ? `Talon manquant${flags}` : `Payslip missing${flags}`;
   }
+  if (payload.flags?.includes("income_doc_unreadable")) {
+    return locale === "fr"
+      ? `Talon illisible — vérification manuelle${flags}`
+      : `Payslip unreadable — manual review${flags}`;
+  }
   if (payload.flags?.includes("payslip_not_recognized")) {
     return locale === "fr"
-      ? `Document non reconnu comme talon${flags}`
-      : `Not recognized as payslip${flags}`;
+      ? `Document non reconnu comme talon — vérification manuelle${flags}`
+      : `Not recognized as payslip — manual review${flags}`;
+  }
+  if (payload.flags?.includes("payslip_partial_not_recognized")) {
+    return locale === "fr"
+      ? `Au moins un talon non reconnu — vérification manuelle${flags}`
+      : `At least one slip not recognized — manual review${flags}`;
   }
   const bits: string[] = [];
   if (payload.slip_count && payload.slip_count > 1) {
@@ -323,6 +333,15 @@ export function formatJobMessagePreview(
         return locale === "fr"
           ? `Nom différent du formulaire${flags}`
           : `Name differs from form${flags}`;
+      }
+      if (
+        idExtract.flags?.includes("name_not_extracted") ||
+        idExtract.flags?.includes("blur_front") ||
+        idExtract.flags?.includes("blur_back")
+      ) {
+        return locale === "fr"
+          ? `Pièce peu lisible — vérification manuelle${flags}`
+          : `ID poorly readable — manual review${flags}`;
       }
       if (idExtract.pdf417_ok) {
         return `PDF417 (${idExtract.pdf417_variant || "ok"})${flags}`;
