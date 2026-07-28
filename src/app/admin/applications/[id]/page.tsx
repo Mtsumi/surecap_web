@@ -20,6 +20,7 @@ import { guarantorAddressOutsideQuebec } from "@/lib/quebecAddress";
 import { applicationStatusLabel, memberStatusLabel } from "@/lib/adminStatus";
 import ApplicationDocuments from "./ApplicationDocuments";
 import ScreeningJobs from "./ScreeningJobs";
+import { useAdminLocaleContext } from "../../AdminLocaleContext";
 
 function formatLivedDates(
   from: string | null | undefined,
@@ -48,6 +49,7 @@ function memberDisplayName(member: ApplicationMember): string {
 }
 
 function MemberCard({ member }: { member: ApplicationMember }) {
+  const { t } = useAdminLocaleContext();
   const email = member.email || member.invited_email;
   const defaultOpen = member.role === "primary";
 
@@ -81,7 +83,7 @@ function MemberCard({ member }: { member: ApplicationMember }) {
         ) ? (
           <div className="sm:col-span-2">
             <p className={`${adminUi.alertWarn} text-sm`}>
-              Garant hors Québec — vérification manuelle recommandée (poursuites limitées).
+              {t("guarantorOutsideQuebecReview")}
             </p>
           </div>
         ) : null}

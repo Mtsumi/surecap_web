@@ -62,6 +62,8 @@ export const adminMessages = {
     buildingsInvalidRent: "Loyer invalide.",
     buildingsEmptyUnits: "Aucun logement pour cet immeuble.",
     buildingsGenericError: "Une erreur est survenue.",
+    guarantorOutsideQuebecReview:
+      "Garant hors Québec — vérification manuelle recommandée (actions juridiques limitées).",
   },
   en: {
     brand: "Montreal Living",
@@ -121,6 +123,8 @@ export const adminMessages = {
     buildingsInvalidRent: "Invalid rent amount.",
     buildingsEmptyUnits: "No units for this building.",
     buildingsGenericError: "Something went wrong.",
+    guarantorOutsideQuebecReview:
+      "Guarantor outside Quebec — manual review recommended (limited legal action).",
   },
 } as const;
 
