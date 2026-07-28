@@ -182,6 +182,14 @@ function networkFetchError(): Error {
   );
 }
 
+/** Map stale-backend upload errors to a clearer message on mobile. */
+export function formatUploadErrorMessage(message: string): string {
+  if (message.includes("Unknown document type: pay_slip_3")) {
+    return "The server is not updated for the third payslip slot yet. Ask ops to redeploy the API, then try again.";
+  }
+  return message;
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
