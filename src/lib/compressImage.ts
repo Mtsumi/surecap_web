@@ -1,4 +1,4 @@
-/** Client-side image compression before ID uploads (phone camera JPEGs). */
+/** Client-side image compression before uploads (phone camera JPEGs). */
 
 const MAX_EDGE_PX = 1800;
 const JPEG_QUALITY = 0.82;

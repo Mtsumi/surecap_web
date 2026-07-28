@@ -164,11 +164,35 @@ function apiHeaders(init?: RequestInit): HeadersInit {
   return headers;
 }
 
+/** Safari/WebKit often surfaces network/body-limit failures as "Load failed". */
+function isNetworkFetchError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const msg = error.message.toLowerCase();
+  return (
+    msg.includes("failed to fetch") ||
+    msg.includes("load failed") ||
+    msg.includes("networkerror") ||
+    msg.includes("network request failed")
+  );
+}
+
+function networkFetchError(): Error {
+  return new Error(
+    "Connection failed. If you are uploading a photo, try a smaller image or PDF, then retry."
+  );
+}
+
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: apiHeaders(init),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: apiHeaders(init),
+    });
+  } catch (error) {
+    if (isNetworkFetchError(error)) throw networkFetchError();
+    throw error;
+  }
 
   let body: ApiEnvelope<T> | null = null;
   try {
@@ -192,10 +216,16 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 async function apiFetchVoid(path: string, init?: RequestInit): Promise<void> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: apiHeaders(init),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: apiHeaders(init),
+    });
+  } catch (error) {
+    if (isNetworkFetchError(error)) throw networkFetchError();
+    throw error;
+  }
 
   if (res.status === 204) {
     return;
@@ -221,7 +251,13 @@ async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
   if (API_URL.includes("ngrok")) {
     headers["ngrok-skip-browser-warning"] = "1";
   }
-  const res = await fetch(`${API_URL}${path}`, { method: "POST", headers, body: form });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, { method: "POST", headers, body: form });
+  } catch (error) {
+    if (isNetworkFetchError(error)) throw networkFetchError();
+    throw error;
+  }
 
   let body: ApiEnvelope<T> | null = null;
   try {
