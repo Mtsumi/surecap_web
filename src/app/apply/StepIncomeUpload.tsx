@@ -13,6 +13,7 @@ import {
   MemberDocument,
   deleteInviteDocument,
   deleteMemberDocument,
+  formatUploadErrorMessage,
   listInviteDocuments,
   listMemberDocuments,
   uploadInviteDocument,
@@ -75,6 +76,9 @@ export default function StepIncomeUpload(props: Props) {
   const [busySlot, setBusySlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const uploadErrorMessage = (e: unknown) =>
+    e instanceof Error ? formatUploadErrorMessage(e.message) : t(locale, "uploadFailed");
+
   const onDocumentsChangeRef = useRef(onDocumentsChange);
   onDocumentsChangeRef.current = onDocumentsChange;
 
@@ -94,7 +98,7 @@ export default function StepIncomeUpload(props: Props) {
         : await listInviteDocuments(inviteToken);
       publishDocuments(list);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "uploadFailed"));
+      setError(uploadErrorMessage(e));
     } finally {
       setLoadingList(false);
     }
@@ -128,7 +132,7 @@ export default function StepIncomeUpload(props: Props) {
       }
       publishDocuments(documents.filter((doc) => doc.document_type !== documentType));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "uploadFailed"));
+      setError(uploadErrorMessage(e));
     } finally {
       setBusySlot(null);
     }
@@ -157,7 +161,7 @@ export default function StepIncomeUpload(props: Props) {
         )
       );
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "uploadFailed"));
+      setError(uploadErrorMessage(e));
     } finally {
       setBusySlot(null);
     }
@@ -189,7 +193,7 @@ export default function StepIncomeUpload(props: Props) {
           documents.filter((doc) => !stale.includes(doc.document_type))
         );
       } catch (e) {
-        setError(e instanceof Error ? e.message : t(locale, "uploadFailed"));
+        setError(uploadErrorMessage(e));
         setBusySlot(null);
         return;
       }
