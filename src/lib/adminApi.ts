@@ -61,6 +61,7 @@ export type ApplicationMember = {
   previous_address_lived_to: string | null;
   address_not_in_canada: boolean | null;
   lease_in_name: boolean | null;
+  housing_status?: "renting" | "own_home" | null;
   move_in_date: string | null;
   landlord_phone: string | null;
   hr_phone: string | null;
@@ -91,6 +92,7 @@ export type ApplicationDetail = {
   previous_address_lived_to: string | null;
   address_not_in_canada: boolean | null;
   lease_in_name: boolean | null;
+  housing_status?: "renting" | "own_home" | null;
   move_in_date: string | null;
   renting_with_others: boolean | null;
   landlord_phone: string | null;

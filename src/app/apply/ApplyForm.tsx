@@ -29,6 +29,7 @@ import {
   clearApplyProgress,
   DraftSession,
   loadApplyProgress,
+  loadLatestApplyProgress,
   saveApplyProgress,
 } from "@/lib/applyStorage";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
@@ -119,6 +120,7 @@ type FormFields = {
   still_at_current_address: boolean;
   previous_address_lived_from: string;
   previous_address_lived_to: string;
+  housing_status: "renting" | "own_home";
   lease_in_name: boolean | null;
   move_in_date: string;
   renting_with_others: boolean | null;
@@ -153,6 +155,7 @@ const emptyForm: FormFields = {
   still_at_current_address: true,
   previous_address_lived_from: "",
   previous_address_lived_to: "",
+  housing_status: "renting",
   lease_in_name: null,
   move_in_date: "",
   renting_with_others: null,
@@ -196,6 +199,9 @@ function stepLabel(step: Step, locale: Locale): string {
 
 const MAX_ROOMMATES = 5;
 
+/** Survives React Strict Mode remounts so resume only runs once per page load. */
+let didAttemptDraftResume = false;
+
 function formPayload(
   fields: FormFields,
   roommates: RoommateContact[],
@@ -217,17 +223,25 @@ function formPayload(
     previous_apartment: fields.previous_apartment.trim() || undefined,
     previous_place_id: fields.previous_place_id || undefined,
     ...addressDatePayload(fields),
-    lease_in_name: fields.lease_in_name ?? undefined,
+    housing_status: fields.housing_status,
+    lease_in_name:
+      fields.housing_status === "own_home"
+        ? false
+        : (fields.lease_in_name ?? undefined),
     move_in_date: fields.move_in_date,
     renting_with_others: fields.renting_with_others ?? undefined,
-    landlord_name: fields.landlord_name.trim(),
-    landlord_phone: fields.landlord_phone.trim(),
-    previous_landlord_name: fields.previous_address.trim()
-      ? fields.previous_landlord_name.trim()
-      : undefined,
-    previous_landlord_phone: fields.previous_address.trim()
-      ? fields.previous_landlord_phone.trim()
-      : undefined,
+    landlord_name:
+      fields.housing_status === "own_home" ? "" : fields.landlord_name.trim(),
+    landlord_phone:
+      fields.housing_status === "own_home" ? "" : fields.landlord_phone.trim(),
+    previous_landlord_name:
+      fields.housing_status === "own_home" || !fields.previous_address.trim()
+        ? undefined
+        : fields.previous_landlord_name.trim(),
+    previous_landlord_phone:
+      fields.housing_status === "own_home" || !fields.previous_address.trim()
+        ? undefined
+        : fields.previous_landlord_phone.trim(),
     hr_name: fields.hr_name.trim(),
     hr_phone: fields.hr_phone.trim(),
     employment_type: fields.employment_type,
@@ -287,6 +301,7 @@ export default function ApplyForm() {
   const [fieldErrors, setFieldErrors] = useState<
     Partial<Record<string, ApplyValidationCode>>
   >({});
+  const [showDraftBanner, setShowDraftBanner] = useState(false);
 
   const inputClass =
     "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-base text-[#292524] outline-none transition focus:border-[#3d5a45]";
@@ -430,6 +445,183 @@ export default function ApplyForm() {
     ]
   );
 
+  // Debounced autosave while a unit draft is in progress.
+  useEffect(() => {
+    if (!selectedUnit || !selectedBuilding) return;
+    const timer = window.setTimeout(() => {
+      persistProgress(step);
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [
+    form,
+    roommates,
+    guarantor,
+    includeGuarantor,
+    idKind,
+    draftSession,
+    step,
+    selectedUnit,
+    selectedBuilding,
+    persistProgress,
+  ]);
+
+  // Flush draft when the tab is hidden or the page is unloading.
+  useEffect(() => {
+    if (!selectedUnit || !selectedBuilding) return;
+    const flush = () => persistProgress(step);
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pagehide", flush);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pagehide", flush);
+    };
+  }, [selectedUnit, selectedBuilding, persistProgress, step]);
+
+  const restoreFromSaved = useCallback(
+    async (building: Building, unit: Unit, saved: NonNullable<ReturnType<typeof loadApplyProgress>>) => {
+      setSelectedBuilding(building);
+      setSelectedUnit(unit);
+      setSubmittedApplicationId(null);
+      setError(null);
+      setLoading(true);
+
+      try {
+        let nextDraftSession: DraftSession | null = saved.draftSession ?? null;
+        let nextIdKind: IdDocumentKind = saved.idKind ?? "passport";
+        const matchesBuilding = saved.buildingId === building.id;
+
+        if (matchesBuilding) {
+          setForm({
+            ...emptyForm,
+            ...(saved.form as FormFields),
+            housing_status:
+              (saved.form as FormFields).housing_status === "own_home"
+                ? "own_home"
+                : "renting",
+          });
+          setRoommates(
+            saved.roommates.length ? saved.roommates : [{ name: "", email: "" }]
+          );
+          setIncludeGuarantor(saved.includeGuarantor);
+          setGuarantor(saved.guarantor);
+          setStep(isFormStep(saved.step) ? saved.step : "personal");
+        } else {
+          setForm(emptyForm);
+          setRoommates([{ name: "", email: "" }]);
+          setIncludeGuarantor(false);
+          setGuarantor({ name: "", email: "", phone: "" });
+          setStep("personal");
+          nextDraftSession = null;
+        }
+
+        if (!nextDraftSession?.uploadToken) {
+          const app = await createApplicationDraft(unit.id);
+          if (!app.primary_member_id || !app.upload_token) {
+            throw new Error(t(locale, "error"));
+          }
+          nextDraftSession = {
+            applicationId: app.id,
+            memberId: app.primary_member_id,
+            uploadToken: app.upload_token,
+          };
+        }
+
+        setDraftSession(nextDraftSession);
+        setIdKind(nextIdKind);
+        setIdDocuments([]);
+        setIncomeDocuments([]);
+        saveApplyProgress({
+          unitId: unit.id,
+          buildingId: building.id,
+          step:
+            matchesBuilding && isFormStep(saved.step) ? saved.step : "personal",
+          form: matchesBuilding
+            ? {
+                ...emptyForm,
+                ...(saved.form as FormFields),
+                housing_status:
+                  (saved.form as FormFields).housing_status === "own_home"
+                    ? "own_home"
+                    : "renting",
+              }
+            : emptyForm,
+          roommates:
+            matchesBuilding && saved.roommates.length
+              ? saved.roommates
+              : [{ name: "", email: "" }],
+          includeGuarantor: matchesBuilding ? saved.includeGuarantor : false,
+          guarantor: matchesBuilding
+            ? saved.guarantor
+            : { name: "", email: "", phone: "" },
+          draftSession: nextDraftSession,
+          idKind: nextIdKind,
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t(locale, "error"));
+        setSelectedUnit(null);
+        setDraftSession(null);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [locale]
+  );
+
+  // Resume latest draft after buildings load (building step, no unit yet).
+  useEffect(() => {
+    if (loading || didAttemptDraftResume) return;
+    if (step !== "building" || selectedUnit) return;
+    if (buildings.length === 0) return;
+
+    didAttemptDraftResume = true;
+    const saved = loadLatestApplyProgress();
+    if (!saved) return;
+    const building = buildings.find((b) => b.id === saved.buildingId);
+    if (!building) return;
+
+    void (async () => {
+      setLoading(true);
+      try {
+        const unitList = await fetchUnits(building.id);
+        setUnits(unitList);
+        const unit = unitList.find((u) => u.id === saved.unitId);
+        if (!unit) return;
+        await restoreFromSaved(building, unit, saved);
+        setShowDraftBanner(true);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : t(locale, "error"));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [loading, step, selectedUnit, buildings, restoreFromSaved, locale]);
+
+  const handleStartOver = () => {
+    if (selectedUnit) clearApplyProgress(selectedUnit.id);
+    didAttemptDraftResume = true;
+    setShowDraftBanner(false);
+    setSelectedBuilding(null);
+    setSelectedUnit(null);
+    setSubmittedApplicationId(null);
+    setDraftSession(null);
+    setIdKind("passport");
+    setIdDocuments([]);
+    setIncomeDocuments([]);
+    setForm(emptyForm);
+    setRoommates([{ name: "", email: "" }]);
+    setIncludeGuarantor(false);
+    setGuarantor({ name: "", email: "", phone: "" });
+    setUnits([]);
+    setFieldErrors({});
+    setError(null);
+    setErrorStep(null);
+    setStep("building");
+  };
+
   const fieldErrorsForFormStep = (
     formStep: (typeof FORM_STEPS)[number]
   ): ApplyFieldErrors => {
@@ -512,21 +704,36 @@ export default function ApplyForm() {
       const saved = loadApplyProgress(u.id);
       let nextDraftSession: DraftSession | null = saved?.draftSession ?? null;
       let nextIdKind: IdDocumentKind = saved?.idKind ?? "passport";
+      let nextForm: FormFields = emptyForm;
+      let nextRoommates = [{ name: "", email: "" }];
+      let nextIncludeGuarantor = false;
+      let nextGuarantor = { name: "", email: "", phone: "" };
+      let nextStep: Step = "personal";
 
       if (saved && saved.buildingId === selectedBuilding.id) {
-        setForm({ ...emptyForm, ...(saved.form as FormFields) });
-        setRoommates(saved.roommates.length ? saved.roommates : [{ name: "", email: "" }]);
-        setIncludeGuarantor(saved.includeGuarantor);
-        setGuarantor(saved.guarantor);
-        setStep(isFormStep(saved.step) ? saved.step : "personal");
+        nextForm = {
+          ...emptyForm,
+          ...(saved.form as FormFields),
+          housing_status:
+            (saved.form as FormFields).housing_status === "own_home"
+              ? "own_home"
+              : "renting",
+        };
+        nextRoommates = saved.roommates.length
+          ? saved.roommates
+          : [{ name: "", email: "" }];
+        nextIncludeGuarantor = saved.includeGuarantor;
+        nextGuarantor = saved.guarantor;
+        nextStep = isFormStep(saved.step) ? saved.step : "personal";
       } else {
-        setForm(emptyForm);
-        setRoommates([{ name: "", email: "" }]);
-        setIncludeGuarantor(false);
-        setGuarantor({ name: "", email: "", phone: "" });
-        setStep("personal");
         nextDraftSession = null;
       }
+
+      setForm(nextForm);
+      setRoommates(nextRoommates);
+      setIncludeGuarantor(nextIncludeGuarantor);
+      setGuarantor(nextGuarantor);
+      setStep(nextStep);
 
       if (!nextDraftSession?.uploadToken) {
         const app = await createApplicationDraft(u.id);
@@ -543,22 +750,15 @@ export default function ApplyForm() {
       setDraftSession(nextDraftSession);
       setIdKind(nextIdKind);
       setIdDocuments([]);
+      setIncomeDocuments([]);
       saveApplyProgress({
         unitId: u.id,
         buildingId: selectedBuilding.id,
-        step: saved && saved.buildingId === selectedBuilding.id && isFormStep(saved.step)
-          ? saved.step
-          : "personal",
-        form:
-          saved && saved.buildingId === selectedBuilding.id
-            ? { ...emptyForm, ...(saved.form as FormFields) }
-            : emptyForm,
-        roommates:
-          saved && saved.buildingId === selectedBuilding.id && saved.roommates.length
-            ? saved.roommates
-            : [{ name: "", email: "" }],
-        includeGuarantor: saved?.includeGuarantor ?? false,
-        guarantor: saved?.guarantor ?? { name: "", email: "", phone: "" },
+        step: nextStep,
+        form: nextForm,
+        roommates: nextRoommates,
+        includeGuarantor: nextIncludeGuarantor,
+        guarantor: nextGuarantor,
         draftSession: nextDraftSession,
         idKind: nextIdKind,
         updatedAt: new Date().toISOString(),
@@ -572,8 +772,13 @@ export default function ApplyForm() {
     }
   };
 
-  const addressValidationFields = () =>
-    toAddressValidationInput(form, { requireLeaseInName: true, requireLandlord: true });
+  const addressValidationFields = () => {
+    const ownsHome = form.housing_status === "own_home";
+    return toAddressValidationInput(form, {
+      requireLeaseInName: !ownsHome,
+      requireLandlord: !ownsHome,
+    });
+  };
 
   const validationInput = () => ({
     move_in_date: form.move_in_date,
@@ -807,6 +1012,28 @@ export default function ApplyForm() {
       {error && (
         <div className="mb-5 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-4 py-3 text-sm text-[#7f1d1d]">
           {error}
+        </div>
+      )}
+
+      {showDraftBanner && (
+        <div className="mb-5 flex items-start justify-between gap-3 rounded border border-[#c9dcc9] bg-[#f6faf6] px-4 py-3 text-sm text-[#1a3d22]">
+          <p className="leading-relaxed">{t(locale, "draftRestoredBanner")}</p>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <button
+              type="button"
+              onClick={handleStartOver}
+              className="text-sm font-medium text-[#3d5a45] underline-offset-2 hover:underline"
+            >
+              {t(locale, "draftStartOver")}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowDraftBanner(false)}
+              className="text-xs text-[#78716c] underline-offset-2 hover:underline"
+            >
+              {t(locale, "cancel")}
+            </button>
+          </div>
         </div>
       )}
 
@@ -1199,6 +1426,55 @@ export default function ApplyForm() {
               inputClassFor={inputClassFor}
               fieldHint={fieldHint}
             />
+            <fieldset id="apply-field-housing_status">
+              <legend className="text-sm text-[#57534e]">
+                {t(locale, "housingStatus")}
+              </legend>
+              <div className="mt-2 flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm text-[#292524]">
+                  <input
+                    type="radio"
+                    name="housing_status"
+                    checked={form.housing_status === "renting"}
+                    onChange={() => setField("housing_status", "renting")}
+                  />
+                  {t(locale, "housingRenting")}
+                </label>
+                <label className="flex items-center gap-2 text-sm text-[#292524]">
+                  <input
+                    type="radio"
+                    name="housing_status"
+                    checked={form.housing_status === "own_home"}
+                    onChange={() => {
+                      setForm((prev) => ({
+                        ...prev,
+                        housing_status: "own_home",
+                        lease_in_name: null,
+                        landlord_name: "",
+                        landlord_phone: "",
+                        previous_landlord_name: "",
+                        previous_landlord_phone: "",
+                      }));
+                      clearFieldError("lease_in_name");
+                      clearFieldError("landlord_name");
+                      clearFieldError("landlord_phone");
+                      clearFieldError("previous_landlord_name");
+                      clearFieldError("previous_landlord_phone");
+                      setError(null);
+                      setErrorStep(null);
+                    }}
+                  />
+                  {t(locale, "housingOwnHome")}
+                </label>
+              </div>
+              {form.housing_status === "own_home" ? (
+                <p className="mt-2 text-xs text-[#a8a29e]">
+                  {t(locale, "housingOwnHomeHint")}
+                </p>
+              ) : null}
+            </fieldset>
+            {form.housing_status === "renting" ? (
+              <>
             <div id="apply-field-landlord_name">
               <label className="block text-sm text-[#57534e]">
                 {t(locale, "landlordName")}
@@ -1266,6 +1542,8 @@ export default function ApplyForm() {
               </p>
               {fieldHint("lease_in_name")}
             </fieldset>
+              </>
+            ) : null}
             <AddressAutocomplete
               locale={locale}
               label={t(locale, "previousAddress")}
@@ -1315,7 +1593,7 @@ export default function ApplyForm() {
                 fieldHint={fieldHint}
               />
             ) : null}
-            {form.previous_address.trim() ? (
+            {form.housing_status === "renting" && form.previous_address.trim() ? (
               <>
                 <div id="apply-field-previous_landlord_name">
                   <label className="block text-sm text-[#57534e]">
@@ -1853,6 +2131,16 @@ export default function ApplyForm() {
               )}
             />
             <ReviewRow
+              label={t(locale, "housingStatus")}
+              value={
+                form.housing_status === "own_home"
+                  ? t(locale, "housingOwnHome")
+                  : t(locale, "housingRenting")
+              }
+            />
+            {form.housing_status === "renting" ? (
+              <>
+            <ReviewRow
               label={t(locale, "landlordName")}
               value={form.landlord_name}
             />
@@ -1870,6 +2158,8 @@ export default function ApplyForm() {
                     : t(locale, "no")
               }
             />
+              </>
+            ) : null}
             {form.address_not_in_canada && (
               <ReviewRow
                 label={t(locale, "addressNotInCanada")}
@@ -1892,13 +2182,13 @@ export default function ApplyForm() {
                 )}
               />
             )}
-            {form.previous_address && (
+            {form.housing_status === "renting" && form.previous_address && (
               <ReviewRow
                 label={t(locale, "previousLandlordName")}
                 value={form.previous_landlord_name}
               />
             )}
-            {form.previous_address && (
+            {form.housing_status === "renting" && form.previous_address && (
               <ReviewRow
                 label={t(locale, "previousLandlordPhone")}
                 value={form.previous_landlord_phone}

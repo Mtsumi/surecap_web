@@ -19,6 +19,7 @@ import {
   uploadMemberDocument,
 } from "@/lib/api";
 import { Locale, MessageKey, t } from "@/lib/i18n";
+import IdPhotoCropReview from "./IdPhotoCropReview";
 
 const SLOT_LABEL: Record<string, MessageKey> = {
   id_passport: "idPassport",
@@ -46,6 +47,11 @@ type Props = (MemberMode | InviteMode) & {
   onDocumentsChange?: (documents: MemberDocument[]) => void;
 };
 
+type PendingCrop = {
+  documentType: string;
+  file: File;
+};
+
 function documentsEqual(a: MemberDocument[], b: MemberDocument[]): boolean {
   if (a.length !== b.length) return false;
   return a.every(
@@ -66,6 +72,8 @@ export default function StepDocumentUpload(props: Props) {
   const [loadingList, setLoadingList] = useState(true);
   const [busySlot, setBusySlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pendingCrop, setPendingCrop] = useState<PendingCrop | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const onDocumentsChangeRef = useRef(onDocumentsChange);
   onDocumentsChangeRef.current = onDocumentsChange;
@@ -126,12 +134,7 @@ export default function StepDocumentUpload(props: Props) {
     }
   };
 
-  const handleFile = async (documentType: string, file: File | null) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError(t(locale, "idUploadImageOnly"));
-      return;
-    }
+  const uploadCroppedFile = async (documentType: string, file: File) => {
     setError(null);
     setBusySlot(documentType);
     try {
@@ -156,6 +159,20 @@ export default function StepDocumentUpload(props: Props) {
     } finally {
       setBusySlot(null);
     }
+  };
+
+  const handleFileSelected = (documentType: string, file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError(t(locale, "idUploadImageOnly"));
+      return;
+    }
+    setError(null);
+    setPendingCrop({ documentType, file });
+  };
+
+  const openCamera = (documentType: string) => {
+    fileInputRefs.current[documentType]?.click();
   };
 
   const handleIdKindChange = async (nextKind: IdDocumentKind) => {
@@ -249,23 +266,29 @@ export default function StepDocumentUpload(props: Props) {
                 </p>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <label>
-                  <span className="sr-only">
-                    {uploaded ? t(locale, "uploadReplaceFile") : t(locale, "uploadChooseFile")}
-                  </span>
-                  <input
-                    type="file"
-                    accept={ACCEPTED_ID_UPLOAD_TYPES}
-                    capture="environment"
-                    disabled={busy}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] ?? null;
-                      void handleFile(slot, file);
-                      e.target.value = "";
-                    }}
-                    className="block w-full text-sm text-[#57534e] file:mr-3 file:rounded file:border-0 file:bg-[#e8f0ea] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#1a3d22] hover:file:bg-[#d4e4d6] disabled:opacity-60"
-                  />
-                </label>
+                <input
+                  ref={(el) => {
+                    fileInputRefs.current[slot] = el;
+                  }}
+                  type="file"
+                  accept={ACCEPTED_ID_UPLOAD_TYPES}
+                  capture="environment"
+                  disabled={busy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    handleFileSelected(slot, file);
+                    e.target.value = "";
+                  }}
+                  className="sr-only"
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => openCamera(slot)}
+                  className="rounded border-0 bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] transition hover:bg-[#d4e4d6] disabled:opacity-60"
+                >
+                  {uploaded ? t(locale, "idRetakePhoto") : t(locale, "idTakePhoto")}
+                </button>
                 {uploaded && (
                   <button
                     type="button"
@@ -296,6 +319,25 @@ export default function StepDocumentUpload(props: Props) {
         ID_DOCUMENT_SLOTS.driver_licence.every((slot) => uploadedTypes.has(slot)) && (
           <p className="mt-4 text-sm text-[#3d5a45]">{t(locale, "idUploadComplete")}</p>
         )}
+
+      {pendingCrop ? (
+        <IdPhotoCropReview
+          locale={locale}
+          file={pendingCrop.file}
+          onConfirm={(cropped) => {
+            const documentType = pendingCrop.documentType;
+            setPendingCrop(null);
+            void uploadCroppedFile(documentType, cropped);
+          }}
+          onCancel={() => setPendingCrop(null)}
+          onRetake={() => {
+            const documentType = pendingCrop.documentType;
+            setPendingCrop(null);
+            // Let the modal unmount before reopening the camera picker.
+            requestAnimationFrame(() => openCamera(documentType));
+          }}
+        />
+      ) : null}
     </div>
   );
 }

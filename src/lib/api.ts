@@ -42,6 +42,7 @@ export type Application = {
   previous_address_lived_from: string | null;
   previous_address_lived_to: string | null;
   lease_in_name: boolean | null;
+  housing_status?: "renting" | "own_home" | null;
   move_in_date: string | null;
   renting_with_others: boolean | null;
   landlord_phone: string | null;
@@ -103,6 +104,7 @@ export type ApplicationUpdate = Partial<{
   previous_address_lived_from: string;
   previous_address_lived_to: string;
   lease_in_name: boolean;
+  housing_status?: "renting" | "own_home" | null;
   move_in_date: string;
   renting_with_others: boolean;
   landlord_phone: string;
@@ -394,6 +396,7 @@ export type InviteeSubmitPayload = {
   previous_address_lived_from?: string;
   previous_address_lived_to?: string;
   lease_in_name?: boolean;
+  housing_status?: "renting" | "own_home" | null;
   move_in_date?: string;
   landlord_phone?: string;
   hr_phone?: string;

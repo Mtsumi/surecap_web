@@ -43,6 +43,16 @@ describe("addressFormUtils", () => {
     expect(input.require_lease_in_name).toBe(false);
   });
 
+  it("toAddressValidationInput defaults own_home to skip landlord", () => {
+    const input = toAddressValidationInput({
+      ...fields,
+      housing_status: "own_home",
+      lease_in_name: null,
+    });
+    expect(input.require_landlord).toBe(false);
+    expect(input.require_lease_in_name).toBe(false);
+  });
+
   it("formatAddressDateRange shows still living label when to is null", () => {
     expect(formatAddressDateRange("en", "2024-01-01", null)).toContain("2024-01-01");
     expect(formatAddressDateRange("en", "2024-01-01", null).toLowerCase()).toContain("still");

@@ -97,21 +97,32 @@ function MemberCard({ member }: { member: ApplicationMember }) {
         />
         {(member.role === "primary" || member.role === "roommate") && (
           <AdminField
-            label="Bail au nom du locataire"
+            label="Situation de logement"
             value={
-              member.lease_in_name === null
-                ? null
-                : member.lease_in_name
-                  ? "Oui"
-                  : "Non"
+              member.housing_status === "own_home"
+                ? "Propriétaire"
+                : member.housing_status === "renting"
+                  ? "Locataire"
+                  : null
             }
           />
         )}
-        {(member.role === "primary" || member.role === "roommate") && (
+        {member.role === "roommate" && (
+          <AdminField label="Date d'emménagement" value={member.move_in_date} />
+        )}
+        {(member.role === "primary" || member.role === "roommate") &&
+          member.housing_status !== "own_home" && (
           <>
-            {member.role === "roommate" && (
-              <AdminField label="Date d'emménagement" value={member.move_in_date} />
-            )}
+            <AdminField
+              label="Bail au nom du locataire"
+              value={
+                member.lease_in_name === null
+                  ? null
+                  : member.lease_in_name
+                    ? "Oui"
+                    : "Non"
+              }
+            />
             <AdminField label="Locateur actuel" value={member.landlord_name} />
             <AdminField label="Tél. locateur actuel" value={member.landlord_phone} />
             {member.previous_address ? (
@@ -368,16 +379,30 @@ export default function ApplicationDetailPage() {
               <AdminField label="Téléphone" value={app.phone} />
               <AdminField label="Adresse" value={app.current_address} />
               <AdminField label="Date d'emménagement" value={app.move_in_date} />
-              <AdminField label="Locateur actuel" value={app.landlord_name} />
-              <AdminField label="Tél. locateur actuel" value={app.landlord_phone} />
               <AdminField
-                label="Locateur précédent"
-                value={app.previous_landlord_name}
+                label="Situation de logement"
+                value={
+                  app.housing_status === "own_home"
+                    ? "Propriétaire"
+                    : app.housing_status === "renting"
+                      ? "Locataire"
+                      : null
+                }
               />
-              <AdminField
-                label="Tél. locateur précédent"
-                value={app.previous_landlord_phone}
-              />
+              {app.housing_status !== "own_home" ? (
+                <>
+                  <AdminField label="Locateur actuel" value={app.landlord_name} />
+                  <AdminField label="Tél. locateur actuel" value={app.landlord_phone} />
+                  <AdminField
+                    label="Locateur précédent"
+                    value={app.previous_landlord_name}
+                  />
+                  <AdminField
+                    label="Tél. locateur précédent"
+                    value={app.previous_landlord_phone}
+                  />
+                </>
+              ) : null}
               <AdminField label="Contact RH" value={app.hr_name} />
               <AdminField label="Tél. RH" value={app.hr_phone} />
             </dl>

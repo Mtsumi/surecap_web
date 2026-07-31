@@ -25,6 +25,7 @@ function roommateFields(overrides: Partial<InviteeFormFields> = {}): InviteeForm
     still_at_current_address: true,
     previous_address_lived_from: "",
     previous_address_lived_to: "",
+    housing_status: "renting",
     lease_in_name: true,
     move_in_date: "2026-07-01",
     landlord_name: "Landlord Co",
@@ -87,6 +88,22 @@ describe("inviteeFieldErrors", () => {
     );
     expect(errors.previous_landlord_name).toBe("required");
     expect(errors.previous_landlord_phone).toBe("required");
+  });
+
+  it("skips landlord checks for roommate own_home", () => {
+    const errors = inviteeFieldErrors(
+      "roommate",
+      roommateFields({
+        housing_status: "own_home",
+        landlord_name: "",
+        landlord_phone: "",
+        lease_in_name: null,
+      }),
+      "roommate@example.com"
+    );
+    expect(errors.landlord_name).toBeUndefined();
+    expect(errors.landlord_phone).toBeUndefined();
+    expect(errors.lease_in_name).toBeUndefined();
   });
 
   it("flags guarantor required fields without landlord references", () => {

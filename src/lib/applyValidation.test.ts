@@ -236,6 +236,25 @@ describe("address date validation", () => {
       )
     ).toEqual({});
   });
+
+  it("skips landlord and lease checks for own_home via require flags", () => {
+    expect(
+      addressFieldErrors(
+        baseInput({
+          landlord_name: "",
+          landlord_phone: "",
+          lease_in_name: null,
+          require_landlord: false,
+          require_lease_in_name: false,
+          previous_address: "10 Old St",
+          previous_address_lived_from: "2022-01-01",
+          previous_address_lived_to: "2024-01-01",
+          previous_landlord_name: "",
+          previous_landlord_phone: "",
+        })
+      )
+    ).toEqual({});
+  });
 });
 
 describe("step validators", () => {

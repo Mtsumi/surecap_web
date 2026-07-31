@@ -28,6 +28,11 @@ export const messages = {
     leaseInName: "Is the lease in your name?",
     leaseInNameHint:
       "We use this when contacting your current landlord for a reference.",
+    housingStatus: "Current housing",
+    housingRenting: "I am renting",
+    housingOwnHome: "I own my home",
+    housingOwnHomeHint:
+      "You can skip landlord and lease details if you own your current home.",
     addressLivedHere: "Lived here",
     addressLivedFrom: "From",
     addressLivedTo: "To",
@@ -97,10 +102,10 @@ export const messages = {
     applicationId: "Reference",
     uploadDocumentsTitle: "Upload your ID",
     uploadDocumentsHint:
-      "Upload a clear photo or PDF of your ID. You can replace or remove a file before continuing.",
+      "Take a clear photo of your ID. You can retake or remove a photo before continuing.",
     idDocumentType: "ID document type",
     idPassport: "Passport",
-    idMedicare: "Canadian health card (RAMQ)",
+    idMedicare: "Canadian health insurance card",
     idDriverLicence: "Canadian driver's licence",
     idDriverLicenceHint:
       "Provincial driver's licence issued in Canada (e.g. Quebec SAAQ). Foreign licences are not accepted here — use passport instead.",
@@ -116,10 +121,22 @@ export const messages = {
     idUploadComplete: "Both sides of your licence are saved.",
     idUploadRequired: "Please upload your ID before submitting.",
     idUploadLaterHint:
-      "Don't have your ID with you? Continue for now — come back on this phone/browser to upload before you submit. On mobile you can take a photo.",
+      "Don't have your ID with you? Continue for now — come back on this phone/browser to take a photo before you submit.",
     idUploadCameraHint:
-      "Use your phone camera for ID photos (PDF uploads are not accepted). Photos are compressed before upload.",
-    idUploadImageOnly: "Please take or choose a photo of your ID (images only).",
+      "Use your phone camera to photograph your ID. Photos are compressed before upload.",
+    idUploadImageOnly: "Please take a photo of your ID (images only).",
+    idTakePhoto: "Take photo",
+    idRetakePhoto: "Retake photo",
+    idCropTitle: "Adjust your photo",
+    idCropHint: "Drag to centre your ID in the square frame.",
+    idCropUsePhoto: "Use this photo",
+    idCropRetake: "Retake",
+    idBlurryWarning:
+      "This photo looks blurry. You can still continue, but a clearer photo helps verification.",
+    draftRestoredBanner:
+      "We restored your saved draft on this device. You can continue where you left off.",
+    draftStartOver: "Start over",
+    cancel: "Cancel",
     loading: "Loading…",
     error: "Something went wrong. Please try again.",
     langToggle: "Français",
@@ -198,6 +215,11 @@ export const messages = {
     leaseInName: "Le bail est-il à votre nom?",
     leaseInNameHint:
       "Cela nous aide à joindre le bon locateur pour votre référence.",
+    housingStatus: "Situation de logement actuelle",
+    housingRenting: "Je suis locataire",
+    housingOwnHome: "Je suis propriétaire",
+    housingOwnHomeHint:
+      "Vous pouvez omettre les renseignements sur le locateur et le bail si vous êtes propriétaire de votre domicile actuel.",
     addressLivedHere: "Habité ici",
     addressLivedFrom: "Du",
     addressLivedTo: "Au",
@@ -268,10 +290,10 @@ export const messages = {
     applicationId: "Référence",
     uploadDocumentsTitle: "Téléverser votre pièce d'identité",
     uploadDocumentsHint:
-      "Téléversez une photo ou un PDF lisible de votre pièce d'identité. Vous pouvez remplacer ou retirer un fichier avant de continuer.",
+      "Prenez une photo lisible de votre pièce d'identité. Vous pouvez reprendre ou retirer une photo avant de continuer.",
     idDocumentType: "Type de pièce d'identité",
     idPassport: "Passeport",
-    idMedicare: "Carte d'assurance-maladie (RAMQ)",
+    idMedicare: "Carte d'assurance-maladie canadienne",
     idDriverLicence: "Permis de conduire canadien",
     idDriverLicenceHint:
       "Permis de conduire provincial délivré au Canada (p. ex. permis SAAQ du Québec). Les permis étrangers ne sont pas acceptés ici — choisissez passeport.",
@@ -288,11 +310,23 @@ export const messages = {
     idUploadRequired:
       "Veuillez téléverser votre pièce d'identité avant d'envoyer la demande.",
     idUploadLaterHint:
-      "Pas de pièce d'identité sous la main? Continuez — revenez sur ce téléphone/navigateur pour la téléverser avant d'envoyer. Sur mobile, vous pouvez prendre une photo.",
+      "Pas de pièce d'identité sous la main? Continuez — revenez sur ce téléphone/navigateur pour prendre une photo avant d'envoyer.",
     idUploadCameraHint:
-      "Utilisez l'appareil photo pour la pièce d'identité (pas de PDF). Les photos sont compressées avant l'envoi.",
+      "Utilisez l'appareil photo pour photographier votre pièce d'identité. Les photos sont compressées avant l'envoi.",
     idUploadImageOnly:
-      "Veuillez prendre ou choisir une photo de votre pièce d'identité (images seulement).",
+      "Veuillez prendre une photo de votre pièce d'identité (images seulement).",
+    idTakePhoto: "Prendre une photo",
+    idRetakePhoto: "Reprendre la photo",
+    idCropTitle: "Ajustez votre photo",
+    idCropHint: "Faites glisser pour centrer votre pièce d'identité dans le cadre carré.",
+    idCropUsePhoto: "Utiliser cette photo",
+    idCropRetake: "Reprendre",
+    idBlurryWarning:
+      "Cette photo semble floue. Vous pouvez continuer, mais une photo plus nette facilite la vérification.",
+    draftRestoredBanner:
+      "Nous avons restauré votre brouillon enregistré sur cet appareil. Vous pouvez reprendre où vous étiez.",
+    draftStartOver: "Recommencer",
+    cancel: "Annuler",
     loading: "Chargement…",
     error: "Une erreur s'est produite. Veuillez réessayer.",
     langToggle: "English",
