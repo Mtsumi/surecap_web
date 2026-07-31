@@ -11,11 +11,15 @@ export type AddressDateFormFields = {
   previous_address_lived_from: string;
   previous_address_lived_to: string;
   lease_in_name?: boolean | null;
+  landlord_name?: string;
+  landlord_phone?: string;
+  previous_landlord_name?: string;
+  previous_landlord_phone?: string;
 };
 
 export function toAddressValidationInput(
   fields: AddressDateFormFields,
-  options?: { requireLeaseInName?: boolean }
+  options?: { requireLeaseInName?: boolean; requireLandlord?: boolean }
 ): AddressDatesInput {
   return {
     current_address: fields.current_address,
@@ -27,6 +31,11 @@ export function toAddressValidationInput(
     previous_address_lived_to: fields.previous_address_lived_to,
     lease_in_name: fields.lease_in_name ?? null,
     require_lease_in_name: options?.requireLeaseInName,
+    landlord_name: fields.landlord_name,
+    landlord_phone: fields.landlord_phone,
+    previous_landlord_name: fields.previous_landlord_name,
+    previous_landlord_phone: fields.previous_landlord_phone,
+    require_landlord: options?.requireLandlord,
   };
 }
 

@@ -107,11 +107,25 @@ function MemberCard({ member }: { member: ApplicationMember }) {
             }
           />
         )}
-        {member.role === "roommate" && (
+        {(member.role === "primary" || member.role === "roommate") && (
           <>
-            <AdminField label="Date d'emménagement" value={member.move_in_date} />
-            <AdminField label="Locateur" value={member.landlord_name} />
-            <AdminField label="Tél. locateur" value={member.landlord_phone} />
+            {member.role === "roommate" && (
+              <AdminField label="Date d'emménagement" value={member.move_in_date} />
+            )}
+            <AdminField label="Locateur actuel" value={member.landlord_name} />
+            <AdminField label="Tél. locateur actuel" value={member.landlord_phone} />
+            {member.previous_address ? (
+              <>
+                <AdminField
+                  label="Locateur précédent"
+                  value={member.previous_landlord_name}
+                />
+                <AdminField
+                  label="Tél. locateur précédent"
+                  value={member.previous_landlord_phone}
+                />
+              </>
+            ) : null}
           </>
         )}
         <AdminField label="Contact RH" value={member.hr_name} />
@@ -354,8 +368,16 @@ export default function ApplicationDetailPage() {
               <AdminField label="Téléphone" value={app.phone} />
               <AdminField label="Adresse" value={app.current_address} />
               <AdminField label="Date d'emménagement" value={app.move_in_date} />
-              <AdminField label="Locateur" value={app.landlord_name} />
-              <AdminField label="Tél. locateur" value={app.landlord_phone} />
+              <AdminField label="Locateur actuel" value={app.landlord_name} />
+              <AdminField label="Tél. locateur actuel" value={app.landlord_phone} />
+              <AdminField
+                label="Locateur précédent"
+                value={app.previous_landlord_name}
+              />
+              <AdminField
+                label="Tél. locateur précédent"
+                value={app.previous_landlord_phone}
+              />
               <AdminField label="Contact RH" value={app.hr_name} />
               <AdminField label="Tél. RH" value={app.hr_phone} />
             </dl>

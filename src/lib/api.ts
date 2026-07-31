@@ -48,6 +48,8 @@ export type Application = {
   hr_phone: string | null;
   landlord_name: string | null;
   hr_name: string | null;
+  previous_landlord_phone: string | null;
+  previous_landlord_name: string | null;
   landlord_email: string | null;
   hr_email: string | null;
   referral_source: string | null;
@@ -107,6 +109,8 @@ export type ApplicationUpdate = Partial<{
   hr_phone: string;
   landlord_name: string;
   hr_name: string;
+  previous_landlord_phone?: string;
+  previous_landlord_name?: string;
   landlord_email?: string;
   hr_email?: string;
   referral_source: string;
@@ -178,7 +182,7 @@ function isNetworkFetchError(error: unknown): boolean {
 
 function networkFetchError(): Error {
   return new Error(
-    "Connection failed. If you are uploading a photo, try a smaller image or PDF, then retry."
+    "Upload failed (connection or file size). Try a smaller photo or PDF under 1 MB, then retry."
   );
 }
 
@@ -376,6 +380,8 @@ export type InviteeSubmitPayload = {
   hr_phone?: string;
   landlord_name?: string;
   hr_name?: string;
+  previous_landlord_phone?: string;
+  previous_landlord_name?: string;
   referral_source?: string;
   facebook_url?: string;
   linkedin_url?: string;

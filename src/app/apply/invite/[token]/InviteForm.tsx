@@ -100,6 +100,8 @@ function emptyFields(): InviteeFormFields {
     move_in_date: "",
     landlord_name: "",
     landlord_phone: "",
+    previous_landlord_name: "",
+    previous_landlord_phone: "",
     hr_name: "",
     hr_phone: "",
     employment_type: "employed",
@@ -242,7 +244,10 @@ export default function InviteForm({ token }: Props) {
   };
 
   const addressFields = () =>
-    toAddressValidationInput(form, { requireLeaseInName: role === "roommate" });
+    toAddressValidationInput(form, {
+      requireLeaseInName: role === "roommate",
+      requireLandlord: role === "roommate",
+    });
 
   const validateStep = (current: Step): boolean => {
     if (!role || !context) return false;
@@ -252,7 +257,7 @@ export default function InviteForm({ token }: Props) {
       references:
         role === "guarantor"
           ? ["hr_name", "hr_phone", "monthly_net_income"]
-          : ["landlord_name", "landlord_phone", "hr_name", "hr_phone", "monthly_net_income"],
+          : ["hr_name", "hr_phone", "monthly_net_income"],
       review: [],
       done: [],
     };
@@ -284,10 +289,14 @@ export default function InviteForm({ token }: Props) {
         const hrError = validatePhoneFormat(form.hr_phone);
         if (hrError) errors.hr_phone = hrError;
       } else {
-        const phoneError = validatePhones(form.landlord_phone, form.hr_phone);
-        if (phoneError) {
-          errors.landlord_phone = phoneError;
-          errors.hr_phone = phoneError;
+        const hrError = validatePhoneFormat(form.hr_phone);
+        if (hrError) {
+          errors.hr_phone = hrError;
+        } else {
+          const phoneError = validatePhones(form.landlord_phone, form.hr_phone);
+          if (phoneError) {
+            errors.hr_phone = phoneError;
+          }
         }
       }
     }
@@ -368,10 +377,11 @@ export default function InviteForm({ token }: Props) {
         } else if (
           key === "current_address" ||
           key === "lease_in_name" ||
-          key.includes("address_lived")
+          key.includes("address_lived") ||
+          key.includes("landlord")
         ) {
           setStep("addresses");
-        } else if (key.startsWith("landlord") || key.startsWith("hr") || key === "monthly_net_income") {
+        } else if (key.startsWith("hr") || key === "monthly_net_income") {
           setStep("references");
         }
       }
@@ -409,6 +419,10 @@ export default function InviteForm({ token }: Props) {
       payload.lease_in_name = form.lease_in_name === true;
       payload.landlord_name = form.landlord_name.trim();
       payload.landlord_phone = form.landlord_phone.trim();
+      if (form.previous_address.trim()) {
+        payload.previous_landlord_name = form.previous_landlord_name.trim();
+        payload.previous_landlord_phone = form.previous_landlord_phone.trim();
+      }
       payload.hr_name = form.hr_name.trim();
       payload.hr_phone = form.hr_phone.trim();
       if (form.referral_source.trim()) payload.referral_source = form.referral_source.trim();
@@ -737,6 +751,31 @@ export default function InviteForm({ token }: Props) {
             fieldHint={fieldHint}
           />
           {role === "roommate" && (
+            <>
+              <label className="block text-sm text-[#57534e]">
+                {t(locale, "landlordName")}
+                <input
+                  required
+                  value={form.landlord_name}
+                  onChange={(e) => setField("landlord_name", e.target.value)}
+                  className={inputClassFor("landlord_name")}
+                />
+                {fieldHint("landlord_name")}
+              </label>
+              <div className="block text-sm text-[#57534e]">
+                <span className="block">{t(locale, "landlordPhone")}</span>
+                <PhoneField
+                  locale={locale}
+                  required
+                  invalid={!!fieldErrors.landlord_phone}
+                  value={form.landlord_phone}
+                  onChange={(value) => setField("landlord_phone", value)}
+                />
+                {fieldHint("landlord_phone")}
+              </div>
+            </>
+          )}
+          {role === "roommate" && (
             <fieldset>
               <legend className="text-sm text-[#57534e]">
                 {t(locale, "leaseInName")}
@@ -777,6 +816,8 @@ export default function InviteForm({ token }: Props) {
                   ...prev,
                   previous_address_lived_from: "",
                   previous_address_lived_to: "",
+                  previous_landlord_name: "",
+                  previous_landlord_phone: "",
                 }));
               }
               if (placeId) setField("previous_place_id", placeId);
@@ -810,6 +851,31 @@ export default function InviteForm({ token }: Props) {
               inputClassFor={inputClassFor}
               fieldHint={fieldHint}
             />
+          ) : null}
+          {role === "roommate" && form.previous_address.trim() ? (
+            <>
+              <label className="block text-sm text-[#57534e]">
+                {t(locale, "previousLandlordName")}
+                <input
+                  required
+                  value={form.previous_landlord_name}
+                  onChange={(e) => setField("previous_landlord_name", e.target.value)}
+                  className={inputClassFor("previous_landlord_name")}
+                />
+                {fieldHint("previous_landlord_name")}
+              </label>
+              <div className="block text-sm text-[#57534e]">
+                <span className="block">{t(locale, "previousLandlordPhone")}</span>
+                <PhoneField
+                  locale={locale}
+                  required
+                  invalid={!!fieldErrors.previous_landlord_phone}
+                  value={form.previous_landlord_phone}
+                  onChange={(value) => setField("previous_landlord_phone", value)}
+                />
+                {fieldHint("previous_landlord_phone")}
+              </div>
+            </>
           ) : null}
           <div className="flex gap-3">
             <button
@@ -873,31 +939,6 @@ export default function InviteForm({ token }: Props) {
           <h3 className="pt-2 text-sm font-medium text-[#292524]">
             {t(locale, "incomeReferencesHeading")}
           </h3>
-          {role === "roommate" && (
-            <>
-              <label className="block text-sm text-[#57534e]">
-                {t(locale, "landlordName")}
-                <input
-                  required
-                  value={form.landlord_name}
-                  onChange={(e) => setField("landlord_name", e.target.value)}
-                  className={inputClass}
-                />
-                {fieldHint("landlord_name")}
-              </label>
-              <div className="block text-sm text-[#57534e]">
-                <span className="block">{t(locale, "landlordPhone")}</span>
-                <PhoneField
-                  locale={locale}
-                  required
-                  invalid={!!fieldErrors.landlord_phone}
-                  value={form.landlord_phone}
-                  onChange={(value) => setField("landlord_phone", value)}
-                />
-                {fieldHint("landlord_phone")}
-              </div>
-            </>
-          )}
           <label className="block text-sm text-[#57534e]">
             {t(locale, "hrName")}
             <input
@@ -967,6 +1008,18 @@ export default function InviteForm({ token }: Props) {
                 )}
               </dd>
             </div>
+            {role === "roommate" && (
+              <>
+                <div>
+                  <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "landlordName")}</dt>
+                  <dd>{form.landlord_name}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "landlordPhone")}</dt>
+                  <dd>{form.landlord_phone}</dd>
+                </div>
+              </>
+            )}
             {role === "roommate" && context.move_in_date && (
               <div>
                 <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "moveInDate")}</dt>
@@ -997,6 +1050,22 @@ export default function InviteForm({ token }: Props) {
                     )}
                   </dd>
                 </div>
+                {role === "roommate" && (
+                  <>
+                    <div>
+                      <dt className="text-xs uppercase text-[#a8a29e]">
+                        {t(locale, "previousLandlordName")}
+                      </dt>
+                      <dd>{form.previous_landlord_name}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs uppercase text-[#a8a29e]">
+                        {t(locale, "previousLandlordPhone")}
+                      </dt>
+                      <dd>{form.previous_landlord_phone}</dd>
+                    </div>
+                  </>
+                )}
               </>
             )}
           </dl>

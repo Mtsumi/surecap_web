@@ -8,7 +8,7 @@ import {
   incomeUploadComplete,
   staleIncomeDocumentTypes,
 } from "@/lib/incomeUpload";
-import { compressImageForUpload } from "@/lib/compressImage";
+import { compressImageForUpload, uploadFileTooLargeMessage } from "@/lib/compressImage";
 import {
   MemberDocument,
   deleteInviteDocument,
@@ -20,6 +20,9 @@ import {
   uploadMemberDocument,
 } from "@/lib/api";
 import { Locale, MessageKey, t } from "@/lib/i18n";
+
+const LIST_LOAD_FAILED =
+  "Could not load uploaded documents. Check your connection and try again.";
 
 const SLOT_LABEL: Record<string, MessageKey> = {
   pay_slip_1: "incomePaySlip1",
@@ -98,7 +101,7 @@ export default function StepIncomeUpload(props: Props) {
         : await listInviteDocuments(inviteToken);
       publishDocuments(list);
     } catch (e) {
-      setError(uploadErrorMessage(e));
+      setError(LIST_LOAD_FAILED);
     } finally {
       setLoadingList(false);
     }
@@ -108,7 +111,6 @@ export default function StepIncomeUpload(props: Props) {
     memberId,
     uploadToken,
     inviteToken,
-    locale,
     publishDocuments,
   ]);
 
@@ -143,6 +145,11 @@ export default function StepIncomeUpload(props: Props) {
     setError(null);
     setBusySlot(documentType);
     try {
+      const tooLarge = uploadFileTooLargeMessage(file);
+      if (tooLarge) {
+        setError(tooLarge);
+        return;
+      }
       // Same as ID: phone camera JPEGs often exceed mobile/proxy body limits.
       const uploadFile = await compressImageForUpload(file);
       const saved =

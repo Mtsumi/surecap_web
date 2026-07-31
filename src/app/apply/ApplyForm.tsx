@@ -57,6 +57,7 @@ import {
   addressFieldErrors,
   validateEmailUniqueness,
   validatePhones,
+  validatePhoneFormat,
   adultMaxDateOfBirthString,
   validateDateOfBirth,
 } from "@/lib/applyValidation";
@@ -123,6 +124,8 @@ type FormFields = {
   renting_with_others: boolean | null;
   landlord_name: string;
   landlord_phone: string;
+  previous_landlord_name: string;
+  previous_landlord_phone: string;
   hr_name: string;
   hr_phone: string;
   employment_type: EmploymentType;
@@ -155,6 +158,8 @@ const emptyForm: FormFields = {
   renting_with_others: null,
   landlord_name: "",
   landlord_phone: "",
+  previous_landlord_name: "",
+  previous_landlord_phone: "",
   hr_name: "",
   hr_phone: "",
   employment_type: "employed",
@@ -217,6 +222,12 @@ function formPayload(
     renting_with_others: fields.renting_with_others ?? undefined,
     landlord_name: fields.landlord_name.trim(),
     landlord_phone: fields.landlord_phone.trim(),
+    previous_landlord_name: fields.previous_address.trim()
+      ? fields.previous_landlord_name.trim()
+      : undefined,
+    previous_landlord_phone: fields.previous_address.trim()
+      ? fields.previous_landlord_phone.trim()
+      : undefined,
     hr_name: fields.hr_name.trim(),
     hr_phone: fields.hr_phone.trim(),
     employment_type: fields.employment_type,
@@ -562,7 +573,7 @@ export default function ApplyForm() {
   };
 
   const addressValidationFields = () =>
-    toAddressValidationInput(form, { requireLeaseInName: true });
+    toAddressValidationInput(form, { requireLeaseInName: true, requireLandlord: true });
 
   const validationInput = () => ({
     move_in_date: form.move_in_date,
@@ -577,6 +588,8 @@ export default function ApplyForm() {
     address_not_in_canada: form.address_not_in_canada,
     landlord_phone: form.landlord_phone,
     landlord_name: form.landlord_name,
+    previous_landlord_phone: form.previous_landlord_phone,
+    previous_landlord_name: form.previous_landlord_name,
     hr_phone: form.hr_phone,
     hr_name: form.hr_name,
     monthly_net_income: form.monthly_net_income,
@@ -1186,6 +1199,37 @@ export default function ApplyForm() {
               inputClassFor={inputClassFor}
               fieldHint={fieldHint}
             />
+            <div id="apply-field-landlord_name">
+              <label className="block text-sm text-[#57534e]">
+                {t(locale, "landlordName")}
+                <input
+                  type="text"
+                  required
+                  autoComplete="name"
+                  value={form.landlord_name}
+                  onChange={(e) => {
+                    setField("landlord_name", e.target.value);
+                    clearFieldError("landlord_name");
+                  }}
+                  className={inputClassFor("landlord_name")}
+                />
+              </label>
+              {fieldHint("landlord_name")}
+            </div>
+            <div id="apply-field-landlord_phone" className="block text-sm text-[#57534e]">
+              <span className="block">{t(locale, "landlordPhone")}</span>
+              <PhoneField
+                locale={locale}
+                required
+                invalid={!!fieldErrors.landlord_phone}
+                value={form.landlord_phone}
+                onChange={(value) => {
+                  setField("landlord_phone", value);
+                  syncPhoneValidation(value, form.hr_phone);
+                }}
+              />
+              {fieldHint("landlord_phone")}
+            </div>
             <fieldset id="apply-field-lease_in_name">
               <legend className="text-sm text-[#57534e]">
                 {t(locale, "leaseInName")}
@@ -1233,6 +1277,8 @@ export default function ApplyForm() {
                     ...prev,
                     previous_address_lived_from: "",
                     previous_address_lived_to: "",
+                    previous_landlord_name: "",
+                    previous_landlord_phone: "",
                   }));
                 }
                 if (placeId) setField("previous_place_id", placeId);
@@ -1268,6 +1314,47 @@ export default function ApplyForm() {
                 inputClassFor={inputClassFor}
                 fieldHint={fieldHint}
               />
+            ) : null}
+            {form.previous_address.trim() ? (
+              <>
+                <div id="apply-field-previous_landlord_name">
+                  <label className="block text-sm text-[#57534e]">
+                    {t(locale, "previousLandlordName")}
+                    <input
+                      type="text"
+                      required
+                      autoComplete="name"
+                      value={form.previous_landlord_name}
+                      onChange={(e) => {
+                        setField("previous_landlord_name", e.target.value);
+                        clearFieldError("previous_landlord_name");
+                      }}
+                      className={inputClassFor("previous_landlord_name")}
+                    />
+                  </label>
+                  {fieldHint("previous_landlord_name")}
+                </div>
+                <div
+                  id="apply-field-previous_landlord_phone"
+                  className="block text-sm text-[#57534e]"
+                >
+                  <span className="block">{t(locale, "previousLandlordPhone")}</span>
+                  <PhoneField
+                    locale={locale}
+                    required
+                    invalid={!!fieldErrors.previous_landlord_phone}
+                    value={form.previous_landlord_phone}
+                    onChange={(value) => {
+                      setField("previous_landlord_phone", value);
+                      setFieldValidation(
+                        "previous_landlord_phone",
+                        validatePhoneFormat(value)
+                      );
+                    }}
+                  />
+                  {fieldHint("previous_landlord_phone")}
+                </div>
+              </>
             ) : null}
             <button
               type="submit"
@@ -1621,33 +1708,6 @@ export default function ApplyForm() {
             <h3 className="pt-2 text-sm font-medium text-[#292524]">
               {t(locale, "incomeReferencesHeading")}
             </h3>
-            <div id="apply-field-landlord_name">
-            <label className="block text-sm text-[#57534e]">
-              {t(locale, "landlordName")}
-              <input
-                type="text"
-                required
-                autoComplete="name"
-                value={form.landlord_name}
-                onChange={(e) => setField("landlord_name", e.target.value)}
-                className={inputClassFor("landlord_name")}
-              />
-            </label>
-            </div>
-            <div id="apply-field-landlord_phone" className="block text-sm text-[#57534e]">
-              <span className="block">{t(locale, "landlordPhone")}</span>
-              <PhoneField
-                locale={locale}
-                required
-                invalid={!!fieldErrors.landlord_phone}
-                value={form.landlord_phone}
-                onChange={(value) => {
-                  setField("landlord_phone", value);
-                  syncPhoneValidation(value, form.hr_phone);
-                }}
-              />
-              {fieldHint("landlord_phone")}
-            </div>
             <div id="apply-field-hr_name">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "hrName")}
@@ -1793,6 +1853,14 @@ export default function ApplyForm() {
               )}
             />
             <ReviewRow
+              label={t(locale, "landlordName")}
+              value={form.landlord_name}
+            />
+            <ReviewRow
+              label={t(locale, "landlordPhone")}
+              value={form.landlord_phone}
+            />
+            <ReviewRow
               label={t(locale, "leaseInName")}
               value={
                 form.lease_in_name === null
@@ -1824,6 +1892,18 @@ export default function ApplyForm() {
                 )}
               />
             )}
+            {form.previous_address && (
+              <ReviewRow
+                label={t(locale, "previousLandlordName")}
+                value={form.previous_landlord_name}
+              />
+            )}
+            {form.previous_address && (
+              <ReviewRow
+                label={t(locale, "previousLandlordPhone")}
+                value={form.previous_landlord_phone}
+              />
+            )}
             <ReviewRow
               label={t(locale, "moveInDate")}
               value={form.move_in_date}
@@ -1842,14 +1922,6 @@ export default function ApplyForm() {
             <ReviewRow
               label={t(locale, "monthlyNetIncome")}
               value={formatMonthlyNetIncome(locale, form.monthly_net_income)}
-            />
-            <ReviewRow
-              label={t(locale, "landlordName")}
-              value={form.landlord_name}
-            />
-            <ReviewRow
-              label={t(locale, "landlordPhone")}
-              value={form.landlord_phone}
             />
             <ReviewRow label={t(locale, "hrName")} value={form.hr_name} />
             <ReviewRow label={t(locale, "hrPhone")} value={form.hr_phone} />

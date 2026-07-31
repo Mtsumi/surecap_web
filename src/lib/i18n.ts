@@ -49,6 +49,8 @@ export const messages = {
     references: "Income",
     landlordPhone: "Current landlord phone",
     landlordName: "Current landlord name",
+    previousLandlordPhone: "Previous landlord phone",
+    previousLandlordName: "Previous landlord name",
     hrPhone: "HR / employer phone",
     hrName: "HR / employer contact name",
     referencesNote:
@@ -70,7 +72,7 @@ export const messages = {
     incomeProof: "Proof of income",
     incomeUploadComplete: "Income document saved.",
     incomeUploadRequired: "Please upload your proof of income before continuing.",
-    incomeReferencesHeading: "Reference contacts",
+    incomeReferencesHeading: "Employer reference",
     otherInfo: "Additional information",
     referralSource:
       "How did you learn about Montreal Living and this apartment?",
@@ -218,6 +220,8 @@ export const messages = {
     references: "Revenu",
     landlordPhone: "Téléphone du locateur actuel",
     landlordName: "Nom du locateur actuel",
+    previousLandlordPhone: "Téléphone du locateur précédent",
+    previousLandlordName: "Nom du locateur précédent",
     hrPhone: "Téléphone RH / employeur",
     hrName: "Nom du contact RH / employeur",
     referencesNote:
@@ -239,7 +243,7 @@ export const messages = {
     incomeProof: "Preuve de revenu",
     incomeUploadComplete: "Document de revenu enregistré.",
     incomeUploadRequired: "Veuillez téléverser votre preuve de revenu avant de continuer.",
-    incomeReferencesHeading: "Contacts de référence",
+    incomeReferencesHeading: "Référence employeur",
     otherInfo: "Informations supplémentaires",
     referralSource:
       "Comment avez-vous entendu parler de Montreal Living et de cet appartement?",

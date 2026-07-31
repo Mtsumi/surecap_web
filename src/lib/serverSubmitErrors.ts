@@ -63,10 +63,15 @@ function inviteToValidationInput(
     guarantor: null,
     landlord_phone: form.landlord_phone,
     landlord_name: form.landlord_name,
+    previous_landlord_phone: form.previous_landlord_phone,
+    previous_landlord_name: form.previous_landlord_name,
     hr_phone: form.hr_phone,
     hr_name: form.hr_name,
     monthly_net_income: form.monthly_net_income,
-    ...toAddressValidationInput(form, { requireLeaseInName: role === "roommate" }),
+    ...toAddressValidationInput(form, {
+      requireLeaseInName: role === "roommate",
+      requireLandlord: role === "roommate",
+    }),
   };
 }
 
@@ -108,8 +113,10 @@ const PYDANTIC_FIELD_STEP: Record<string, ApplyFormStep> = {
   guarantor: "housing",
   employment_type: "references",
   monthly_net_income: "references",
-  landlord_name: "references",
-  landlord_phone: "references",
+  landlord_name: "addresses",
+  landlord_phone: "addresses",
+  previous_landlord_name: "addresses",
+  previous_landlord_phone: "addresses",
   hr_name: "references",
   hr_phone: "references",
   referral_source: "other",
@@ -172,10 +179,9 @@ export function mapPydanticValidationErrors(
           : "fieldRequired";
 
   // Re-run client rules when phones are present so same-phone check still applies.
-  if (step === "references" && !fieldErrors.landlord_phone && !fieldErrors.hr_phone) {
+  if (step === "references" && !fieldErrors.hr_phone) {
     const phoneError = validatePhones(input.landlord_phone, input.hr_phone);
     if (phoneError) {
-      fieldErrors.landlord_phone = phoneError;
       fieldErrors.hr_phone = phoneError;
       return {
         step,
@@ -205,6 +211,8 @@ export function mapServerSubmitError(
       if (applicant) fieldErrors.phone = applicant;
       const landlord = validatePhoneFormat(input.landlord_phone);
       if (landlord) fieldErrors.landlord_phone = landlord;
+      const previousLandlord = validatePhoneFormat(input.previous_landlord_phone);
+      if (previousLandlord) fieldErrors.previous_landlord_phone = previousLandlord;
       const hr = validatePhoneFormat(input.hr_phone);
       if (hr) fieldErrors.hr_phone = hr;
       if (input.includeGuarantor && input.guarantor?.phone) {
@@ -224,7 +232,9 @@ export function mapServerSubmitError(
         ? "personal"
         : firstKey === "guarantor_phone"
           ? "housing"
-          : "references";
+          : firstKey === "landlord_phone" || firstKey === "previous_landlord_phone"
+            ? "addresses"
+            : "references";
     return { step, fieldErrors, messageKey: "validationInvalidPhone" };
   }
 
@@ -232,9 +242,7 @@ export function mapServerSubmitError(
     const code = validatePhones(input.landlord_phone, input.hr_phone);
     return {
       step: "references",
-      fieldErrors: code
-        ? { landlord_phone: code, hr_phone: code }
-        : {},
+      fieldErrors: code ? { hr_phone: code } : {},
       messageKey: "validationLandlordHrSamePhone",
     };
   }
@@ -313,6 +321,22 @@ export function mapServerSubmitError(
       step: "addresses",
       fieldErrors: addressFieldErrors(input),
       messageKey: "validationInvalidAddressDateRange",
+    };
+  }
+
+  if (trimmed === "Previous landlord name is required") {
+    return {
+      step: "addresses",
+      fieldErrors: { previous_landlord_name: "required" },
+      messageKey: "fieldRequired",
+    };
+  }
+
+  if (trimmed === "Previous landlord phone is required") {
+    return {
+      step: "addresses",
+      fieldErrors: { previous_landlord_phone: "required" },
+      messageKey: "fieldRequired",
     };
   }
 
