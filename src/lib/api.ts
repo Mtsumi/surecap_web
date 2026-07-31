@@ -182,7 +182,7 @@ function isNetworkFetchError(error: unknown): boolean {
 
 function networkFetchError(): Error {
   return new Error(
-    "Upload failed (connection or file size). Try a smaller photo or PDF under 1 MB, then retry."
+    "Upload could not complete (connection interrupted). Check Wi‑Fi, disable Brave Shields for this site if enabled, then retry. Files under a few MB are fine."
   );
 }
 
@@ -263,12 +263,27 @@ async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
   if (API_URL.includes("ngrok")) {
     headers["ngrok-skip-browser-warning"] = "1";
   }
+
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), 90_000);
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, { method: "POST", headers, body: form });
+    res = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers,
+      body: form,
+      signal: controller.signal,
+    });
   } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error(
+        "Upload timed out. Try again on Wi‑Fi, or use a PDF under a few MB."
+      );
+    }
     if (isNetworkFetchError(error)) throw networkFetchError();
     throw error;
+  } finally {
+    window.clearTimeout(timer);
   }
 
   let body: ApiEnvelope<T> | null = null;
@@ -279,8 +294,12 @@ async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
   }
 
   if (!res.ok || body?.status === "error") {
+    const fallback =
+      res.status === 413
+        ? "File too large for the server. Try a smaller PDF or photo."
+        : res.statusText || `Upload failed (${res.status})`;
     throw new ApiError(
-      body?.message || res.statusText,
+      body?.message || fallback,
       extractValidationErrors(body?.data)
     );
   }
@@ -434,7 +453,7 @@ export function uploadMemberDocument(
   const form = new FormData();
   form.append("upload_token", uploadToken);
   form.append("document_type", documentType);
-  form.append("file", file);
+  form.append("file", file, file.name || "upload");
   return apiFetchForm<MemberDocument>(
     `/applications/${applicationId}/members/${memberId}/uploads`,
     form
@@ -448,7 +467,7 @@ export function uploadInviteDocument(
 ): Promise<MemberDocument> {
   const form = new FormData();
   form.append("document_type", documentType);
-  form.append("file", file);
+  form.append("file", file, file.name || "upload");
   return apiFetchForm<MemberDocument>(
     `/applications/invites/${encodeURIComponent(inviteToken)}/uploads`,
     form
