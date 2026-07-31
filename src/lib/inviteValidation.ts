@@ -35,6 +35,8 @@ export type InviteeFormFields = {
   move_in_date: string;
   landlord_name: string;
   landlord_phone: string;
+  previous_landlord_name: string;
+  previous_landlord_phone: string;
   hr_name: string;
   hr_phone: string;
   employment_type: EmploymentType;
@@ -54,8 +56,6 @@ const ROOMMATE_REQUIRED: (keyof InviteeFormFields)[] = [
   "date_of_birth",
   "email",
   "phone",
-  "landlord_name",
-  "landlord_phone",
   "hr_name",
   "hr_phone",
   "employment_type",
@@ -114,9 +114,7 @@ export function inviteeFieldErrors(
   if (dobError) errors.date_of_birth = dobError;
 
   const phoneFields: (keyof InviteeFormFields)[] =
-    role === "guarantor"
-      ? ["phone", "hr_phone"]
-      : ["phone", "landlord_phone", "hr_phone"];
+    role === "guarantor" ? ["phone", "hr_phone"] : ["phone", "hr_phone"];
   for (const key of phoneFields) {
     const formatError = validatePhoneFormat(String(fields[key]));
     if (formatError) errors[key] = formatError;
@@ -125,7 +123,6 @@ export function inviteeFieldErrors(
   if (role === "roommate") {
     const phoneError = validatePhones(fields.landlord_phone, fields.hr_phone);
     if (phoneError) {
-      errors.landlord_phone = phoneError;
       errors.hr_phone = phoneError;
     }
   }
@@ -133,7 +130,10 @@ export function inviteeFieldErrors(
   Object.assign(
     errors,
     addressFieldErrors(
-      toAddressValidationInput(fields, { requireLeaseInName: role === "roommate" })
+      toAddressValidationInput(fields, {
+        requireLeaseInName: role === "roommate",
+        requireLandlord: role === "roommate",
+      })
     )
   );
 

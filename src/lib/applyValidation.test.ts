@@ -41,6 +41,8 @@ function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidati
     phone: "5145550100",
     landlord_name: "Marie Landlord",
     landlord_phone: "5145550101",
+    previous_landlord_name: "",
+    previous_landlord_phone: "",
     hr_name: "Jean HR",
     hr_phone: "5145550102",
     monthly_net_income: "4000",
@@ -181,6 +183,8 @@ describe("address date validation", () => {
         previous_address: "10 Old St",
         previous_address_lived_from: "2022-01-01",
         previous_address_lived_to: "2024-06-01",
+        previous_landlord_name: "Old Landlord",
+        previous_landlord_phone: "5145550199",
         current_address_lived_from: "2024-01-01",
         still_at_current_address: true,
       })
@@ -194,11 +198,43 @@ describe("address date validation", () => {
         previous_address: "10 Old St",
         previous_address_lived_from: "2022-01-01",
         previous_address_lived_to: "2024-01-01",
+        previous_landlord_name: "Old Landlord",
+        previous_landlord_phone: "5145550199",
         current_address_lived_from: "2024-01-01",
         still_at_current_address: true,
       })
     );
     expect(errors.previous_address_lived_to).toBeUndefined();
+  });
+
+  it("requires current and previous landlord when previous address is set", () => {
+    expect(
+      addressFieldErrors(baseInput({ landlord_name: "", landlord_phone: "" }))
+    ).toEqual({
+      landlord_name: "required",
+      landlord_phone: "required",
+    });
+    const previousErrors = addressFieldErrors(
+      baseInput({
+        previous_address: "10 Old St",
+        previous_address_lived_from: "2022-01-01",
+        previous_address_lived_to: "2024-01-01",
+      })
+    );
+    expect(previousErrors.previous_landlord_name).toBe("required");
+    expect(previousErrors.previous_landlord_phone).toBe("required");
+  });
+
+  it("skips landlord checks when require_landlord is false", () => {
+    expect(
+      addressFieldErrors(
+        baseInput({
+          landlord_name: "",
+          landlord_phone: "",
+          require_landlord: false,
+        })
+      )
+    ).toEqual({});
   });
 });
 
@@ -310,12 +346,27 @@ describe("field error maps", () => {
     expect(
       incomeFieldErrors({
         monthly_net_income: "4000",
-        landlord_name: "Marie",
         landlord_phone: "5145550101",
         hr_name: "Jean",
         hr_phone: "",
       })
     ).toEqual({ hr_phone: "required" });
+    expect(
+      incomeFieldErrors({
+        monthly_net_income: "4000",
+        landlord_phone: "5145550100",
+        hr_name: "Jean",
+        hr_phone: "5145550100",
+      })
+    ).toEqual({ hr_phone: "landlord_hr_same_phone" });
+    expect(
+      incomeFieldErrors({
+        monthly_net_income: "4000",
+        landlord_phone: "",
+        hr_name: "",
+        hr_phone: "5145550102",
+      })
+    ).toEqual({ hr_name: "required" });
   });
 
   it("validateDateOfBirth and findFirstValidationIssue reject underage / future DOB", () => {

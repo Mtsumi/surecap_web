@@ -29,6 +29,8 @@ function roommateFields(overrides: Partial<InviteeFormFields> = {}): InviteeForm
     move_in_date: "2026-07-01",
     landlord_name: "Landlord Co",
     landlord_phone: "5145550101",
+    previous_landlord_name: "",
+    previous_landlord_phone: "",
     hr_name: "HR Dept",
     hr_phone: "5145550102",
     employment_type: "employed",
@@ -46,6 +48,8 @@ function guarantorFields(overrides: Partial<InviteeFormFields> = {}): InviteeFor
     move_in_date: "",
     landlord_name: "",
     landlord_phone: "",
+    previous_landlord_name: "",
+    previous_landlord_phone: "",
     ...overrides,
   });
 }
@@ -71,9 +75,24 @@ describe("inviteeFieldErrors", () => {
     expect(errors.landlord_name).toBe("required");
   });
 
+  it("requires previous landlord when previous address is set for roommates", () => {
+    const errors = inviteeFieldErrors(
+      "roommate",
+      roommateFields({
+        previous_address: "10 Old St",
+        previous_address_lived_from: "2022-01-01",
+        previous_address_lived_to: "2024-01-01",
+      }),
+      "roommate@example.com"
+    );
+    expect(errors.previous_landlord_name).toBe("required");
+    expect(errors.previous_landlord_phone).toBe("required");
+  });
+
   it("flags guarantor required fields without landlord references", () => {
     const errors = inviteeFieldErrors("guarantor", guarantorFields({ hr_name: "" }), "roommate@example.com");
     expect(errors.landlord_phone).toBeUndefined();
+    expect(errors.landlord_name).toBeUndefined();
     expect(errors.hr_name).toBe("required");
   });
 
@@ -98,7 +117,6 @@ describe("inviteeFieldErrors", () => {
       "roommate@example.com"
     );
     expect(errors.email).toBe("invite_email_mismatch");
-    expect(errors.landlord_phone).toBe("landlord_hr_same_phone");
     expect(errors.hr_phone).toBe("landlord_hr_same_phone");
   });
 

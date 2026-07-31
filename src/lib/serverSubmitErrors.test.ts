@@ -12,6 +12,8 @@ function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidati
     guarantor: null,
     landlord_name: "Landlord Co",
     landlord_phone: "+15145550101",
+    previous_landlord_name: "",
+    previous_landlord_phone: "",
     hr_name: "HR Dept",
     hr_phone: "+15145550102",
     monthly_net_income: "4000",
@@ -28,14 +30,27 @@ function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidati
 }
 
 describe("mapServerSubmitError", () => {
-  it("routes invalid phone to references when only landlord/HR fail client check", () => {
+  it("routes invalid landlord phone to addresses step", () => {
     const result = mapServerSubmitError(
       "Invalid phone number",
       baseInput({ landlord_phone: "bad", hr_phone: "+15145550102" })
     );
-    expect(result?.step).toBe("references");
+    expect(result?.step).toBe("addresses");
     expect(result?.fieldErrors.landlord_phone).toBe("invalid_phone");
     expect(result?.messageKey).toBe("validationInvalidPhone");
+  });
+
+  it("routes previous landlord required messages to addresses", () => {
+    expect(mapServerSubmitError("Previous landlord name is required", baseInput())).toEqual({
+      step: "addresses",
+      fieldErrors: { previous_landlord_name: "required" },
+      messageKey: "fieldRequired",
+    });
+    expect(mapServerSubmitError("Previous landlord phone is required", baseInput())).toEqual({
+      step: "addresses",
+      fieldErrors: { previous_landlord_phone: "required" },
+      messageKey: "fieldRequired",
+    });
   });
 
   it("routes invalid phone to personal for applicant phone", () => {

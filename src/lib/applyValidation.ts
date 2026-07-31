@@ -37,6 +37,12 @@ export type AddressDatesInput = {
   previous_address_lived_to: string;
   lease_in_name: boolean | null;
   require_lease_in_name?: boolean;
+  landlord_name?: string;
+  landlord_phone?: string;
+  previous_landlord_name?: string;
+  previous_landlord_phone?: string;
+  /** Primary + roommate collect landlords; guarantors pass false. Default true. */
+  require_landlord?: boolean;
 };
 
 export type ApplyValidationInput = {
@@ -52,6 +58,8 @@ export type ApplyValidationInput = {
   phone: string;
   landlord_name: string;
   landlord_phone: string;
+  previous_landlord_name: string;
+  previous_landlord_phone: string;
   hr_name: string;
   hr_phone: string;
   monthly_net_income: string;
@@ -306,6 +314,7 @@ export function validateReferencesStep(
 export function addressFieldErrors(fields: AddressDatesInput): ApplyFieldErrors {
   const errors: ApplyFieldErrors = {};
   const today = localDateString();
+  const requireLandlord = fields.require_landlord !== false;
 
   if (!fields.current_address.trim()) {
     errors.current_address = "required";
@@ -330,6 +339,20 @@ export function addressFieldErrors(fields: AddressDatesInput): ApplyFieldErrors 
       errors.current_address_lived_to = "invalid_address_date_range";
     } else if (currentTo > today) {
       errors.current_address_lived_to = "address_date_in_future";
+    }
+  }
+
+  if (requireLandlord) {
+    const landlordName = (fields.landlord_name ?? "").trim();
+    const landlordPhone = (fields.landlord_phone ?? "").trim();
+    if (!landlordName) {
+      errors.landlord_name = "required";
+    }
+    if (!landlordPhone) {
+      errors.landlord_phone = "required";
+    } else {
+      const landlordFormat = validatePhoneFormat(landlordPhone);
+      if (landlordFormat) errors.landlord_phone = landlordFormat;
     }
   }
 
@@ -360,6 +383,21 @@ export function addressFieldErrors(fields: AddressDatesInput): ApplyFieldErrors 
       }
       if (currentFrom && previousTo > currentFrom) {
         errors.previous_address_lived_to = "address_dates_chain";
+      }
+    }
+    if (requireLandlord) {
+      const previousLandlordName = (fields.previous_landlord_name ?? "").trim();
+      const previousLandlordPhone = (fields.previous_landlord_phone ?? "").trim();
+      if (!previousLandlordName) {
+        errors.previous_landlord_name = "required";
+      }
+      if (!previousLandlordPhone) {
+        errors.previous_landlord_phone = "required";
+      } else {
+        const previousLandlordFormat = validatePhoneFormat(previousLandlordPhone);
+        if (previousLandlordFormat) {
+          errors.previous_landlord_phone = previousLandlordFormat;
+        }
       }
     }
   } else if (
@@ -518,28 +556,15 @@ export function referencesFieldErrors(
 export function incomeFieldErrors(
   fields: Pick<
     ApplyValidationInput,
-    | "monthly_net_income"
-    | "landlord_name"
-    | "landlord_phone"
-    | "hr_name"
-    | "hr_phone"
+    "monthly_net_income" | "hr_name" | "hr_phone" | "landlord_phone"
   >
 ): ApplyFieldErrors {
   const errors: ApplyFieldErrors = {};
   if (!parseMonthlyNetIncome(fields.monthly_net_income)) {
     errors.monthly_net_income = "required";
   }
-  if (!fields.landlord_name.trim()) {
-    errors.landlord_name = "required";
-  }
   if (!fields.hr_name.trim()) {
     errors.hr_name = "required";
-  }
-  if (!fields.landlord_phone.trim()) {
-    errors.landlord_phone = "required";
-  } else {
-    const landlordFormat = validatePhoneFormat(fields.landlord_phone);
-    if (landlordFormat) errors.landlord_phone = landlordFormat;
   }
   if (!fields.hr_phone.trim()) {
     errors.hr_phone = "required";
@@ -547,10 +572,10 @@ export function incomeFieldErrors(
     const hrFormat = validatePhoneFormat(fields.hr_phone);
     if (hrFormat) errors.hr_phone = hrFormat;
   }
-  if (!errors.landlord_phone && !errors.hr_phone) {
+  // Same-phone check once both numbers exist (landlord collected on addresses).
+  if (!errors.hr_phone && fields.landlord_phone.trim()) {
     const same = validatePhones(fields.landlord_phone, fields.hr_phone);
     if (same) {
-      errors.landlord_phone = same;
       errors.hr_phone = same;
     }
   }
