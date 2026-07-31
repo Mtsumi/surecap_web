@@ -19,7 +19,6 @@ import {
   uploadMemberDocument,
 } from "@/lib/api";
 import { Locale, MessageKey, t } from "@/lib/i18n";
-import IdPhotoCropReview from "./IdPhotoCropReview";
 
 const SLOT_LABEL: Record<string, MessageKey> = {
   id_passport: "idPassport",
@@ -47,11 +46,6 @@ type Props = (MemberMode | InviteMode) & {
   onDocumentsChange?: (documents: MemberDocument[]) => void;
 };
 
-type PendingCrop = {
-  documentType: string;
-  file: File;
-};
-
 function documentsEqual(a: MemberDocument[], b: MemberDocument[]): boolean {
   if (a.length !== b.length) return false;
   return a.every(
@@ -72,7 +66,6 @@ export default function StepDocumentUpload(props: Props) {
   const [loadingList, setLoadingList] = useState(true);
   const [busySlot, setBusySlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pendingCrop, setPendingCrop] = useState<PendingCrop | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const onDocumentsChangeRef = useRef(onDocumentsChange);
@@ -134,7 +127,12 @@ export default function StepDocumentUpload(props: Props) {
     }
   };
 
-  const uploadCroppedFile = async (documentType: string, file: File) => {
+  const handleFile = async (documentType: string, file: File | null) => {
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setError(t(locale, "idUploadImageOnly"));
+      return;
+    }
     setError(null);
     setBusySlot(documentType);
     try {
@@ -159,16 +157,6 @@ export default function StepDocumentUpload(props: Props) {
     } finally {
       setBusySlot(null);
     }
-  };
-
-  const handleFileSelected = (documentType: string, file: File | null) => {
-    if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError(t(locale, "idUploadImageOnly"));
-      return;
-    }
-    setError(null);
-    setPendingCrop({ documentType, file });
   };
 
   const openCamera = (documentType: string) => {
@@ -211,12 +199,12 @@ export default function StepDocumentUpload(props: Props) {
   };
 
   const slots = idSlotsForKind(idKind);
-  const uploadedTypes = new Set(documents.map((doc) => doc.document_type));
   const switchingKind = busySlot === "id_kind";
+  const uploadedTypes = new Set(documents.map((doc) => doc.document_type));
 
   return (
     <div className="rounded border border-[#d4e4d6] bg-[#fafcfa] px-4 py-5">
-      <h3 className="text-sm font-medium text-[#1a3d22]">
+      <h3 className="text-sm font-medium text-[#292524]">
         {t(locale, "uploadDocumentsTitle")}
       </h3>
       <p className="mt-1 text-sm leading-relaxed text-[#57534e]">
@@ -276,7 +264,7 @@ export default function StepDocumentUpload(props: Props) {
                   disabled={busy}
                   onChange={(e) => {
                     const file = e.target.files?.[0] ?? null;
-                    handleFileSelected(slot, file);
+                    void handleFile(slot, file);
                     e.target.value = "";
                   }}
                   className="sr-only"
@@ -319,25 +307,6 @@ export default function StepDocumentUpload(props: Props) {
         ID_DOCUMENT_SLOTS.driver_licence.every((slot) => uploadedTypes.has(slot)) && (
           <p className="mt-4 text-sm text-[#3d5a45]">{t(locale, "idUploadComplete")}</p>
         )}
-
-      {pendingCrop ? (
-        <IdPhotoCropReview
-          locale={locale}
-          file={pendingCrop.file}
-          onConfirm={(cropped) => {
-            const documentType = pendingCrop.documentType;
-            setPendingCrop(null);
-            void uploadCroppedFile(documentType, cropped);
-          }}
-          onCancel={() => setPendingCrop(null)}
-          onRetake={() => {
-            const documentType = pendingCrop.documentType;
-            setPendingCrop(null);
-            // Let the modal unmount before reopening the camera picker.
-            requestAnimationFrame(() => openCamera(documentType));
-          }}
-        />
-      ) : null}
     </div>
   );
 }

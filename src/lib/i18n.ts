@@ -127,12 +127,6 @@ export const messages = {
     idUploadImageOnly: "Please take a photo of your ID (images only).",
     idTakePhoto: "Take photo",
     idRetakePhoto: "Retake photo",
-    idCropTitle: "Adjust your photo",
-    idCropHint: "Drag to centre your ID in the square frame.",
-    idCropUsePhoto: "Use this photo",
-    idCropRetake: "Retake",
-    idBlurryWarning:
-      "This photo looks blurry. You can still continue, but a clearer photo helps verification.",
     draftRestoredBanner:
       "We restored your saved draft on this device. You can continue where you left off.",
     draftStartOver: "Start over",
@@ -317,12 +311,6 @@ export const messages = {
       "Veuillez prendre une photo de votre pièce d'identité (images seulement).",
     idTakePhoto: "Prendre une photo",
     idRetakePhoto: "Reprendre la photo",
-    idCropTitle: "Ajustez votre photo",
-    idCropHint: "Faites glisser pour centrer votre pièce d'identité dans le cadre carré.",
-    idCropUsePhoto: "Utiliser cette photo",
-    idCropRetake: "Reprendre",
-    idBlurryWarning:
-      "Cette photo semble floue. Vous pouvez continuer, mais une photo plus nette facilite la vérification.",
     draftRestoredBanner:
       "Nous avons restauré votre brouillon enregistré sur cet appareil. Vous pouvez reprendre où vous étiez.",
     draftStartOver: "Recommencer",
