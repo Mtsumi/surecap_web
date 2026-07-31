@@ -127,6 +127,19 @@ export const messages = {
     idUploadImageOnly: "Please take a photo of your ID (images only).",
     idTakePhoto: "Take photo",
     idRetakePhoto: "Retake photo",
+    idCameraTitle: "ID photo",
+    idCameraAlignHint: "Fit your ID inside the frame",
+    idCameraStarting: "Starting camera…",
+    idCameraCapture: "Capture",
+    idCameraCancel: "Cancel",
+    idCameraRetake: "Retake",
+    idCameraUsePhoto: "Use this photo",
+    idCameraPermissionDenied:
+      "Camera access was blocked. You can still take a photo with your device camera.",
+    idCameraUseDevice: "Use device camera",
+    idCameraCaptureFailed: "Could not capture photo. Try again.",
+    idBlurryWarning:
+      "This photo looks blurry. You can still continue, but a clearer photo helps verification.",
     draftRestoredBanner:
       "We restored your saved draft on this device. You can continue where you left off.",
     draftStartOver: "Start over",
@@ -311,6 +324,19 @@ export const messages = {
       "Veuillez prendre une photo de votre pièce d'identité (images seulement).",
     idTakePhoto: "Prendre une photo",
     idRetakePhoto: "Reprendre la photo",
+    idCameraTitle: "Photo d'identité",
+    idCameraAlignHint: "Placez votre pièce d'identité dans le cadre",
+    idCameraStarting: "Démarrage de la caméra…",
+    idCameraCapture: "Prendre",
+    idCameraCancel: "Annuler",
+    idCameraRetake: "Reprendre",
+    idCameraUsePhoto: "Utiliser cette photo",
+    idCameraPermissionDenied:
+      "L'accès à la caméra a été refusé. Vous pouvez quand même prendre une photo avec l'appareil.",
+    idCameraUseDevice: "Utiliser la caméra de l'appareil",
+    idCameraCaptureFailed: "Impossible de capturer la photo. Réessayez.",
+    idBlurryWarning:
+      "Cette photo semble floue. Vous pouvez continuer, mais une photo plus nette facilite la vérification.",
     draftRestoredBanner:
       "Nous avons restauré votre brouillon enregistré sur cet appareil. Vous pouvez reprendre où vous étiez.",
     draftStartOver: "Recommencer",

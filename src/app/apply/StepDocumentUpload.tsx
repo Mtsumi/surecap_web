@@ -19,6 +19,7 @@ import {
   uploadMemberDocument,
 } from "@/lib/api";
 import { Locale, MessageKey, t } from "@/lib/i18n";
+import IdCameraCapture from "./IdCameraCapture";
 
 const SLOT_LABEL: Record<string, MessageKey> = {
   id_passport: "idPassport",
@@ -66,6 +67,7 @@ export default function StepDocumentUpload(props: Props) {
   const [loadingList, setLoadingList] = useState(true);
   const [busySlot, setBusySlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cameraSlot, setCameraSlot] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const onDocumentsChangeRef = useRef(onDocumentsChange);
@@ -159,8 +161,13 @@ export default function StepDocumentUpload(props: Props) {
     }
   };
 
-  const openCamera = (documentType: string) => {
+  const openDeviceCamera = (documentType: string) => {
     fileInputRefs.current[documentType]?.click();
+  };
+
+  const openGuidedCamera = (documentType: string) => {
+    setError(null);
+    setCameraSlot(documentType);
   };
 
   const handleIdKindChange = async (nextKind: IdDocumentKind) => {
@@ -272,7 +279,7 @@ export default function StepDocumentUpload(props: Props) {
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={() => openCamera(slot)}
+                  onClick={() => openGuidedCamera(slot)}
                   className="rounded border-0 bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] transition hover:bg-[#d4e4d6] disabled:opacity-60"
                 >
                   {uploaded ? t(locale, "idRetakePhoto") : t(locale, "idTakePhoto")}
@@ -307,6 +314,23 @@ export default function StepDocumentUpload(props: Props) {
         ID_DOCUMENT_SLOTS.driver_licence.every((slot) => uploadedTypes.has(slot)) && (
           <p className="mt-4 text-sm text-[#3d5a45]">{t(locale, "idUploadComplete")}</p>
         )}
+
+      {cameraSlot ? (
+        <IdCameraCapture
+          locale={locale}
+          onCancel={() => setCameraSlot(null)}
+          onCapture={(file) => {
+            const documentType = cameraSlot;
+            setCameraSlot(null);
+            void handleFile(documentType, file);
+          }}
+          onUseDeviceCamera={() => {
+            const documentType = cameraSlot;
+            setCameraSlot(null);
+            requestAnimationFrame(() => openDeviceCamera(documentType));
+          }}
+        />
+      ) : null}
     </div>
   );
 }
