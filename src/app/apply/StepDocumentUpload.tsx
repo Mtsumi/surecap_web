@@ -66,6 +66,7 @@ export default function StepDocumentUpload(props: Props) {
   const [loadingList, setLoadingList] = useState(true);
   const [busySlot, setBusySlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const onDocumentsChangeRef = useRef(onDocumentsChange);
   onDocumentsChangeRef.current = onDocumentsChange;
@@ -158,6 +159,10 @@ export default function StepDocumentUpload(props: Props) {
     }
   };
 
+  const openCamera = (documentType: string) => {
+    fileInputRefs.current[documentType]?.click();
+  };
+
   const handleIdKindChange = async (nextKind: IdDocumentKind) => {
     if (nextKind === idKind) return;
     const stale = staleIdDocumentTypes(
@@ -194,12 +199,12 @@ export default function StepDocumentUpload(props: Props) {
   };
 
   const slots = idSlotsForKind(idKind);
-  const uploadedTypes = new Set(documents.map((doc) => doc.document_type));
   const switchingKind = busySlot === "id_kind";
+  const uploadedTypes = new Set(documents.map((doc) => doc.document_type));
 
   return (
     <div className="rounded border border-[#d4e4d6] bg-[#fafcfa] px-4 py-5">
-      <h3 className="text-sm font-medium text-[#1a3d22]">
+      <h3 className="text-sm font-medium text-[#292524]">
         {t(locale, "uploadDocumentsTitle")}
       </h3>
       <p className="mt-1 text-sm leading-relaxed text-[#57534e]">
@@ -249,23 +254,29 @@ export default function StepDocumentUpload(props: Props) {
                 </p>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <label>
-                  <span className="sr-only">
-                    {uploaded ? t(locale, "uploadReplaceFile") : t(locale, "uploadChooseFile")}
-                  </span>
-                  <input
-                    type="file"
-                    accept={ACCEPTED_ID_UPLOAD_TYPES}
-                    capture="environment"
-                    disabled={busy}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] ?? null;
-                      void handleFile(slot, file);
-                      e.target.value = "";
-                    }}
-                    className="block w-full text-sm text-[#57534e] file:mr-3 file:rounded file:border-0 file:bg-[#e8f0ea] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#1a3d22] hover:file:bg-[#d4e4d6] disabled:opacity-60"
-                  />
-                </label>
+                <input
+                  ref={(el) => {
+                    fileInputRefs.current[slot] = el;
+                  }}
+                  type="file"
+                  accept={ACCEPTED_ID_UPLOAD_TYPES}
+                  capture="environment"
+                  disabled={busy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    void handleFile(slot, file);
+                    e.target.value = "";
+                  }}
+                  className="sr-only"
+                />
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => openCamera(slot)}
+                  className="rounded border-0 bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] transition hover:bg-[#d4e4d6] disabled:opacity-60"
+                >
+                  {uploaded ? t(locale, "idRetakePhoto") : t(locale, "idTakePhoto")}
+                </button>
                 {uploaded && (
                   <button
                     type="button"

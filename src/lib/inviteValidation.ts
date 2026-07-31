@@ -32,6 +32,7 @@ export type InviteeFormFields = {
   previous_address_lived_from: string;
   previous_address_lived_to: string;
   lease_in_name: boolean | null;
+  housing_status: "renting" | "own_home";
   move_in_date: string;
   landlord_name: string;
   landlord_phone: string;
@@ -121,9 +122,11 @@ export function inviteeFieldErrors(
   }
 
   if (role === "roommate") {
-    const phoneError = validatePhones(fields.landlord_phone, fields.hr_phone);
-    if (phoneError) {
-      errors.hr_phone = phoneError;
+    if (fields.housing_status !== "own_home") {
+      const phoneError = validatePhones(fields.landlord_phone, fields.hr_phone);
+      if (phoneError) {
+        errors.hr_phone = phoneError;
+      }
     }
   }
 
@@ -131,8 +134,8 @@ export function inviteeFieldErrors(
     errors,
     addressFieldErrors(
       toAddressValidationInput(fields, {
-        requireLeaseInName: role === "roommate",
-        requireLandlord: role === "roommate",
+        requireLeaseInName: role === "roommate" && fields.housing_status !== "own_home",
+        requireLandlord: role === "roommate" && fields.housing_status !== "own_home",
       })
     )
   );

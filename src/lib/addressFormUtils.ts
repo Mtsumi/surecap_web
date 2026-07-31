@@ -11,6 +11,7 @@ export type AddressDateFormFields = {
   previous_address_lived_from: string;
   previous_address_lived_to: string;
   lease_in_name?: boolean | null;
+  housing_status?: "renting" | "own_home";
   landlord_name?: string;
   landlord_phone?: string;
   previous_landlord_name?: string;
@@ -21,6 +22,7 @@ export function toAddressValidationInput(
   fields: AddressDateFormFields,
   options?: { requireLeaseInName?: boolean; requireLandlord?: boolean }
 ): AddressDatesInput {
+  const ownsHome = fields.housing_status === "own_home";
   return {
     current_address: fields.current_address,
     current_address_lived_from: fields.current_address_lived_from,
@@ -30,12 +32,18 @@ export function toAddressValidationInput(
     previous_address_lived_from: fields.previous_address_lived_from,
     previous_address_lived_to: fields.previous_address_lived_to,
     lease_in_name: fields.lease_in_name ?? null,
-    require_lease_in_name: options?.requireLeaseInName,
+    require_lease_in_name:
+      options?.requireLeaseInName !== undefined
+        ? options.requireLeaseInName
+        : !ownsHome,
     landlord_name: fields.landlord_name,
     landlord_phone: fields.landlord_phone,
     previous_landlord_name: fields.previous_landlord_name,
     previous_landlord_phone: fields.previous_landlord_phone,
-    require_landlord: options?.requireLandlord,
+    require_landlord:
+      options?.requireLandlord !== undefined
+        ? options.requireLandlord
+        : !ownsHome,
   };
 }
 

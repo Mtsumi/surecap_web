@@ -69,8 +69,8 @@ function inviteToValidationInput(
     hr_name: form.hr_name,
     monthly_net_income: form.monthly_net_income,
     ...toAddressValidationInput(form, {
-      requireLeaseInName: role === "roommate",
-      requireLandlord: role === "roommate",
+      requireLeaseInName: role === "roommate" && form.housing_status !== "own_home",
+      requireLandlord: role === "roommate" && form.housing_status !== "own_home",
     }),
   };
 }

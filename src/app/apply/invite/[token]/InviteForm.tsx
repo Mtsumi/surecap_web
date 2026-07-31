@@ -96,6 +96,7 @@ function emptyFields(): InviteeFormFields {
     still_at_current_address: true,
     previous_address_lived_from: "",
     previous_address_lived_to: "",
+    housing_status: "renting",
     lease_in_name: null,
     move_in_date: "",
     landlord_name: "",
@@ -245,8 +246,8 @@ export default function InviteForm({ token }: Props) {
 
   const addressFields = () =>
     toAddressValidationInput(form, {
-      requireLeaseInName: role === "roommate",
-      requireLandlord: role === "roommate",
+      requireLeaseInName: role === "roommate" && form.housing_status !== "own_home",
+      requireLandlord: role === "roommate" && form.housing_status !== "own_home",
     });
 
   const validateStep = (current: Step): boolean => {
@@ -292,7 +293,7 @@ export default function InviteForm({ token }: Props) {
         const hrError = validatePhoneFormat(form.hr_phone);
         if (hrError) {
           errors.hr_phone = hrError;
-        } else {
+        } else if (form.housing_status !== "own_home") {
           const phoneError = validatePhones(form.landlord_phone, form.hr_phone);
           if (phoneError) {
             errors.hr_phone = phoneError;
@@ -416,12 +417,19 @@ export default function InviteForm({ token }: Props) {
     if (form.previous_place_id) payload.previous_place_id = form.previous_place_id;
 
     if (role === "roommate") {
-      payload.lease_in_name = form.lease_in_name === true;
-      payload.landlord_name = form.landlord_name.trim();
-      payload.landlord_phone = form.landlord_phone.trim();
-      if (form.previous_address.trim()) {
-        payload.previous_landlord_name = form.previous_landlord_name.trim();
-        payload.previous_landlord_phone = form.previous_landlord_phone.trim();
+      payload.housing_status = form.housing_status;
+      if (form.housing_status === "own_home") {
+        payload.lease_in_name = false;
+        payload.landlord_name = "";
+        payload.landlord_phone = "";
+      } else {
+        payload.lease_in_name = form.lease_in_name === true;
+        payload.landlord_name = form.landlord_name.trim();
+        payload.landlord_phone = form.landlord_phone.trim();
+        if (form.previous_address.trim()) {
+          payload.previous_landlord_name = form.previous_landlord_name.trim();
+          payload.previous_landlord_phone = form.previous_landlord_phone.trim();
+        }
       }
       payload.hr_name = form.hr_name.trim();
       payload.hr_phone = form.hr_phone.trim();
@@ -751,6 +759,48 @@ export default function InviteForm({ token }: Props) {
             fieldHint={fieldHint}
           />
           {role === "roommate" && (
+            <fieldset>
+              <legend className="text-sm text-[#57534e]">
+                {t(locale, "housingStatus")}
+              </legend>
+              <div className="mt-2 flex flex-col gap-2">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="housing_status"
+                    checked={form.housing_status === "renting"}
+                    onChange={() => setField("housing_status", "renting")}
+                  />
+                  {t(locale, "housingRenting")}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="radio"
+                    name="housing_status"
+                    checked={form.housing_status === "own_home"}
+                    onChange={() => {
+                      setForm((prev) => ({
+                        ...prev,
+                        housing_status: "own_home",
+                        lease_in_name: null,
+                        landlord_name: "",
+                        landlord_phone: "",
+                        previous_landlord_name: "",
+                        previous_landlord_phone: "",
+                      }));
+                    }}
+                  />
+                  {t(locale, "housingOwnHome")}
+                </label>
+              </div>
+              {form.housing_status === "own_home" ? (
+                <p className="mt-2 text-xs text-[#a8a29e]">
+                  {t(locale, "housingOwnHomeHint")}
+                </p>
+              ) : null}
+            </fieldset>
+          )}
+          {role === "roommate" && form.housing_status === "renting" && (
             <>
               <label className="block text-sm text-[#57534e]">
                 {t(locale, "landlordName")}
@@ -775,7 +825,7 @@ export default function InviteForm({ token }: Props) {
               </div>
             </>
           )}
-          {role === "roommate" && (
+          {role === "roommate" && form.housing_status === "renting" && (
             <fieldset>
               <legend className="text-sm text-[#57534e]">
                 {t(locale, "leaseInName")}
@@ -852,7 +902,9 @@ export default function InviteForm({ token }: Props) {
               fieldHint={fieldHint}
             />
           ) : null}
-          {role === "roommate" && form.previous_address.trim() ? (
+          {role === "roommate" &&
+          form.housing_status === "renting" &&
+          form.previous_address.trim() ? (
             <>
               <label className="block text-sm text-[#57534e]">
                 {t(locale, "previousLandlordName")}
@@ -1009,6 +1061,16 @@ export default function InviteForm({ token }: Props) {
               </dd>
             </div>
             {role === "roommate" && (
+              <div>
+                <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "housingStatus")}</dt>
+                <dd>
+                  {form.housing_status === "own_home"
+                    ? t(locale, "housingOwnHome")
+                    : t(locale, "housingRenting")}
+                </dd>
+              </div>
+            )}
+            {role === "roommate" && form.housing_status === "renting" && (
               <>
                 <div>
                   <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "landlordName")}</dt>
@@ -1026,7 +1088,7 @@ export default function InviteForm({ token }: Props) {
                 <dd>{context.move_in_date}</dd>
               </div>
             )}
-            {role === "roommate" && (
+            {role === "roommate" && form.housing_status === "renting" && (
               <div>
                 <dt className="text-xs uppercase text-[#a8a29e]">{t(locale, "leaseInName")}</dt>
                 <dd>
@@ -1050,7 +1112,7 @@ export default function InviteForm({ token }: Props) {
                     )}
                   </dd>
                 </div>
-                {role === "roommate" && (
+                {role === "roommate" && form.housing_status === "renting" && (
                   <>
                     <div>
                       <dt className="text-xs uppercase text-[#a8a29e]">
