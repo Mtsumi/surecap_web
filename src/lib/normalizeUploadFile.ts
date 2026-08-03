@@ -68,10 +68,7 @@ function extensionForMime(mime: string): string {
  * avoids a mid-upload failure that shows up as a network "Load failed".
  */
 export async function normalizeUploadFile(file: File): Promise<File> {
-  if (file.size <= 0) {
-    throw new Error("That file is empty. Try exporting the payslip as a PDF or photo again.");
-  }
-
+  // Do not gate on file.size — Android content:// picks often report 0 until read.
   let buffer: ArrayBuffer;
   try {
     buffer = await file.arrayBuffer();
@@ -79,6 +76,10 @@ export async function normalizeUploadFile(file: File): Promise<File> {
     throw new Error(
       "Could not read the selected file. On Android, try Files → share as PDF, or take a photo of the slip."
     );
+  }
+
+  if (buffer.byteLength <= 0) {
+    throw new Error("That file is empty. Try exporting the payslip as a PDF or photo again.");
   }
 
   const bytes = new Uint8Array(buffer);

@@ -499,7 +499,11 @@ export default function ApplyForm() {
   }, [selectedUnit, selectedBuilding, persistProgress]);
 
   const restoreFromSaved = useCallback(
-    async (building: Building, unit: Unit, saved: NonNullable<ReturnType<typeof loadApplyProgress>>) => {
+    async (
+      building: Building,
+      unit: Unit,
+      saved: NonNullable<ReturnType<typeof loadApplyProgress>>
+    ): Promise<boolean> => {
       setSelectedBuilding(building);
       setSelectedUnit(unit);
       setSubmittedApplicationId(null);
@@ -578,10 +582,12 @@ export default function ApplyForm() {
           idKind: nextIdKind,
           updatedAt: new Date().toISOString(),
         });
+        return true;
       } catch (e) {
         setError(e instanceof Error ? e.message : t(locale, "error"));
         setSelectedUnit(null);
         setDraftSession(null);
+        return false;
       } finally {
         setLoading(false);
       }
@@ -591,6 +597,8 @@ export default function ApplyForm() {
 
   // Resume latest draft after buildings load / after Android kills the tab.
   const resumeInFlightRef = useRef(false);
+  /** When true, user is deliberately on building pick — skip visibility auto-resume. */
+  const suppressVisibilityResumeRef = useRef(false);
   const tryResumeLatestDraft = useCallback(async () => {
     if (resumeInFlightRef.current) return false;
     if (selectedUnitRef.current) return false;
@@ -607,13 +615,23 @@ export default function ApplyForm() {
     try {
       const unitList = await fetchUnits(building.id);
       setUnits(unitList);
-      // Bail if user picked something while we were fetching.
+      // Bail if user navigated away while units were loading.
       if (selectedUnitRef.current) return false;
+      if (stepRef.current !== "building") return false;
+      if (
+        selectedBuildingRef.current &&
+        selectedBuildingRef.current.id !== building.id
+      ) {
+        return false;
+      }
       const unit = unitList.find((u) => u.id === saved.unitId);
       if (!unit) return false;
-      await restoreFromSaved(building, unit, saved);
-      setShowDraftBanner(true);
-      return true;
+      const ok = await restoreFromSaved(building, unit, saved);
+      if (ok) {
+        suppressVisibilityResumeRef.current = false;
+        setShowDraftBanner(true);
+      }
+      return ok;
     } catch (e) {
       setError(e instanceof Error ? e.message : t(locale, "error"));
       return false;
@@ -628,24 +646,23 @@ export default function ApplyForm() {
     if (step !== "building" || selectedUnit) return;
     if (buildings.length === 0) return;
 
-    // Only lock the auto-resume once we have decided there is nothing to restore,
-    // or after a successful restore — otherwise a transient failure never retries.
     const saved = loadLatestApplyProgress();
     if (!saved) {
       didAttemptDraftResume = true;
       return;
     }
 
-    // One automatic attempt per cold load. Transient failures can still be
-    // retried via visibility/pageshow (maybeResume) without spinning on load.
+    // One automatic attempt per cold load. BFCache pageshow can still retry.
     void tryResumeLatestDraft().finally(() => {
       didAttemptDraftResume = true;
     });
   }, [loading, step, selectedUnit, buildings, tryResumeLatestDraft]);
 
-  // Android tab discard / soft reload: re-open draft when user returns to a bare apply page.
+  // BFCache soft-reload only — visibility-change resume hijacked intentional building re-picks.
   useEffect(() => {
-    const maybeResume = () => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      if (suppressVisibilityResumeRef.current) return;
       if (document.visibilityState === "hidden") return;
       if (selectedUnitRef.current) return;
       if (stepRef.current !== "building") return;
@@ -656,17 +673,9 @@ export default function ApplyForm() {
         if (ok) didAttemptDraftResume = true;
       });
     };
-    const onPageShow = (event: PageTransitionEvent) => {
-      // BFCache restore: React state may be empty while storage still has a draft.
-      if (event.persisted) {
-        maybeResume();
-      }
-    };
     window.addEventListener("pageshow", onPageShow);
-    document.addEventListener("visibilitychange", maybeResume);
     return () => {
       window.removeEventListener("pageshow", onPageShow);
-      document.removeEventListener("visibilitychange", maybeResume);
     };
   }, [buildings, tryResumeLatestDraft]);
 
@@ -676,6 +685,7 @@ export default function ApplyForm() {
       const latest = loadLatestApplyProgress();
       if (latest) clearApplyProgress(latest.unitId);
     }
+    suppressVisibilityResumeRef.current = true;
     didAttemptDraftResume = true;
     setShowDraftBanner(false);
     setSelectedBuilding(null);
@@ -754,6 +764,7 @@ export default function ApplyForm() {
   };
 
   const handleSelectBuilding = (b: Building) => {
+    suppressVisibilityResumeRef.current = true;
     setSelectedBuilding(b);
     setSelectedUnit(null);
     setSubmittedApplicationId(null);
@@ -1154,6 +1165,7 @@ export default function ApplyForm() {
           <button
             type="button"
             onClick={() => {
+              suppressVisibilityResumeRef.current = true;
               setSelectedBuilding(null);
               setUnits([]);
               setStep("building");
