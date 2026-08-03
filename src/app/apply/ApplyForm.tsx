@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AddressAutocomplete from "./AddressAutocomplete";
 import AddressLivedDates from "./AddressLivedDates";
@@ -303,6 +303,26 @@ export default function ApplyForm() {
   >({});
   const [showDraftBanner, setShowDraftBanner] = useState(false);
 
+  // Keep latest values for flush on app-switch (Android often freezes before debounced save).
+  const formRef = useRef(form);
+  const roommatesRef = useRef(roommates);
+  const guarantorRef = useRef(guarantor);
+  const includeGuarantorRef = useRef(includeGuarantor);
+  const draftSessionRef = useRef(draftSession);
+  const idKindRef = useRef(idKind);
+  const stepRef = useRef(step);
+  const selectedUnitRef = useRef(selectedUnit);
+  const selectedBuildingRef = useRef(selectedBuilding);
+  formRef.current = form;
+  roommatesRef.current = roommates;
+  guarantorRef.current = guarantor;
+  includeGuarantorRef.current = includeGuarantor;
+  draftSessionRef.current = draftSession;
+  idKindRef.current = idKind;
+  stepRef.current = step;
+  selectedUnitRef.current = selectedUnit;
+  selectedBuildingRef.current = selectedBuilding;
+
   const inputClass =
     "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-base text-[#292524] outline-none transition focus:border-[#3d5a45]";
 
@@ -419,30 +439,23 @@ export default function ApplyForm() {
 
   const persistProgress = useCallback(
     (nextStep: Step) => {
-      if (!selectedUnit || !selectedBuilding) return;
+      const unit = selectedUnitRef.current;
+      const building = selectedBuildingRef.current;
+      if (!unit || !building) return;
       saveApplyProgress({
-        unitId: selectedUnit.id,
-        buildingId: selectedBuilding.id,
+        unitId: unit.id,
+        buildingId: building.id,
         step: nextStep,
-        form,
-        roommates,
-        includeGuarantor,
-        guarantor,
-        draftSession,
-        idKind,
+        form: formRef.current,
+        roommates: roommatesRef.current,
+        includeGuarantor: includeGuarantorRef.current,
+        guarantor: guarantorRef.current,
+        draftSession: draftSessionRef.current,
+        idKind: idKindRef.current,
         updatedAt: new Date().toISOString(),
       });
     },
-    [
-      selectedUnit,
-      selectedBuilding,
-      form,
-      roommates,
-      includeGuarantor,
-      guarantor,
-      draftSession,
-      idKind,
-    ]
+    []
   );
 
   // Debounced autosave while a unit draft is in progress.
@@ -450,7 +463,7 @@ export default function ApplyForm() {
     if (!selectedUnit || !selectedBuilding) return;
     const timer = window.setTimeout(() => {
       persistProgress(step);
-    }, 400);
+    }, 200);
     return () => window.clearTimeout(timer);
   }, [
     form,
@@ -465,23 +478,32 @@ export default function ApplyForm() {
     persistProgress,
   ]);
 
-  // Flush draft when the tab is hidden or the page is unloading.
+  // Flush draft synchronously when the tab is hidden / app-switched / page frozen.
   useEffect(() => {
     if (!selectedUnit || !selectedBuilding) return;
-    const flush = () => persistProgress(step);
+    const flush = () => persistProgress(stepRef.current);
     const onVisibility = () => {
       if (document.visibilityState === "hidden") flush();
     };
+    const onPageHide = () => flush();
+    const onFreeze = () => flush();
     document.addEventListener("visibilitychange", onVisibility);
-    window.addEventListener("pagehide", flush);
+    window.addEventListener("pagehide", onPageHide);
+    // Chrome Android discards tabs via freeze when available.
+    document.addEventListener("freeze", onFreeze as EventListener);
     return () => {
       document.removeEventListener("visibilitychange", onVisibility);
-      window.removeEventListener("pagehide", flush);
+      window.removeEventListener("pagehide", onPageHide);
+      document.removeEventListener("freeze", onFreeze as EventListener);
     };
-  }, [selectedUnit, selectedBuilding, persistProgress, step]);
+  }, [selectedUnit, selectedBuilding, persistProgress]);
 
   const restoreFromSaved = useCallback(
-    async (building: Building, unit: Unit, saved: NonNullable<ReturnType<typeof loadApplyProgress>>) => {
+    async (
+      building: Building,
+      unit: Unit,
+      saved: NonNullable<ReturnType<typeof loadApplyProgress>>
+    ): Promise<boolean> => {
       setSelectedBuilding(building);
       setSelectedUnit(unit);
       setSubmittedApplicationId(null);
@@ -560,10 +582,12 @@ export default function ApplyForm() {
           idKind: nextIdKind,
           updatedAt: new Date().toISOString(),
         });
+        return true;
       } catch (e) {
         setError(e instanceof Error ? e.message : t(locale, "error"));
         setSelectedUnit(null);
         setDraftSession(null);
+        return false;
       } finally {
         setLoading(false);
       }
@@ -571,37 +595,97 @@ export default function ApplyForm() {
     [locale]
   );
 
-  // Resume latest draft after buildings load (building step, no unit yet).
+  // Resume latest draft after buildings load / after Android kills the tab.
+  const resumeInFlightRef = useRef(false);
+  /** When true, user is deliberately on building pick — skip visibility auto-resume. */
+  const suppressVisibilityResumeRef = useRef(false);
+  const tryResumeLatestDraft = useCallback(async () => {
+    if (resumeInFlightRef.current) return false;
+    if (selectedUnitRef.current) return false;
+    if (stepRef.current !== "building") return false;
+    if (buildings.length === 0) return false;
+
+    const saved = loadLatestApplyProgress();
+    if (!saved) return false;
+    const building = buildings.find((b) => b.id === saved.buildingId);
+    if (!building) return false;
+
+    resumeInFlightRef.current = true;
+    setLoading(true);
+    try {
+      const unitList = await fetchUnits(building.id);
+      setUnits(unitList);
+      // Bail if user navigated away while units were loading.
+      if (selectedUnitRef.current) return false;
+      if (stepRef.current !== "building") return false;
+      if (
+        selectedBuildingRef.current &&
+        selectedBuildingRef.current.id !== building.id
+      ) {
+        return false;
+      }
+      const unit = unitList.find((u) => u.id === saved.unitId);
+      if (!unit) return false;
+      const ok = await restoreFromSaved(building, unit, saved);
+      if (ok) {
+        suppressVisibilityResumeRef.current = false;
+        setShowDraftBanner(true);
+      }
+      return ok;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t(locale, "error"));
+      return false;
+    } finally {
+      setLoading(false);
+      resumeInFlightRef.current = false;
+    }
+  }, [buildings, restoreFromSaved, locale]);
+
   useEffect(() => {
     if (loading || didAttemptDraftResume) return;
     if (step !== "building" || selectedUnit) return;
     if (buildings.length === 0) return;
 
-    didAttemptDraftResume = true;
     const saved = loadLatestApplyProgress();
-    if (!saved) return;
-    const building = buildings.find((b) => b.id === saved.buildingId);
-    if (!building) return;
+    if (!saved) {
+      didAttemptDraftResume = true;
+      return;
+    }
 
-    void (async () => {
-      setLoading(true);
-      try {
-        const unitList = await fetchUnits(building.id);
-        setUnits(unitList);
-        const unit = unitList.find((u) => u.id === saved.unitId);
-        if (!unit) return;
-        await restoreFromSaved(building, unit, saved);
-        setShowDraftBanner(true);
-      } catch (e) {
-        setError(e instanceof Error ? e.message : t(locale, "error"));
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, [loading, step, selectedUnit, buildings, restoreFromSaved, locale]);
+    // One automatic attempt per cold load. BFCache pageshow can still retry.
+    void tryResumeLatestDraft().finally(() => {
+      didAttemptDraftResume = true;
+    });
+  }, [loading, step, selectedUnit, buildings, tryResumeLatestDraft]);
+
+  // BFCache soft-reload only — visibility-change resume hijacked intentional building re-picks.
+  useEffect(() => {
+    const onPageShow = (event: PageTransitionEvent) => {
+      if (!event.persisted) return;
+      if (suppressVisibilityResumeRef.current) return;
+      if (document.visibilityState === "hidden") return;
+      if (selectedUnitRef.current) return;
+      if (stepRef.current !== "building") return;
+      if (buildings.length === 0) return;
+      if (!loadLatestApplyProgress()) return;
+      if (resumeInFlightRef.current) return;
+      void tryResumeLatestDraft().then((ok) => {
+        if (ok) didAttemptDraftResume = true;
+      });
+    };
+    window.addEventListener("pageshow", onPageShow);
+    return () => {
+      window.removeEventListener("pageshow", onPageShow);
+    };
+  }, [buildings, tryResumeLatestDraft]);
 
   const handleStartOver = () => {
     if (selectedUnit) clearApplyProgress(selectedUnit.id);
+    else {
+      const latest = loadLatestApplyProgress();
+      if (latest) clearApplyProgress(latest.unitId);
+    }
+    suppressVisibilityResumeRef.current = true;
     didAttemptDraftResume = true;
     setShowDraftBanner(false);
     setSelectedBuilding(null);
@@ -680,6 +764,7 @@ export default function ApplyForm() {
   };
 
   const handleSelectBuilding = (b: Building) => {
+    suppressVisibilityResumeRef.current = true;
     setSelectedBuilding(b);
     setSelectedUnit(null);
     setSubmittedApplicationId(null);
@@ -1080,6 +1165,7 @@ export default function ApplyForm() {
           <button
             type="button"
             onClick={() => {
+              suppressVisibilityResumeRef.current = true;
               setSelectedBuilding(null);
               setUnits([]);
               setStep("building");

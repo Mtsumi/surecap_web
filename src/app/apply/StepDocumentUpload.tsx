@@ -19,6 +19,7 @@ import {
   uploadMemberDocument,
 } from "@/lib/api";
 import { Locale, MessageKey, t } from "@/lib/i18n";
+import { normalizeUploadFile } from "@/lib/normalizeUploadFile";
 import IdCameraCapture from "./IdCameraCapture";
 
 const SLOT_LABEL: Record<string, MessageKey> = {
@@ -131,14 +132,16 @@ export default function StepDocumentUpload(props: Props) {
 
   const handleFile = async (documentType: string, file: File | null) => {
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      setError(t(locale, "idUploadImageOnly"));
-      return;
-    }
     setError(null);
     setBusySlot(documentType);
     try {
-      const uploadFile = await compressImageForUpload(file);
+      // Normalize first — Android may report empty/octet-stream for JPEGs.
+      const normalized = await normalizeUploadFile(file);
+      if (!normalized.type.startsWith("image/")) {
+        setError(t(locale, "idUploadImageOnly"));
+        return;
+      }
+      const uploadFile = await compressImageForUpload(normalized);
       const saved =
         props.mode === "member"
           ? await uploadMemberDocument(

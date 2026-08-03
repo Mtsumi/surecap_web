@@ -182,9 +182,10 @@ function isNetworkFetchError(error: unknown): boolean {
   );
 }
 
-function networkFetchError(): Error {
+function networkFetchError(detail?: string): Error {
+  const extra = detail ? ` File: ${detail}.` : "";
   return new Error(
-    "Upload could not complete (connection interrupted). Check Wi‑Fi, disable Brave Shields for this site if enabled, then retry. Files under a few MB are fine."
+    `Upload could not complete (connection interrupted). Stay on this tab while uploading, try Wi‑Fi, then retry. Limit is about 10 MB, not 1 MB.${extra}`
   );
 }
 
@@ -260,12 +261,20 @@ async function apiFetchVoid(path: string, init?: RequestInit): Promise<void> {
   }
 }
 
+function formDataFileLabel(form: FormData): string | undefined {
+  const value = form.get("file");
+  if (!(value instanceof File)) return undefined;
+  const kb = Math.max(1, Math.round(value.size / 1024));
+  return `${value.name || "file"} · ${kb} KB · ${value.type || "unknown"}`;
+}
+
 async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
   const headers: Record<string, string> = {};
   if (API_URL.includes("ngrok")) {
     headers["ngrok-skip-browser-warning"] = "1";
   }
 
+  const fileLabel = formDataFileLabel(form);
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), 90_000);
   let res: Response;
@@ -279,10 +288,12 @@ async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
       throw new Error(
-        "Upload timed out. Try again on Wi‑Fi, or use a PDF under a few MB."
+        `Upload timed out. Try Wi‑Fi or a smaller PDF/photo (under a few MB).${
+          fileLabel ? ` File: ${fileLabel}.` : ""
+        }`
       );
     }
-    if (isNetworkFetchError(error)) throw networkFetchError();
+    if (isNetworkFetchError(error)) throw networkFetchError(fileLabel);
     throw error;
   } finally {
     window.clearTimeout(timer);
