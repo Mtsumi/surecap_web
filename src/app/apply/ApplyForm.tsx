@@ -636,10 +636,10 @@ export default function ApplyForm() {
       return;
     }
 
-    void tryResumeLatestDraft().then((ok) => {
-      if (ok || !loadLatestApplyProgress()) {
-        didAttemptDraftResume = true;
-      }
+    // One automatic attempt per cold load. Transient failures can still be
+    // retried via visibility/pageshow (maybeResume) without spinning on load.
+    void tryResumeLatestDraft().finally(() => {
+      didAttemptDraftResume = true;
     });
   }, [loading, step, selectedUnit, buildings, tryResumeLatestDraft]);
 
