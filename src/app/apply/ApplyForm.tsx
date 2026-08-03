@@ -628,8 +628,19 @@ export default function ApplyForm() {
     if (step !== "building" || selectedUnit) return;
     if (buildings.length === 0) return;
 
-    didAttemptDraftResume = true;
-    void tryResumeLatestDraft();
+    // Only lock the auto-resume once we have decided there is nothing to restore,
+    // or after a successful restore — otherwise a transient failure never retries.
+    const saved = loadLatestApplyProgress();
+    if (!saved) {
+      didAttemptDraftResume = true;
+      return;
+    }
+
+    void tryResumeLatestDraft().then((ok) => {
+      if (ok || !loadLatestApplyProgress()) {
+        didAttemptDraftResume = true;
+      }
+    });
   }, [loading, step, selectedUnit, buildings, tryResumeLatestDraft]);
 
   // Android tab discard / soft reload: re-open draft when user returns to a bare apply page.
@@ -640,14 +651,13 @@ export default function ApplyForm() {
       if (stepRef.current !== "building") return;
       if (buildings.length === 0) return;
       if (!loadLatestApplyProgress()) return;
-      // Allow another resume attempt after the page was discarded.
-      didAttemptDraftResume = false;
+      if (resumeInFlightRef.current) return;
       void tryResumeLatestDraft().then((ok) => {
         if (ok) didAttemptDraftResume = true;
       });
     };
     const onPageShow = (event: PageTransitionEvent) => {
-      // Always re-check after bfcache restore or hard reload.
+      // BFCache restore: React state may be empty while storage still has a draft.
       if (event.persisted) {
         maybeResume();
       }

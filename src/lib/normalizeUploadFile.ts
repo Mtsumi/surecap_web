@@ -29,10 +29,16 @@ export function detectMimeFromBytes(bytes: Uint8Array): string | null {
   ) {
     return "image/webp";
   }
-  // HEIC/HEIF brand in ftyp box
-  if (bytes.length >= 12) {
-    const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]);
-    if (["heic", "heix", "hevc", "mif1", "msf1"].includes(brand.toLowerCase())) {
+  // HEIC/HEIF: ISO BMFF with ftyp brand (bytes 4–7 = "ftyp", 8–11 = major brand)
+  if (
+    bytes.length >= 12 &&
+    bytes[4] === 0x66 &&
+    bytes[5] === 0x74 &&
+    bytes[6] === 0x79 &&
+    bytes[7] === 0x70
+  ) {
+    const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]).toLowerCase();
+    if (["heic", "heix", "hevc", "hevx", "mif1", "msf1"].includes(brand)) {
       return "image/heic";
     }
   }
@@ -84,12 +90,31 @@ export async function normalizeUploadFile(file: File): Promise<File> {
   }
 
   const declared = (file.type || "").split(";", 1)[0].trim().toLowerCase();
+  if (!detected && (declared === "image/heic" || declared === "image/heif")) {
+    throw new Error(
+      "HEIC photos are not supported. Save as JPEG or take a new photo, or use a PDF."
+    );
+  }
+
   const mime =
     detected ||
     (declared && declared !== "application/octet-stream" ? declared : "") ||
     "application/octet-stream";
 
   if (!detected && mime === "application/octet-stream") {
+    throw new Error(
+      "Unsupported file. Use a PDF, JPEG, PNG, or WebP payslip/photo."
+    );
+  }
+
+  // Refuse content types the server cannot accept even if the browser declared them.
+  const allowed = new Set([
+    "application/pdf",
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ]);
+  if (!allowed.has(mime)) {
     throw new Error(
       "Unsupported file. Use a PDF, JPEG, PNG, or WebP payslip/photo."
     );
