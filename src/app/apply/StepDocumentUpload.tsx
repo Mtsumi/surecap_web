@@ -19,6 +19,7 @@ import {
   uploadMemberDocument,
 } from "@/lib/api";
 import { Locale, MessageKey, t } from "@/lib/i18n";
+import { normalizeUploadFile } from "@/lib/normalizeUploadFile";
 import IdCameraCapture from "./IdCameraCapture";
 
 const SLOT_LABEL: Record<string, MessageKey> = {
@@ -138,7 +139,8 @@ export default function StepDocumentUpload(props: Props) {
     setError(null);
     setBusySlot(documentType);
     try {
-      const uploadFile = await compressImageForUpload(file);
+      const normalized = await normalizeUploadFile(file);
+      const uploadFile = await compressImageForUpload(normalized);
       const saved =
         props.mode === "member"
           ? await uploadMemberDocument(

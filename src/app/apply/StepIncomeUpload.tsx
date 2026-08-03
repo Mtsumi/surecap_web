@@ -19,6 +19,7 @@ import {
   uploadInviteDocument,
   uploadMemberDocument,
 } from "@/lib/api";
+import { normalizeUploadFile } from "@/lib/normalizeUploadFile";
 import { Locale, MessageKey, t } from "@/lib/i18n";
 
 const LIST_LOAD_FAILED =
@@ -145,13 +146,15 @@ export default function StepIncomeUpload(props: Props) {
     setError(null);
     setBusySlot(documentType);
     try {
-      const tooLarge = uploadFileTooLargeMessage(file);
+      // Read + fix MIME before upload (Android pickers often need this).
+      const normalized = await normalizeUploadFile(file);
+      const tooLarge = uploadFileTooLargeMessage(normalized);
       if (tooLarge) {
         setError(tooLarge);
         return;
       }
-      // Same as ID: phone camera JPEGs often exceed mobile/proxy body limits.
-      const uploadFile = await compressImageForUpload(file);
+      // Phone camera JPEGs often exceed mobile/proxy body limits.
+      const uploadFile = await compressImageForUpload(normalized);
       const saved =
         props.mode === "member"
           ? await uploadMemberDocument(
