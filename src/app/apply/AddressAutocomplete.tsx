@@ -86,6 +86,12 @@ export default function AddressAutocomplete({
     onChangeRef.current = onChange;
   }, [onChange]);
 
+  const syncInputFromProp = useCallback(() => {
+    const el = inputRef.current;
+    if (!el || el.value === value) return;
+    el.value = value;
+  }, [value]);
+
   const bindAutocomplete = useCallback(() => {
     const input = inputRef.current;
     if (!input || !window.google?.maps?.places || manualOnly || !apiKey) return false;
@@ -117,12 +123,9 @@ export default function AddressAutocomplete({
   }, [apiKey, manualOnly]);
 
   useEffect(() => {
-    const el = inputRef.current;
-    if (!el || document.activeElement === el) return;
-    if (el.value !== value) {
-      el.value = value;
-    }
-  }, [value]);
+    if (document.activeElement === inputRef.current) return;
+    syncInputFromProp();
+  }, [syncInputFromProp]);
 
   useEffect(() => {
     if (!apiKey || manualOnly) {
@@ -165,6 +168,7 @@ export default function AddressAutocomplete({
         autoComplete={apiKey && !manualOnly && !mapsFailed ? "off" : "street-address"}
         defaultValue={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={() => syncInputFromProp()}
         onFocus={() => {
           if (!manualOnly && apiKey && !mapsFailed && !autocompleteRef.current) {
             void loadGoogleMaps(apiKey)
