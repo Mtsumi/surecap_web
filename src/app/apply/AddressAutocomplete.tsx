@@ -82,7 +82,9 @@ export default function AddressAutocomplete({
   const [mapsFailed, setMapsFailed] = useState(false);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-  onChangeRef.current = onChange;
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   const bindAutocomplete = useCallback(() => {
     const input = inputRef.current;
