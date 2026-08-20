@@ -16,6 +16,7 @@ describe("incomeUpload", () => {
     ]);
     expect(incomeSlotsForType("self_employed")).toEqual([
       "notice_of_assessment_year_1",
+      "notice_of_assessment_year_2",
     ]);
     expect(incomeSlotsForType("other")).toEqual(["proof_of_income"]);
   });
@@ -26,6 +27,15 @@ describe("incomeUpload", () => {
     ).toBe(true);
     expect(incomeUploadComplete("employed", ["pay_slip_1"])).toBe(false);
     expect(incomeUploadComplete("employed", [])).toBe(false);
+    expect(
+      incomeUploadComplete("self_employed", [
+        "notice_of_assessment_year_1",
+        "notice_of_assessment_year_2",
+      ])
+    ).toBe(true);
+    expect(
+      incomeUploadComplete("self_employed", ["notice_of_assessment_year_1"])
+    ).toBe(false);
   });
 
   it("drops stale income docs when employment type changes", () => {

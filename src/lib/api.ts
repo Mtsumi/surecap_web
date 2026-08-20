@@ -1,3 +1,10 @@
+import {
+  isRetryableUploadError,
+  sleep,
+  uploadNetworkErrorMessage,
+  uploadTimeoutErrorMessage,
+} from "./uploadErrors";
+
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
@@ -107,13 +114,13 @@ export type ApplicationUpdate = Partial<{
   housing_status?: "renting" | "own_home" | null;
   move_in_date: string;
   renting_with_others: boolean;
-  landlord_phone: string;
+  landlord_phone: string | null;
   hr_phone: string;
-  landlord_name: string;
+  landlord_name: string | null;
   hr_name: string;
-  previous_landlord_phone?: string;
-  previous_landlord_name?: string;
-  landlord_email?: string;
+  previous_landlord_phone?: string | null;
+  previous_landlord_name?: string | null;
+  landlord_email?: string | null;
   hr_email?: string;
   referral_source: string;
   facebook_url: string;
@@ -183,10 +190,7 @@ function isNetworkFetchError(error: unknown): boolean {
 }
 
 function networkFetchError(detail?: string): Error {
-  const extra = detail ? ` File: ${detail}.` : "";
-  return new Error(
-    `Upload could not complete (connection interrupted). Stay on this tab while uploading, try Wi‑Fi, then retry. Limit is about 10 MB, not 1 MB.${extra}`
-  );
+  return new Error(uploadNetworkErrorMessage(detail));
 }
 
 /** Map stale-backend upload errors to a clearer message on mobile. */
@@ -268,7 +272,7 @@ function formDataFileLabel(form: FormData): string | undefined {
   return `${value.name || "file"} · ${kb} KB · ${value.type || "unknown"}`;
 }
 
-async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
+async function postUploadForm<T>(path: string, form: FormData): Promise<T> {
   const headers: Record<string, string> = {};
   if (API_URL.includes("ngrok")) {
     headers["ngrok-skip-browser-warning"] = "1";
@@ -287,11 +291,7 @@ async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error(
-        `Upload timed out. Try Wi‑Fi or a smaller PDF/photo (under a few MB).${
-          fileLabel ? ` File: ${fileLabel}.` : ""
-        }`
-      );
+      throw new Error(uploadTimeoutErrorMessage(fileLabel));
     }
     if (isNetworkFetchError(error)) throw networkFetchError(fileLabel);
     throw error;
@@ -309,7 +309,7 @@ async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
   if (!res.ok || body?.status === "error") {
     const fallback =
       res.status === 413
-        ? "File too large for the server. Try a smaller PDF or photo."
+        ? "File too large for the server (limit about 10 MB). Try a smaller PDF or photo."
         : res.statusText || `Upload failed (${res.status})`;
     throw new ApiError(
       body?.message || fallback,
@@ -320,6 +320,16 @@ async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
     throw new Error(body?.message || "Empty API response");
   }
   return body.data;
+}
+
+async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
+  try {
+    return await postUploadForm<T>(path, form);
+  } catch (error) {
+    if (!isRetryableUploadError(error)) throw error;
+    await sleep(1500);
+    return postUploadForm<T>(path, form);
+  }
 }
 
 export function fetchBuildings(): Promise<Building[]> {
