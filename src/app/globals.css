@@ -9,6 +9,11 @@ body {
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 
+/* Google Places dropdown must sit above form sections */
+.pac-container {
+  z-index: 10000;
+}
+
 /* Montreal Living admin (Steve mock tokens) */
 .admin-app {
   --ml-ink: #1b2733;

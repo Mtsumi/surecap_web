@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Locale, t } from "@/lib/i18n";
 
 type Props = {
@@ -11,6 +11,8 @@ type Props = {
   required?: boolean;
   inputClass: string;
   manualOnly?: boolean;
+  /** Stable id per field — required when multiple autocompletes share a page. */
+  fieldKey: string;
 };
 
 declare global {
@@ -53,6 +55,15 @@ function newSessionToken(): google.maps.places.AutocompleteSessionToken {
   return new google.maps.places.AutocompleteSessionToken();
 }
 
+function clearAutocompleteListeners(autocomplete: google.maps.places.Autocomplete) {
+  const eventApi = (
+    window.google?.maps as typeof google.maps & {
+      event?: { clearInstanceListeners: (instance: object) => void };
+    }
+  )?.event;
+  eventApi?.clearInstanceListeners(autocomplete);
+}
+
 export default function AddressAutocomplete({
   locale,
   label,
@@ -61,69 +72,112 @@ export default function AddressAutocomplete({
   required,
   inputClass,
   manualOnly = false,
+  fieldKey,
 }: Props) {
+  const reactId = useId();
+  const inputId = `${fieldKey}-${reactId.replace(/:/g, "")}`;
   const inputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  const [mapsFailed, setMapsFailed] = useState(false);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
   onChangeRef.current = onChange;
 
+  const bindAutocomplete = useCallback(() => {
+    const input = inputRef.current;
+    if (!input || !window.google?.maps?.places || manualOnly || !apiKey) return false;
+
+    if (autocompleteRef.current) {
+      clearAutocompleteListeners(autocompleteRef.current);
+      autocompleteRef.current = null;
+    }
+
+    const sessionToken = newSessionToken();
+    const autocomplete = new window.google.maps.places.Autocomplete(input, {
+      fields: ["formatted_address", "place_id"],
+      types: ["address"],
+      componentRestrictions: { country: "ca" },
+      sessionToken,
+    });
+
+    autocomplete.addListener("place_changed", () => {
+      const place = autocomplete.getPlace();
+      if (place?.formatted_address && inputRef.current) {
+        inputRef.current.value = place.formatted_address;
+        onChangeRef.current(place.formatted_address, place.place_id);
+      }
+      autocomplete.setOptions({ sessionToken: newSessionToken() });
+    });
+
+    autocompleteRef.current = autocomplete;
+    return true;
+  }, [apiKey, manualOnly]);
+
   useEffect(() => {
-    if (!apiKey || !inputRef.current || manualOnly) return;
+    const el = inputRef.current;
+    if (!el || document.activeElement === el) return;
+    if (el.value !== value) {
+      el.value = value;
+    }
+  }, [value]);
+
+  useEffect(() => {
+    if (!apiKey || manualOnly) {
+      setMapsFailed(false);
+      return;
+    }
 
     let cancelled = false;
 
     loadGoogleMaps(apiKey)
       .then(() => {
-        if (cancelled || !inputRef.current || !window.google) return;
-
-        const sessionToken = newSessionToken();
-        const autocomplete = new window.google.maps.places.Autocomplete(
-          inputRef.current,
-          {
-            fields: ["formatted_address", "place_id"],
-            types: ["address"],
-            componentRestrictions: { country: "ca" },
-            sessionToken,
-          }
-        );
-
-        autocomplete.addListener("place_changed", () => {
-          const place = autocomplete.getPlace();
-          if (place?.formatted_address) {
-            onChangeRef.current(place.formatted_address, place.place_id);
-          }
-          autocomplete.setOptions({ sessionToken: newSessionToken() });
-        });
-
-        autocompleteRef.current = autocomplete;
+        if (cancelled) return;
+        if (bindAutocomplete()) {
+          setMapsFailed(false);
+        }
       })
       .catch(() => {
-        /* plain text fallback when Maps script fails */
+        if (!cancelled) setMapsFailed(true);
       });
 
     return () => {
       cancelled = true;
-      autocompleteRef.current = null;
+      if (autocompleteRef.current) {
+        clearAutocompleteListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
+      }
     };
-  }, [apiKey, manualOnly]);
+  }, [apiKey, manualOnly, fieldKey, bindAutocomplete]);
 
-  const showManualHint = manualOnly || !apiKey;
+  const showManualHint = manualOnly || !apiKey || mapsFailed;
 
   return (
-    <label className="block text-sm text-[#57534e]">
+    <label className="block text-sm text-[#57534e]" htmlFor={inputId}>
       {label}
       <input
+        id={inputId}
         ref={inputRef}
         type="text"
         required={required}
-        autoComplete={apiKey && !manualOnly ? "off" : "street-address"}
-        value={value}
+        autoComplete={apiKey && !manualOnly && !mapsFailed ? "off" : "street-address"}
+        defaultValue={value}
         onChange={(e) => onChange(e.target.value)}
+        onFocus={() => {
+          if (!manualOnly && apiKey && !mapsFailed && !autocompleteRef.current) {
+            void loadGoogleMaps(apiKey)
+              .then(() => {
+                if (bindAutocomplete()) setMapsFailed(false);
+              })
+              .catch(() => setMapsFailed(true));
+          }
+        }}
         className={inputClass}
         placeholder={showManualHint ? t(locale, "addressManualHint") : undefined}
       />
+      {mapsFailed && !manualOnly && apiKey ? (
+        <p className="mt-1 text-xs text-[#78716c]">{t(locale, "addressSuggestionsUnavailable")}</p>
+      ) : null}
     </label>
   );
 }

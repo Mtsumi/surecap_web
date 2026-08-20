@@ -29,7 +29,8 @@ const SLOT_LABEL: Record<string, MessageKey> = {
   pay_slip_1: "incomePaySlip1",
   pay_slip_2: "incomePaySlip2",
   pay_slip_3: "incomePaySlip3",
-  notice_of_assessment_year_1: "incomeNoa",
+  notice_of_assessment_year_1: "incomeNoa1",
+  notice_of_assessment_year_2: "incomeNoa2",
   proof_of_income: "incomeProof",
 };
 
@@ -287,7 +288,9 @@ export default function StepIncomeUpload(props: Props) {
                 )}
               </div>
               {busy && busySlot === slot && (
-                <p className="mt-1 text-xs text-[#78716c]">{t(locale, "loading")}</p>
+                <p className="mt-1 text-xs text-[#78716c]">
+                  {t(locale, "uploadStayOnTab")}
+                </p>
               )}
             </div>
           );

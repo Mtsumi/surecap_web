@@ -231,16 +231,20 @@ function formPayload(
     move_in_date: fields.move_in_date,
     renting_with_others: fields.renting_with_others ?? undefined,
     landlord_name:
-      fields.housing_status === "own_home" ? "" : fields.landlord_name.trim(),
+      fields.housing_status === "own_home"
+        ? null
+        : fields.landlord_name.trim() || undefined,
     landlord_phone:
-      fields.housing_status === "own_home" ? "" : fields.landlord_phone.trim(),
+      fields.housing_status === "own_home"
+        ? null
+        : fields.landlord_phone.trim() || undefined,
     previous_landlord_name:
       fields.housing_status === "own_home" || !fields.previous_address.trim()
-        ? undefined
+        ? null
         : fields.previous_landlord_name.trim(),
     previous_landlord_phone:
       fields.housing_status === "own_home" || !fields.previous_address.trim()
-        ? undefined
+        ? null
         : fields.previous_landlord_phone.trim(),
     hr_name: fields.hr_name.trim(),
     hr_phone: fields.hr_phone.trim(),
@@ -1456,6 +1460,7 @@ export default function ApplyForm() {
             </label>
             <div id="apply-field-current_address">
               <AddressAutocomplete
+                fieldKey="current-address"
                 locale={locale}
                 label={t(locale, "currentAddress")}
                 value={form.current_address}
@@ -1631,6 +1636,7 @@ export default function ApplyForm() {
               </>
             ) : null}
             <AddressAutocomplete
+              fieldKey="previous-address"
               locale={locale}
               label={t(locale, "previousAddress")}
               value={form.previous_address}

@@ -420,8 +420,6 @@ export default function InviteForm({ token }: Props) {
       payload.housing_status = form.housing_status;
       if (form.housing_status === "own_home") {
         payload.lease_in_name = false;
-        payload.landlord_name = "";
-        payload.landlord_phone = "";
       } else {
         payload.lease_in_name = form.lease_in_name === true;
         payload.landlord_name = form.landlord_name.trim();
@@ -702,6 +700,7 @@ export default function InviteForm({ token }: Props) {
             </p>
           )}
           <AddressAutocomplete
+            fieldKey="current-address"
             locale={locale}
             label={t(locale, "currentAddress")}
             value={form.current_address}
@@ -856,6 +855,7 @@ export default function InviteForm({ token }: Props) {
             </fieldset>
           )}
           <AddressAutocomplete
+            fieldKey="previous-address"
             locale={locale}
             label={t(locale, "previousAddress")}
             value={form.previous_address}

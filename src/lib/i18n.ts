@@ -62,7 +62,7 @@ export const messages = {
       "Tell us about your employment and upload proof of income. We may also call the references below.",
     incomeDocumentsTitle: "Proof of income",
     incomeDocumentsHint:
-      "Upload a clear photo or PDF. Employed: three pay slips from the last 6 months. Self-employed: your most recent CRA notice of assessment.",
+      "Upload a clear photo or PDF. Employed: three pay slips from the last 6 months. Self-employed: your two most recent CRA notices of assessment.",
     employmentType: "Employment status",
     employmentEmployed: "Employed",
     employmentSelfEmployed: "Self-employed",
@@ -74,6 +74,8 @@ export const messages = {
     incomePaySlip2: "Pay slip 2",
     incomePaySlip3: "Pay slip 3",
     incomeNoa: "CRA notice of assessment",
+    incomeNoa1: "CRA notice of assessment (most recent year)",
+    incomeNoa2: "CRA notice of assessment (previous year)",
     incomeProof: "Proof of income",
     incomeUploadComplete: "Income document saved.",
     incomeUploadRequired: "Please upload your proof of income before continuing.",
@@ -148,6 +150,9 @@ export const messages = {
     error: "Something went wrong. Please try again.",
     langToggle: "Français",
     addressManualHint: "Start typing to search, or enter your address manually.",
+    addressSuggestionsUnavailable:
+      "Address suggestions unavailable (often blocked by Brave or ad blockers). Type your full address manually.",
+    uploadStayOnTab: "Uploading… please stay on this page.",
     addressNotInCanada: "My current address is not in Canada",
     addressApartment: "Apartment / unit # (if applicable)",
     addressApartmentHint:
@@ -257,7 +262,7 @@ export const messages = {
       "Indiquez votre situation d'emploi et téléversez une preuve de revenu. Nous pourrions aussi appeler les références ci-dessous.",
     incomeDocumentsTitle: "Preuve de revenu",
     incomeDocumentsHint:
-      "Téléversez une photo ou un PDF lisible. Salarié : trois fiches de paie des 6 derniers mois. Travailleur autonome : votre avis de cotisation de l'ARC le plus récent.",
+      "Téléversez une photo ou un PDF lisible. Salarié : trois fiches de paie des 6 derniers mois. Travailleur autonome : vos deux avis de cotisation de l'ARC les plus récents.",
     employmentType: "Statut d'emploi",
     employmentEmployed: "Salarié",
     employmentSelfEmployed: "Travailleur autonome",
@@ -269,6 +274,8 @@ export const messages = {
     incomePaySlip2: "Talon de paie 2",
     incomePaySlip3: "Talon de paie 3",
     incomeNoa: "Avis de cotisation de l'ARC",
+    incomeNoa1: "Avis de cotisation de l'ARC (année la plus récente)",
+    incomeNoa2: "Avis de cotisation de l'ARC (année précédente)",
     incomeProof: "Preuve de revenu",
     incomeUploadComplete: "Document de revenu enregistré.",
     incomeUploadRequired: "Veuillez téléverser votre preuve de revenu avant de continuer.",
@@ -346,6 +353,9 @@ export const messages = {
     langToggle: "English",
     addressManualHint:
       "Commencez à taper pour rechercher, ou entrez l'adresse manuellement.",
+    addressSuggestionsUnavailable:
+      "Suggestions d'adresse indisponibles (souvent bloquées par Brave ou un bloqueur). Entrez l'adresse manuellement.",
+    uploadStayOnTab: "Téléversement en cours… veuillez rester sur cette page.",
     addressNotInCanada: "Mon adresse actuelle n'est pas au Canada",
     addressApartment: "Appartement / no d'unité (si applicable)",
     addressApartmentHint:
