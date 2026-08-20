@@ -79,6 +79,8 @@ export default function AddressAutocomplete({
   const inputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
+  /** Bumped on cleanup so stale focus/effect loads do not rebind. */
+  const bindGenerationRef = useRef(0);
   const [mapsFailed, setMapsFailed] = useState(false);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
@@ -122,6 +124,25 @@ export default function AddressAutocomplete({
     return true;
   }, [apiKey, manualOnly]);
 
+  const loadAndBind = useCallback(
+    (generation: number) => {
+      if (!apiKey || manualOnly) return;
+      void loadGoogleMaps(apiKey)
+        .then(() => {
+          if (bindGenerationRef.current !== generation) return;
+          if (bindAutocomplete()) {
+            setMapsFailed(false);
+          }
+        })
+        .catch(() => {
+          if (bindGenerationRef.current === generation) {
+            setMapsFailed(true);
+          }
+        });
+    },
+    [apiKey, manualOnly, bindAutocomplete]
+  );
+
   useEffect(() => {
     if (document.activeElement === inputRef.current) return;
     syncInputFromProp();
@@ -130,30 +151,24 @@ export default function AddressAutocomplete({
   useEffect(() => {
     if (!apiKey || manualOnly) {
       setMapsFailed(false);
+      if (autocompleteRef.current) {
+        clearAutocompleteListeners(autocompleteRef.current);
+        autocompleteRef.current = null;
+      }
       return;
     }
 
-    let cancelled = false;
-
-    loadGoogleMaps(apiKey)
-      .then(() => {
-        if (cancelled) return;
-        if (bindAutocomplete()) {
-          setMapsFailed(false);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setMapsFailed(true);
-      });
+    const generation = ++bindGenerationRef.current;
+    loadAndBind(generation);
 
     return () => {
-      cancelled = true;
+      bindGenerationRef.current += 1;
       if (autocompleteRef.current) {
         clearAutocompleteListeners(autocompleteRef.current);
         autocompleteRef.current = null;
       }
     };
-  }, [apiKey, manualOnly, fieldKey, bindAutocomplete]);
+  }, [apiKey, manualOnly, fieldKey, loadAndBind]);
 
   const showManualHint = manualOnly || !apiKey || mapsFailed;
 
@@ -171,11 +186,7 @@ export default function AddressAutocomplete({
         onBlur={() => syncInputFromProp()}
         onFocus={() => {
           if (!manualOnly && apiKey && !mapsFailed && !autocompleteRef.current) {
-            void loadGoogleMaps(apiKey)
-              .then(() => {
-                if (bindAutocomplete()) setMapsFailed(false);
-              })
-              .catch(() => setMapsFailed(true));
+            loadAndBind(bindGenerationRef.current);
           }
         }}
         className={inputClass}
