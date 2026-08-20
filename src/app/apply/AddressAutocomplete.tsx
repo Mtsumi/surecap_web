@@ -22,6 +22,12 @@ declare global {
   }
 }
 
+const MAPS_LOAD_ERROR = new Error("Failed to load Google Maps");
+
+function markMapsScriptFailed(script: HTMLScriptElement) {
+  script.dataset.surecapMapsFailed = "1";
+}
+
 function loadGoogleMaps(apiKey: string): Promise<void> {
   if (window.google?.maps?.places) {
     return Promise.resolve();
@@ -35,10 +41,20 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
         resolve();
         return;
       }
+      // Prior load already failed — later error listeners never fire.
+      if (existing.dataset.surecapMapsFailed === "1") {
+        reject(MAPS_LOAD_ERROR);
+        return;
+      }
       existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Failed to load Google Maps")), {
-        once: true,
-      });
+      existing.addEventListener(
+        "error",
+        () => {
+          markMapsScriptFailed(existing);
+          reject(MAPS_LOAD_ERROR);
+        },
+        { once: true }
+      );
       return;
     }
     window.__surecapMapsInit = () => resolve();
@@ -46,7 +62,10 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=__surecapMapsInit`;
     script.async = true;
     script.dataset.surecapMaps = "1";
-    script.onerror = () => reject(new Error("Failed to load Google Maps"));
+    script.onerror = () => {
+      markMapsScriptFailed(script);
+      reject(MAPS_LOAD_ERROR);
+    };
     document.head.appendChild(script);
   });
 }
