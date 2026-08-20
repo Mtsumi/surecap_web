@@ -24,6 +24,9 @@ declare global {
 
 const MAPS_LOAD_ERROR = new Error("Failed to load Google Maps");
 
+/** Shared readiness promise so concurrent callers await the callback, not script `load`. */
+let mapsLoadPromise: Promise<void> | null = null;
+
 function markMapsScriptFailed(script: HTMLScriptElement) {
   script.dataset.surecapMapsFailed = "1";
 }
@@ -32,42 +35,70 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
   if (window.google?.maps?.places) {
     return Promise.resolve();
   }
-  return new Promise((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      'script[data-surecap-maps="1"]'
-    );
-    if (existing) {
+
+  const existing = document.querySelector<HTMLScriptElement>(
+    'script[data-surecap-maps="1"]'
+  );
+  if (existing?.dataset.surecapMapsFailed === "1") {
+    return Promise.reject(MAPS_LOAD_ERROR);
+  }
+
+  if (mapsLoadPromise) {
+    return mapsLoadPromise;
+  }
+
+  mapsLoadPromise = new Promise<void>((resolve, reject) => {
+    const settleOk = () => {
       if (window.google?.maps?.places) {
         resolve();
         return;
       }
-      // Prior load already failed — later error listeners never fire.
-      if (existing.dataset.surecapMapsFailed === "1") {
-        reject(MAPS_LOAD_ERROR);
+      mapsLoadPromise = null;
+      reject(MAPS_LOAD_ERROR);
+    };
+    const settleErr = (script: HTMLScriptElement) => {
+      markMapsScriptFailed(script);
+      mapsLoadPromise = null;
+      reject(MAPS_LOAD_ERROR);
+    };
+
+    if (window.google?.maps?.places) {
+      resolve();
+      return;
+    }
+
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      'script[data-surecap-maps="1"]'
+    );
+    if (existingScript) {
+      if (existingScript.dataset.surecapMapsFailed === "1") {
+        settleErr(existingScript);
         return;
       }
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener(
+      // Script already inserted by another caller — wait for API callback, not load.
+      const previous = window.__surecapMapsInit;
+      window.__surecapMapsInit = () => {
+        previous?.();
+        settleOk();
+      };
+      existingScript.addEventListener(
         "error",
-        () => {
-          markMapsScriptFailed(existing);
-          reject(MAPS_LOAD_ERROR);
-        },
+        () => settleErr(existingScript),
         { once: true }
       );
       return;
     }
-    window.__surecapMapsInit = () => resolve();
+
+    window.__surecapMapsInit = () => settleOk();
     const script = document.createElement("script");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places&loading=async&callback=__surecapMapsInit`;
     script.async = true;
     script.dataset.surecapMaps = "1";
-    script.onerror = () => {
-      markMapsScriptFailed(script);
-      reject(MAPS_LOAD_ERROR);
-    };
+    script.onerror = () => settleErr(script);
     document.head.appendChild(script);
   });
+
+  return mapsLoadPromise;
 }
 
 function newSessionToken(): google.maps.places.AutocompleteSessionToken {
