@@ -11,7 +11,6 @@ import {
   InviteeSubmitPayload,
   MemberDocument,
   fetchInvite,
-  reissueInviteUploadToken,
   submitInvite,
 } from "@/lib/api";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
@@ -126,10 +125,6 @@ function stepLabel(locale: Locale, step: Step): string {
 
 type Props = { token: string };
 
-function inviteUploadTokenKey(inviteToken: string): string {
-  return `surecap-invite-upload-token:${inviteToken}`;
-}
-
 export default function InviteForm({ token }: Props) {
   const [locale, setLocale] = useState<Locale>("fr");
   const [context, setContext] = useState<InviteContext | null>(null);
@@ -170,25 +165,12 @@ export default function InviteForm({ token }: Props) {
     setLoading(true);
     setError(null);
     fetchInvite(token)
-      .then(async (data) => {
+      .then((data) => {
         if (cancelled) return;
-        let uploadToken = data.upload_token;
-        if (!uploadToken && typeof window !== "undefined") {
-          uploadToken = sessionStorage.getItem(inviteUploadTokenKey(token));
-        }
-        if (!uploadToken && data.member_status === "invited") {
-          try {
-            const reissued = await reissueInviteUploadToken(token);
-            uploadToken = reissued.upload_token;
-          } catch {
-            if (!cancelled) setError(t(detectLocale(), "inviteExpired"));
-            return;
-          }
-        }
-        if (uploadToken && typeof window !== "undefined") {
-          sessionStorage.setItem(inviteUploadTokenKey(token), uploadToken);
-        }
-        setContext(uploadToken ? { ...data, upload_token: uploadToken } : data);
+        // Invitee ID/income uploads auth via the invite link itself (mode=invite).
+        // Do not reissue member upload tokens here — that revoked other sessions and
+        // left browsers stuck with a cached dead token ("Invalid upload token").
+        setContext(data);
         if (data.member_status === "submitted") {
           setStep("done");
           return;
@@ -307,7 +289,6 @@ export default function InviteForm({ token }: Props) {
     }
     if (
       current === "references" &&
-      context.upload_token &&
       !incomeUploadComplete(
         form.employment_type,
         incomeDocuments.map((doc) => doc.document_type)
@@ -347,7 +328,6 @@ export default function InviteForm({ token }: Props) {
   const handleSubmit = async () => {
     if (!role || !context) return;
     if (
-      context.upload_token &&
       !idUploadComplete(
         idKind,
         idDocuments.map((doc) => doc.document_type)
@@ -358,7 +338,6 @@ export default function InviteForm({ token }: Props) {
       return;
     }
     if (
-      context.upload_token &&
       !incomeUploadComplete(
         form.employment_type,
         incomeDocuments.map((doc) => doc.document_type)
@@ -648,18 +627,14 @@ export default function InviteForm({ token }: Props) {
               placeholder="https://"
             />
           </label>
-          {context.upload_token ? (
-            <StepDocumentUpload
-              mode="member"
-              locale={locale}
-              applicationId={context.application_id}
-              memberId={context.member_id}
-              uploadToken={context.upload_token}
-              idKind={idKind}
-              onIdKindChange={setIdKind}
-              onDocumentsChange={setIdDocuments}
-            />
-          ) : null}
+          <StepDocumentUpload
+            mode="invite"
+            locale={locale}
+            inviteToken={token}
+            idKind={idKind}
+            onIdKindChange={setIdKind}
+            onDocumentsChange={setIdDocuments}
+          />
           <button
             type="submit"
             className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white"
@@ -957,16 +932,14 @@ export default function InviteForm({ token }: Props) {
         >
           <h2 className="text-base font-medium text-[#292524]">{t(locale, "references")}</h2>
           <p className="text-sm text-[#78716c]">{t(locale, "referencesNote")}</p>
-          {context?.upload_token && (
-            <StepIncomeUpload
-              mode="invite"
-              locale={locale}
-              inviteToken={token}
-              employmentType={form.employment_type}
-              onEmploymentTypeChange={(type) => setField("employment_type", type)}
-              onDocumentsChange={setIncomeDocuments}
-            />
-          )}
+          <StepIncomeUpload
+            mode="invite"
+            locale={locale}
+            inviteToken={token}
+            employmentType={form.employment_type}
+            onEmploymentTypeChange={(type) => setField("employment_type", type)}
+            onDocumentsChange={setIncomeDocuments}
+          />
           <label className="block text-sm text-[#57534e]">
             {t(locale, "monthlyNetIncome")}
             <span className="mt-0.5 block text-xs text-[#a8a29e]">
