@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import {
   BuildingAdmin,
@@ -80,6 +80,7 @@ function BuildingJanitorSection({
   const [isEditing, setIsEditing] = useState(false);
   const [emailDraft, setEmailDraft] = useState(building.janitor_email ?? "");
   const [saving, setSaving] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isEditing) {
@@ -92,6 +93,11 @@ function BuildingJanitorSection({
     const currentEmail = (building.janitor_email ?? "").trim();
     if (nextEmail === currentEmail) {
       setIsEditing(false);
+      return;
+    }
+
+    if (nextEmail && !emailInputRef.current?.reportValidity()) {
+      onError(t("buildingsInvalidJanitorEmail"));
       return;
     }
 
@@ -144,6 +150,7 @@ function BuildingJanitorSection({
           <label className="block admin-field-label">
             {t("buildingsJanitorEmail")}
             <input
+              ref={emailInputRef}
               type="email"
               value={emailDraft}
               onChange={(e) => setEmailDraft(e.target.value)}
@@ -429,6 +436,7 @@ export default function BuildingsAdminPage() {
 
       {selectedBuilding ? (
         <BuildingJanitorSection
+          key={selectedBuilding.id}
           building={selectedBuilding}
           onUpdated={handleBuildingUpdated}
           onError={setError}
