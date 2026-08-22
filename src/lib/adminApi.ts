@@ -306,6 +306,7 @@ export function listUnitsAdmin(buildingId: number) {
   return adminFetch<UnitAdmin[]>(`/admin/buildings/${buildingId}/units`);
 }
 
+/** PATCH building settings; blank janitor_email clears the override (API uses ADMIN_EMAILS). */
 export function updateBuildingAdmin(
   buildingId: number,
   data: Partial<Pick<BuildingAdmin, "janitor_email">>
