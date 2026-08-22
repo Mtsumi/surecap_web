@@ -967,7 +967,8 @@ export default function ApplyForm() {
       );
       const app = await submitApplicationById(
         draftSession.applicationId,
-        draftSession.uploadToken
+        draftSession.uploadToken,
+        { preferred_locale: locale }
       );
       clearApplyProgress(selectedUnit.id);
       setSubmittedApplicationId(app.id);
