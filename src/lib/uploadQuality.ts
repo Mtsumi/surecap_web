@@ -1,3 +1,4 @@
+import { MemberDocument } from "@/lib/api";
 import { Locale, MessageKey, t } from "@/lib/i18n";
 
 export type UploadQuality = {
@@ -19,6 +20,27 @@ const FLAG_MESSAGE: Record<string, MessageKey> = {
   noa_blurry: "uploadQualityBlurry",
   quality_warn_after_retry: "uploadQualityRetryFlagged",
 };
+
+export function qualityFromDocument(doc: MemberDocument): UploadQuality | null {
+  const level = doc.quality_level;
+  if (!level || level === "ok") return null;
+  return {
+    level,
+    flags: doc.quality_flags ?? [],
+    upload_generation: doc.upload_generation ?? 1,
+  };
+}
+
+export function qualityBySlotFromDocuments(
+  documents: MemberDocument[]
+): Record<string, UploadQuality> {
+  const next: Record<string, UploadQuality> = {};
+  for (const doc of documents) {
+    const quality = qualityFromDocument(doc);
+    if (quality) next[doc.document_type] = quality;
+  }
+  return next;
+}
 
 export function uploadQualityBanner(
   quality: UploadQuality | null | undefined,

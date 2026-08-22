@@ -21,7 +21,7 @@ import {
 } from "@/lib/api";
 import { normalizeUploadFile } from "@/lib/normalizeUploadFile";
 import { Locale, MessageKey, t } from "@/lib/i18n";
-import { uploadQualityBanner, uploadQualityTone, UploadQuality } from "@/lib/uploadQuality";
+import { uploadQualityBanner, uploadQualityTone, qualityBySlotFromDocuments, UploadQuality } from "@/lib/uploadQuality";
 
 const LIST_LOAD_FAILED =
   "Could not load uploaded documents. Check your connection and try again.";
@@ -90,6 +90,7 @@ export default function StepIncomeUpload(props: Props) {
   onDocumentsChangeRef.current = onDocumentsChange;
 
   const publishDocuments = useCallback((next: MemberDocument[]) => {
+    setQualityBySlot(qualityBySlotFromDocuments(next));
     setDocuments((prev) => {
       if (documentsEqual(prev, next)) return prev;
       onDocumentsChangeRef.current?.(next);
@@ -137,11 +138,6 @@ export default function StepIncomeUpload(props: Props) {
         await deleteInviteDocument(props.inviteToken, documentType);
       }
       publishDocuments(documents.filter((doc) => doc.document_type !== documentType));
-      setQualityBySlot((prev) => {
-        const next = { ...prev };
-        delete next[documentType];
-        return next;
-      });
     } catch (e) {
       setError(uploadErrorMessage(e));
     } finally {
@@ -173,13 +169,12 @@ export default function StepIncomeUpload(props: Props) {
               uploadFile
             )
           : await uploadInviteDocument(props.inviteToken, documentType, uploadFile);
-      const saved = uploadResult.document;
-      setQualityBySlot((prev) => {
-        const next = { ...prev };
-        if (uploadResult.quality.level === "ok") delete next[documentType];
-        else next[documentType] = uploadResult.quality;
-        return next;
-      });
+      const saved = {
+        ...uploadResult.document,
+        quality_level: uploadResult.quality.level,
+        quality_flags: uploadResult.quality.flags,
+        upload_generation: uploadResult.quality.upload_generation,
+      };
       publishDocuments(
         [...documents.filter((doc) => doc.document_type !== documentType), saved].sort(
           (a, b) => a.document_type.localeCompare(b.document_type)
