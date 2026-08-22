@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import {
   BuildingAdmin,
   UnitAdmin,
   listBuildingsAdmin,
   listUnitsAdmin,
+  updateBuildingAdmin,
   updateUnitAdmin,
 } from "@/lib/adminApi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
@@ -60,6 +61,128 @@ function ForRentBadge({
     >
       {forRent ? t("buildingsForRent") : t("buildingsNotForRent")}
     </span>
+  );
+}
+
+type BuildingJanitorSectionProps = {
+  building: BuildingAdmin;
+  onUpdated: (building: BuildingAdmin) => void;
+  onError: (message: string) => void;
+  t: (key: AdminMessageKey) => string;
+};
+
+function BuildingJanitorSection({
+  building,
+  onUpdated,
+  onError,
+  t,
+}: BuildingJanitorSectionProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [emailDraft, setEmailDraft] = useState(building.janitor_email ?? "");
+  const [saving, setSaving] = useState(false);
+  const emailInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setEmailDraft(building.janitor_email ?? "");
+    }
+  }, [building.id, building.janitor_email, isEditing]);
+
+  const saveJanitorEmail = async () => {
+    const nextEmail = emailDraft.trim();
+    const currentEmail = (building.janitor_email ?? "").trim();
+    if (nextEmail === currentEmail) {
+      setIsEditing(false);
+      return;
+    }
+
+    if (nextEmail && !emailInputRef.current?.reportValidity()) {
+      onError(t("buildingsInvalidJanitorEmail"));
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const updated = await updateBuildingAdmin(building.id, {
+        janitor_email: nextEmail || null,
+      });
+      onUpdated(updated);
+      setIsEditing(false);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : t("buildingsGenericError"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className={`${adminUi.card} mt-6 p-4 sm:p-5`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-[var(--ml-ink)]">
+            {t("buildingsJanitorEmail")}
+          </h2>
+          <p className="mt-1 text-xs text-[var(--ml-steel)]">
+            {t("buildingsJanitorEmailHint")}
+          </p>
+        </div>
+        {!isEditing ? (
+          <button
+            type="button"
+            onClick={() => {
+              setEmailDraft(building.janitor_email ?? "");
+              setIsEditing(true);
+            }}
+            aria-label={t("buildingsEdit")}
+            className={adminUi.btnSecondary + " !p-2"}
+          >
+            <PencilIcon />
+          </button>
+        ) : null}
+      </div>
+
+      {!isEditing ? (
+        <p className="mt-3 break-all text-sm text-[var(--ml-ink)]">
+          {building.janitor_email?.trim() || t("buildingsJanitorFallback")}
+        </p>
+      ) : (
+        <div className="mt-3">
+          <label className="block admin-field-label">
+            {t("buildingsJanitorEmail")}
+            <input
+              ref={emailInputRef}
+              type="email"
+              value={emailDraft}
+              onChange={(e) => setEmailDraft(e.target.value)}
+              className={inputClass}
+              placeholder="janitor@example.com"
+              autoComplete="email"
+            />
+          </label>
+          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setEmailDraft(building.janitor_email ?? "");
+                setIsEditing(false);
+              }}
+              disabled={saving}
+              className={adminUi.btnSecondary + " w-full sm:w-auto"}
+            >
+              {t("buildingsCancel")}
+            </button>
+            <button
+              type="button"
+              onClick={saveJanitorEmail}
+              disabled={saving}
+              className={adminUi.btnPrimary + " w-full sm:w-auto"}
+            >
+              {saving ? t("buildingsSaving") : t("buildingsSave")}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -251,6 +374,12 @@ export default function BuildingsAdminPage() {
   const [error, setError] = useState<string | null>(null);
   const [loadingUnits, setLoadingUnits] = useState(false);
 
+  const selectedBuilding = buildings.find((b) => b.id === selectedId) ?? null;
+
+  const handleBuildingUpdated = (updated: BuildingAdmin) => {
+    setBuildings((prev) => prev.map((b) => (b.id === updated.id ? updated : b)));
+  };
+
   useEffect(() => {
     listBuildingsAdmin()
       .then((b) => {
@@ -304,6 +433,16 @@ export default function BuildingsAdminPage() {
           </button>
         ))}
       </div>
+
+      {selectedBuilding ? (
+        <BuildingJanitorSection
+          key={selectedBuilding.id}
+          building={selectedBuilding}
+          onUpdated={handleBuildingUpdated}
+          onError={setError}
+          t={t}
+        />
+      ) : null}
 
       {loadingUnits && units.length > 0 ? (
         <p className={`${adminUi.empty} mt-6`}>{t("loading")}</p>
