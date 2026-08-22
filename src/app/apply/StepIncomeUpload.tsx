@@ -21,6 +21,7 @@ import {
 } from "@/lib/api";
 import { normalizeUploadFile } from "@/lib/normalizeUploadFile";
 import { Locale, MessageKey, t } from "@/lib/i18n";
+import { uploadQualityBanner, uploadQualityTone, UploadQuality } from "@/lib/uploadQuality";
 
 const LIST_LOAD_FAILED =
   "Could not load uploaded documents. Check your connection and try again.";
@@ -77,6 +78,7 @@ export default function StepIncomeUpload(props: Props) {
   const inviteToken = props.mode === "invite" ? props.inviteToken : "";
 
   const [documents, setDocuments] = useState<MemberDocument[]>([]);
+  const [qualityBySlot, setQualityBySlot] = useState<Record<string, UploadQuality>>({});
   const [loadingList, setLoadingList] = useState(true);
   const [busySlot, setBusySlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -135,6 +137,11 @@ export default function StepIncomeUpload(props: Props) {
         await deleteInviteDocument(props.inviteToken, documentType);
       }
       publishDocuments(documents.filter((doc) => doc.document_type !== documentType));
+      setQualityBySlot((prev) => {
+        const next = { ...prev };
+        delete next[documentType];
+        return next;
+      });
     } catch (e) {
       setError(uploadErrorMessage(e));
     } finally {
@@ -156,7 +163,7 @@ export default function StepIncomeUpload(props: Props) {
       }
       // Phone camera JPEGs often exceed mobile/proxy body limits.
       const uploadFile = await compressImageForUpload(normalized);
-      const saved =
+      const uploadResult =
         props.mode === "member"
           ? await uploadMemberDocument(
               props.applicationId,
@@ -166,6 +173,13 @@ export default function StepIncomeUpload(props: Props) {
               uploadFile
             )
           : await uploadInviteDocument(props.inviteToken, documentType, uploadFile);
+      const saved = uploadResult.document;
+      setQualityBySlot((prev) => {
+        const next = { ...prev };
+        if (uploadResult.quality.level === "ok") delete next[documentType];
+        else next[documentType] = uploadResult.quality;
+        return next;
+      });
       publishDocuments(
         [...documents.filter((doc) => doc.document_type !== documentType), saved].sort(
           (a, b) => a.document_type.localeCompare(b.document_type)
@@ -257,6 +271,17 @@ export default function StepIncomeUpload(props: Props) {
               {uploaded && (
                 <p className="mt-1 text-xs text-[#3d5a45]">
                   {t(locale, "uploadSaved")}: {uploaded.original_filename}
+                </p>
+              )}
+              {qualityBySlot[slot] && (
+                <p
+                  className={`mt-2 rounded px-3 py-2 text-xs leading-relaxed ${
+                    uploadQualityTone(qualityBySlot[slot]) === "fail"
+                      ? "border border-[#e7c4c4] bg-[#fdf5f5] text-[#7f1d1d]"
+                      : "border border-[#f5e6c8] bg-[#fffbeb] text-[#92400e]"
+                  }`}
+                >
+                  {uploadQualityBanner(qualityBySlot[slot], locale)}
                 </p>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-3">
