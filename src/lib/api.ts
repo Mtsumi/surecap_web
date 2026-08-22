@@ -127,6 +127,7 @@ export type ApplicationUpdate = Partial<{
   linkedin_url: string;
   employment_type: "employed" | "self_employed" | "other";
   monthly_net_income: number;
+  preferred_locale?: "en" | "fr";
   roommates: RoommateContact[];
   guarantor: GuarantorContact | null;
 }>;
@@ -375,11 +376,13 @@ export function updateApplication(
 
 export function submitApplicationById(
   id: number,
-  uploadToken: string
+  uploadToken: string,
+  body?: { preferred_locale?: "en" | "fr" }
 ): Promise<Application> {
   const params = new URLSearchParams({ upload_token: uploadToken });
   return apiFetch<Application>(`/applications/${id}/submit?${params}`, {
     method: "POST",
+    body: JSON.stringify(body ?? {}),
   });
 }
 
@@ -430,6 +433,7 @@ export type InviteeSubmitPayload = {
   linkedin_url?: string;
   employment_type: "employed" | "self_employed" | "other";
   monthly_net_income: number;
+  preferred_locale?: "en" | "fr";
 };
 
 export type InviteeSubmitResult = {

@@ -377,6 +377,7 @@ export default function InviteForm({ token }: Props) {
       current_address: form.current_address.trim(),
       employment_type: form.employment_type,
       monthly_net_income: parseMonthlyNetIncome(form.monthly_net_income) ?? 0,
+      preferred_locale: locale,
       ...addressDatePayload(form),
     };
     if (form.current_apartment.trim()) {
