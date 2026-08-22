@@ -146,6 +146,7 @@ export type BuildingAdmin = {
   latitude: number | null;
   longitude: number | null;
   active: boolean;
+  janitor_email: string | null;
 };
 
 export type UnitAdmin = {
@@ -303,6 +304,16 @@ export function listBuildingsAdmin() {
 
 export function listUnitsAdmin(buildingId: number) {
   return adminFetch<UnitAdmin[]>(`/admin/buildings/${buildingId}/units`);
+}
+
+export function updateBuildingAdmin(
+  buildingId: number,
+  data: Partial<Pick<BuildingAdmin, "janitor_email">>
+) {
+  return adminFetch<BuildingAdmin>(`/admin/buildings/${buildingId}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  });
 }
 
 export function updateUnitAdmin(

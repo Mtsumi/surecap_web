@@ -62,6 +62,10 @@ export const adminMessages = {
     buildingsInvalidRent: "Loyer invalide.",
     buildingsEmptyUnits: "Aucun logement pour cet immeuble.",
     buildingsGenericError: "Une erreur est survenue.",
+    buildingsJanitorEmail: "Courriel du concierge",
+    buildingsJanitorEmailHint:
+      "Les avis de candidature pour cet immeuble sont envoyés ici. Laissez vide pour utiliser ADMIN_EMAILS.",
+    buildingsJanitorFallback: "Utilise ADMIN_EMAILS (non défini ici)",
     guarantorOutsideQuebecReview:
       "Garant hors Québec — vérification manuelle recommandée (actions juridiques limitées).",
   },
@@ -123,6 +127,10 @@ export const adminMessages = {
     buildingsInvalidRent: "Invalid rent amount.",
     buildingsEmptyUnits: "No units for this building.",
     buildingsGenericError: "Something went wrong.",
+    buildingsJanitorEmail: "Janitor email",
+    buildingsJanitorEmailHint:
+      "Application notifications for this building go here. Leave blank to use ADMIN_EMAILS.",
+    buildingsJanitorFallback: "Uses ADMIN_EMAILS (not set for this building)",
     guarantorOutsideQuebecReview:
       "Guarantor outside Quebec — manual review recommended (limited legal action).",
   },
