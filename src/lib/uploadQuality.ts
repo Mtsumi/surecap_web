@@ -27,6 +27,7 @@ export function qualityFromDocument(doc: MemberDocument): UploadQuality | null {
   return {
     level,
     flags: doc.quality_flags ?? [],
+    message: doc.quality_message ?? null,
     upload_generation: doc.upload_generation ?? 1,
   };
 }
@@ -40,6 +41,23 @@ export function qualityBySlotFromDocuments(
     if (quality) next[doc.document_type] = quality;
   }
   return next;
+}
+
+export function mergeMemberDocument(
+  documents: MemberDocument[],
+  saved: MemberDocument
+): MemberDocument[] {
+  return [
+    ...documents.filter((doc) => doc.document_type !== saved.document_type),
+    saved,
+  ].sort((a, b) => a.document_type.localeCompare(b.document_type));
+}
+
+export function removeMemberDocumentType(
+  documents: MemberDocument[],
+  documentType: string
+): MemberDocument[] {
+  return documents.filter((doc) => doc.document_type !== documentType);
 }
 
 export function uploadQualityBanner(

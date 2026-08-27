@@ -83,6 +83,8 @@ export type MemberDocument = {
   upload_generation?: number;
   quality_level?: "ok" | "warn" | "fail" | null;
   quality_flags?: string[];
+  /** Client-only: last upload API message (not returned by list endpoints). */
+  quality_message?: string | null;
   quality_checked_at?: string | null;
 };
 

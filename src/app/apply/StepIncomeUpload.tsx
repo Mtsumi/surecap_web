@@ -21,7 +21,14 @@ import {
 } from "@/lib/api";
 import { normalizeUploadFile } from "@/lib/normalizeUploadFile";
 import { Locale, MessageKey, t } from "@/lib/i18n";
-import { uploadQualityBanner, uploadQualityTone, qualityBySlotFromDocuments, UploadQuality } from "@/lib/uploadQuality";
+import {
+  uploadQualityBanner,
+  uploadQualityTone,
+  qualityBySlotFromDocuments,
+  mergeMemberDocument,
+  removeMemberDocumentType,
+  UploadQuality,
+} from "@/lib/uploadQuality";
 
 const LIST_LOAD_FAILED =
   "Could not load uploaded documents. Check your connection and try again.";
@@ -98,6 +105,19 @@ export default function StepIncomeUpload(props: Props) {
     });
   }, []);
 
+  const applyDocumentUpdate = useCallback(
+    (updater: (prev: MemberDocument[]) => MemberDocument[]) => {
+      setDocuments((prev) => {
+        const next = updater(prev);
+        setQualityBySlot(qualityBySlotFromDocuments(next));
+        if (documentsEqual(prev, next)) return prev;
+        onDocumentsChangeRef.current?.(next);
+        return next;
+      });
+    },
+    []
+  );
+
   const refreshDocuments = useCallback(async () => {
     setLoadingList(true);
     try {
@@ -137,7 +157,7 @@ export default function StepIncomeUpload(props: Props) {
       } else {
         await deleteInviteDocument(props.inviteToken, documentType);
       }
-      publishDocuments(documents.filter((doc) => doc.document_type !== documentType));
+      applyDocumentUpdate((prev) => removeMemberDocumentType(prev, documentType));
     } catch (e) {
       setError(uploadErrorMessage(e));
     } finally {
@@ -169,17 +189,14 @@ export default function StepIncomeUpload(props: Props) {
               uploadFile
             )
           : await uploadInviteDocument(props.inviteToken, documentType, uploadFile);
-      const saved = {
+      const saved: MemberDocument = {
         ...uploadResult.document,
         quality_level: uploadResult.quality.level,
         quality_flags: uploadResult.quality.flags,
+        quality_message: uploadResult.quality.message ?? null,
         upload_generation: uploadResult.quality.upload_generation,
       };
-      publishDocuments(
-        [...documents.filter((doc) => doc.document_type !== documentType), saved].sort(
-          (a, b) => a.document_type.localeCompare(b.document_type)
-        )
-      );
+      applyDocumentUpdate((prev) => mergeMemberDocument(prev, saved));
     } catch (e) {
       setError(uploadErrorMessage(e));
     } finally {
@@ -209,8 +226,8 @@ export default function StepIncomeUpload(props: Props) {
             await deleteInviteDocument(props.inviteToken, documentType);
           }
         }
-        publishDocuments(
-          documents.filter((doc) => !stale.includes(doc.document_type))
+        applyDocumentUpdate((prev) =>
+          prev.filter((doc) => !stale.includes(doc.document_type))
         );
       } catch (e) {
         setError(uploadErrorMessage(e));
