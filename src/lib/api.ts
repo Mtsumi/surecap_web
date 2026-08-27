@@ -80,6 +80,24 @@ export type MemberDocument = {
   content_type: string;
   byte_size: number;
   uploaded_at: string;
+  upload_generation?: number;
+  quality_level?: "ok" | "warn" | "fail" | null;
+  quality_flags?: string[];
+  /** Client-only: last upload API message (not returned by list endpoints). */
+  quality_message?: string | null;
+  quality_checked_at?: string | null;
+};
+
+export type UploadQuality = {
+  level: "ok" | "warn" | "fail";
+  flags: string[];
+  message?: string | null;
+  upload_generation: number;
+};
+
+export type MemberDocumentUploadResult = {
+  document: MemberDocument;
+  quality: UploadQuality;
 };
 
 export type RoommateContact = {
@@ -477,12 +495,12 @@ export function uploadMemberDocument(
   uploadToken: string,
   documentType: string,
   file: File
-): Promise<MemberDocument> {
+): Promise<MemberDocumentUploadResult> {
   const form = new FormData();
   form.append("upload_token", uploadToken);
   form.append("document_type", documentType);
   form.append("file", file, file.name || "upload");
-  return apiFetchForm<MemberDocument>(
+  return apiFetchForm<MemberDocumentUploadResult>(
     `/applications/${applicationId}/members/${memberId}/uploads`,
     form
   );
@@ -492,11 +510,11 @@ export function uploadInviteDocument(
   inviteToken: string,
   documentType: string,
   file: File
-): Promise<MemberDocument> {
+): Promise<MemberDocumentUploadResult> {
   const form = new FormData();
   form.append("document_type", documentType);
   form.append("file", file, file.name || "upload");
-  return apiFetchForm<MemberDocument>(
+  return apiFetchForm<MemberDocumentUploadResult>(
     `/applications/invites/${encodeURIComponent(inviteToken)}/uploads`,
     form
   );

@@ -153,6 +153,23 @@ export const messages = {
     addressSuggestionsUnavailable:
       "Address suggestions unavailable (often blocked by Brave or ad blockers). Type your full address manually.",
     uploadStayOnTab: "Uploading… please stay on this page.",
+    uploadQualityBlurry:
+      "This file looks blurry. You can continue, but a clearer upload helps verification.",
+    uploadQualityLowResolution:
+      "Image resolution looks low. Move closer or use better lighting.",
+    uploadQualityUnlikelyAspect:
+      "This photo may not show a full ID card. Try fitting the whole card in frame.",
+    uploadQualityNotImage: "ID uploads must be a photo (JPEG, PNG, or WebP).",
+    uploadQualityNotPayslip:
+      "This file does not look like a payslip yet. You can continue, but check the file.",
+    uploadQualityNoTextLayer:
+      "This PDF has little readable text. Export or photograph the payslip instead.",
+    uploadQualityNoaLowText:
+      "This notice of assessment has little readable text. Try a clearer scan or photo.",
+    uploadQualityRetryFlagged:
+      "Still flagged after reupload — the building admin will review this file.",
+    uploadQualityGeneric:
+      "Please review this upload. You can continue, but a clearer file helps.",
     addressNotInCanada: "My current address is not in Canada",
     addressApartment: "Apartment / unit # (if applicable)",
     addressApartmentHint:
@@ -356,6 +373,24 @@ export const messages = {
     addressSuggestionsUnavailable:
       "Suggestions d'adresse indisponibles (souvent bloquées par Brave ou un bloqueur). Entrez l'adresse manuellement.",
     uploadStayOnTab: "Téléversement en cours… veuillez rester sur cette page.",
+    uploadQualityBlurry:
+      "Ce fichier semble flou. Vous pouvez continuer, mais un fichier plus net aide la vérification.",
+    uploadQualityLowResolution:
+      "La résolution de l'image semble faible. Rapprochez-vous ou améliorez l'éclairage.",
+    uploadQualityUnlikelyAspect:
+      "Cette photo ne montre peut-être pas toute la pièce d'identité. Cadrez la carte au complet.",
+    uploadQualityNotImage:
+      "Les pièces d'identité doivent être une photo (JPEG, PNG ou WebP).",
+    uploadQualityNotPayslip:
+      "Ce fichier ne ressemble pas encore à une fiche de paie. Vérifiez le fichier avant de continuer.",
+    uploadQualityNoTextLayer:
+      "Ce PDF contient peu de texte lisible. Exportez ou photographiez la fiche de paie.",
+    uploadQualityNoaLowText:
+      "Cet avis de cotisation contient peu de texte lisible. Essayez une numérisation ou photo plus nette.",
+    uploadQualityRetryFlagged:
+      "Toujours signalé après un nouveau téléversement — l'administrateur de l'immeuble examinera ce fichier.",
+    uploadQualityGeneric:
+      "Veuillez vérifier ce fichier. Vous pouvez continuer, mais un fichier plus net aide.",
     addressNotInCanada: "Mon adresse actuelle n'est pas au Canada",
     addressApartment: "Appartement / no d'unité (si applicable)",
     addressApartmentHint:
