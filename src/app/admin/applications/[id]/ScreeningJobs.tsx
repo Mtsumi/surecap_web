@@ -10,12 +10,14 @@ import {
   landlordFromDossier,
   parseIdDocumentExtractMessage,
   parseIncomeDocumentExtractMessage,
+  parseSoquijScreeningMessage,
   parseTalScreeningMessage,
   precisionLabel,
   pluralCount,
   sourceLabel,
   tenantFromDossier,
   jobTypeLabel,
+  type SoquijDecision,
   type TalDossier,
   type TalSearch,
 } from "@/lib/jobMessageFormat";
@@ -300,16 +302,30 @@ function SearchBlock({ search, locale }: { search: TalSearch; locale: Locale }) 
 function ManualReviewBanner({
   kind,
   locale,
+  docsAnchor,
 }: {
   kind: "income" | "id";
   locale: Locale;
+  docsAnchor?: string;
 }) {
   return (
     <div className={`${adminUi.alertWarn} text-sm`}>
-      <p className="font-semibold text-[var(--ml-ink)]">
-        {inconclusiveReviewTitle(locale)}
-      </p>
-      <p className="mt-1 text-[var(--ml-steel)]">{inconclusiveReviewBody(kind, locale)}</p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <p className="font-semibold text-[var(--ml-ink)]">
+            {inconclusiveReviewTitle(locale)}
+          </p>
+          <p className="mt-1 text-[var(--ml-steel)]">{inconclusiveReviewBody(kind, locale)}</p>
+        </div>
+        {docsAnchor ? (
+          <a
+            href={docsAnchor}
+            className="shrink-0 text-xs font-medium text-[var(--ml-accent)] underline-offset-2 hover:underline"
+          >
+            {locale === "fr" ? "Voir le document ↓" : "Review document ↓"}
+          </a>
+        ) : null}
+      </div>
     </div>
   );
 }
@@ -364,7 +380,15 @@ function IdExtractFlags({
   );
 }
 
-function IdExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
+function IdExtractJobCard({
+  job,
+  locale,
+  docsAnchor,
+}: {
+  job: ApplicationJob;
+  locale: Locale;
+  docsAnchor?: string;
+}) {
   const c = copy(locale);
   const payload = parseIdDocumentExtractMessage(job.message);
   if (!payload) {
@@ -378,7 +402,7 @@ function IdExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Locale
   const inconclusive = isIdExtractInconclusive(payload);
   return (
     <div className="space-y-3 text-sm">
-      {inconclusive ? <ManualReviewBanner kind="id" locale={locale} /> : null}
+      {inconclusive ? <ManualReviewBanner kind="id" locale={locale} docsAnchor={docsAnchor} /> : null}
       <p className="text-[var(--ml-steel)]">
         {idScreeningContextLabel(payload.screening_context, locale)}
         {payload.pdf417_ok ? ` · PDF417 (${payload.pdf417_variant || "ok"})` : ""}
@@ -423,7 +447,15 @@ function IdExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Locale
   );
 }
 
-function IncomeExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
+function IncomeExtractJobCard({
+  job,
+  locale,
+  docsAnchor,
+}: {
+  job: ApplicationJob;
+  locale: Locale;
+  docsAnchor?: string;
+}) {
   const c = copy(locale);
   const payload = parseIncomeDocumentExtractMessage(job.message);
   if (!payload) {
@@ -441,7 +473,7 @@ function IncomeExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Lo
       : null;
   return (
     <div className="space-y-3 text-sm">
-      {inconclusive ? <ManualReviewBanner kind="income" locale={locale} /> : null}
+      {inconclusive ? <ManualReviewBanner kind="income" locale={locale} docsAnchor={docsAnchor} /> : null}
       <p className="font-semibold text-[var(--ml-ink)]">{c.incomeTitle}</p>
       <p className="text-[var(--ml-steel)]">
         {c.incomeReadPath}: {payload.read_path || "—"}
@@ -536,6 +568,92 @@ function IncomeExtractJobCard({ job, locale }: { job: ApplicationJob; locale: Lo
   );
 }
 
+function SoquijDecisionRow({ decision }: { decision: SoquijDecision }) {
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2 text-sm">
+      <div className="min-w-0 flex-1">
+        <p className="font-medium text-[var(--ml-ink)]">{decision.parties || decision.title || "—"}</p>
+        <p className="mt-0.5 text-xs text-[var(--ml-steel)]">
+          {[decision.date, decision.tribunal].filter(Boolean).join(" · ")}
+        </p>
+      </div>
+      {decision.url ? (
+        <a
+          href={decision.url}
+          target="_blank"
+          rel="noreferrer"
+          className={adminUi.talLink}
+        >
+          Ouvrir ↗
+        </a>
+      ) : null}
+    </li>
+  );
+}
+
+function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
+  const payload = parseSoquijScreeningMessage(job.message);
+  if (!payload) {
+    return (
+      <p className={adminUi.empty}>
+        {formatJobMessagePreview(job.job_type, job.message, locale)}
+      </p>
+    );
+  }
+
+  const count = payload.decision_count ?? 0;
+  const decisions = payload.decisions ?? [];
+  const shown = decisions.slice(0, 25);
+  const remaining = decisions.length - shown.length;
+
+  return (
+    <div className="space-y-3 text-sm">
+      {payload.query ? (
+        <p className="text-[var(--ml-ink)]">
+          {locale === "fr" ? "Recherche" : "Query"}: <span className="font-medium">{payload.query}</span>
+        </p>
+      ) : null}
+
+      {payload.status === "failed" ? (
+        <p className={`${adminUi.alertWarn} !border-0 !bg-transparent !p-0`}>
+          {payload.reason || "Échec de la recherche"}
+        </p>
+      ) : count === 0 ? (
+        <p className="text-[var(--ml-steel)]">
+          {locale === "fr"
+            ? "Aucune décision écrite publiée trouvée"
+            : "No published written decisions found"}
+        </p>
+      ) : (
+        <>
+          <p className={`font-medium ${count > 0 ? "text-amber-700" : "text-[var(--ml-ink)]"}`}>
+            {count} {locale === "fr" ? "décision(s) publiée(s) trouvée(s)" : "published decision(s) found"} — {locale === "fr" ? "révision recommandée" : "review recommended"}
+          </p>
+          {shown.length > 0 ? (
+            <ul className="space-y-2">
+              {shown.map((d, i) => (
+                <SoquijDecisionRow key={d.url ?? i} decision={d} />
+              ))}
+            </ul>
+          ) : null}
+          {remaining > 0 ? (
+            <p className="text-xs text-[var(--ml-steel)]">
+              +{remaining} {locale === "fr" ? "autre(s) non affichée(s)" : "more not shown"}
+            </p>
+          ) : null}
+        </>
+      )}
+
+      {payload.note ? (
+        <p className="text-xs text-[var(--ml-steel)] italic">{payload.note}</p>
+      ) : null}
+      {payload.mock ? (
+        <p className="text-xs text-amber-600">Mode simulation</p>
+      ) : null}
+    </div>
+  );
+}
+
 function TalJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
   const c = copy(locale);
   const tal = parseTalScreeningMessage(job.message);
@@ -570,10 +688,19 @@ function TalJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
   );
 }
 
-function JobRow({ job, locale }: { job: ApplicationJob; locale: Locale }) {
+function JobRow({
+  job,
+  locale,
+  docsAnchor,
+}: {
+  job: ApplicationJob;
+  locale: Locale;
+  docsAnchor?: string;
+}) {
   const isTal = job.job_type === "tal_screening";
   const isIdExtract = job.job_type === "id_document_extract";
   const isIncomeExtract = job.job_type === "income_document_extract";
+  const isSoquij = job.job_type === "soquij_screening";
   return (
     <div className="border-b border-[var(--ml-line)] py-4 last:border-b-0">
       <div className="flex flex-wrap items-center gap-2">
@@ -588,11 +715,15 @@ function JobRow({ job, locale }: { job: ApplicationJob; locale: Locale }) {
         </div>
       ) : isIdExtract ? (
         <div className="mt-3">
-          <IdExtractJobCard job={job} locale={locale} />
+          <IdExtractJobCard job={job} locale={locale} docsAnchor={docsAnchor} />
         </div>
       ) : isIncomeExtract ? (
         <div className="mt-3">
-          <IncomeExtractJobCard job={job} locale={locale} />
+          <IncomeExtractJobCard job={job} locale={locale} docsAnchor={docsAnchor} />
+        </div>
+      ) : isSoquij ? (
+        <div className="mt-3">
+          <SoquijJobCard job={job} locale={locale} />
         </div>
       ) : (
         <p className={`${adminUi.empty} mt-2`}>
@@ -606,9 +737,12 @@ function JobRow({ job, locale }: { job: ApplicationJob; locale: Locale }) {
 export default function ScreeningJobs({
   jobs,
   jobMemberLabel,
+  docsAnchor,
 }: {
   jobs: ApplicationJob[];
   jobMemberLabel: (memberId: number) => string;
+  /** href to scroll to the documents section for "review document" links */
+  docsAnchor?: string;
 }) {
   const { locale } = useAdminLocaleContext();
   const c = copy(locale);
@@ -637,7 +771,7 @@ export default function ScreeningJobs({
           </div>
           <div className="px-4 sm:px-5">
             {memberJobs.map((job) => (
-              <JobRow key={job.id} job={job} locale={locale} />
+              <JobRow key={job.id} job={job} locale={locale} docsAnchor={docsAnchor} />
             ))}
           </div>
         </div>

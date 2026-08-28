@@ -468,6 +468,43 @@ export function idScreeningContextLabel(
   }
 }
 
+// ── SOQUIJ ──────────────────────────────────────────────────────────────────
+
+export type SoquijDecision = {
+  title?: string;
+  parties?: string;
+  date?: string;
+  tribunal?: string;
+  url?: string;
+  dossier?: string;
+};
+
+export type SoquijScreeningPayload = {
+  query?: string;
+  status?: string;
+  decision_count?: number;
+  decisions?: SoquijDecision[];
+  has_flags?: boolean;
+  elapsed_seconds?: number;
+  note?: string;
+  mock?: boolean;
+  summary?: string;
+  reason?: string;
+};
+
+export function parseSoquijScreeningMessage(
+  message: string | null | undefined
+): SoquijScreeningPayload | null {
+  if (!message?.trim().startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(message) as unknown;
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed as SoquijScreeningPayload;
+  } catch {
+    return null;
+  }
+}
+
 export function tenantFromDossier(dossier: TalDossier): string | null {
   const matched = dossier.matched_parties?.find((p) => p.name)?.name;
   if (matched) return matched;
