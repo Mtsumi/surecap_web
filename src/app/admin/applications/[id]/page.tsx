@@ -475,8 +475,8 @@ export default function ApplicationDetailPage() {
         <AdminCollapsible
           title="Screening"
           subtitle={
-            talJobCount > 0
-              ? `${talJobCount} recherche${talJobCount === 1 ? "" : "s"}`
+            jobs.length > 0
+              ? `${jobs.length} tâche${jobs.length === 1 ? "" : "s"}`
               : "Aucun résultat pour le moment"
           }
         >

@@ -89,6 +89,13 @@ function copy(locale: Locale) {
       incomePeriod: "Pay period",
       incomePayDate: "Pay date",
       incomeNotPayslip: "Not recognized as a payslip",
+      soquijOpen: "Open ↗",
+      soquijSearchFailed: "Search failed",
+      soquijNoDecisions: "No published written decisions found",
+      soquijFound: (n: number) => `${n} published decision(s) found — review recommended`,
+      soquijMore: (n: number) => `+${n} more not shown`,
+      soquijMock: "Simulation mode",
+      soquijQuery: "Query",
     };
   }
   return {
@@ -130,6 +137,13 @@ function copy(locale: Locale) {
     incomePeriod: "Période",
     incomePayDate: "Date de paie",
     incomeNotPayslip: "Non reconnu comme talon de paie",
+    soquijOpen: "Ouvrir ↗",
+    soquijSearchFailed: "Échec de la recherche",
+    soquijNoDecisions: "Aucune décision écrite publiée trouvée",
+    soquijFound: (n: number) => `${n} décision(s) publiée(s) trouvée(s) — révision recommandée`,
+    soquijMore: (n: number) => `+${n} autre(s) non affichée(s)`,
+    soquijMock: "Mode simulation",
+    soquijQuery: "Recherche",
   };
 }
 
@@ -333,9 +347,11 @@ function ManualReviewBanner({
 function IdExtractFlags({
   summary,
   locale,
+  docsAnchor,
 }: {
   summary: NonNullable<ReturnType<typeof parseTalScreeningMessage>>["id_extract"];
   locale: Locale;
+  docsAnchor?: string;
 }) {
   if (!summary) return null;
   const c = copy(locale);
@@ -345,7 +361,7 @@ function IdExtractFlags({
     <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] p-3 text-sm">
       {inconclusive ? (
         <div className="mb-3">
-          <ManualReviewBanner kind="id" locale={locale} />
+          <ManualReviewBanner kind="id" locale={locale} docsAnchor={docsAnchor} />
         </div>
       ) : null}
       <p className="font-semibold text-[var(--ml-ink)]">{c.idCheck}</p>
@@ -568,7 +584,27 @@ function IncomeExtractJobCard({
   );
 }
 
-function SoquijDecisionRow({ decision }: { decision: SoquijDecision }) {
+const SOQUIJ_HOST = "citoyens.soquij.qc.ca";
+
+function isSoquijUrl(url: string | undefined): boolean {
+  if (!url) return false;
+  try {
+    const parsed = new URL(url);
+    return parsed.protocol === "https:" && parsed.hostname === SOQUIJ_HOST;
+  } catch {
+    return false;
+  }
+}
+
+function SoquijDecisionRow({
+  decision,
+  locale,
+}: {
+  decision: SoquijDecision;
+  locale: Locale;
+}) {
+  const c = copy(locale);
+  const safeUrl = isSoquijUrl(decision.url) ? decision.url : undefined;
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2 text-sm">
       <div className="min-w-0 flex-1">
@@ -577,14 +613,14 @@ function SoquijDecisionRow({ decision }: { decision: SoquijDecision }) {
           {[decision.date, decision.tribunal].filter(Boolean).join(" · ")}
         </p>
       </div>
-      {decision.url ? (
+      {safeUrl ? (
         <a
-          href={decision.url}
+          href={safeUrl}
           target="_blank"
           rel="noreferrer"
           className={adminUi.talLink}
         >
-          Ouvrir ↗
+          {c.soquijOpen}
         </a>
       ) : null}
     </li>
@@ -592,6 +628,7 @@ function SoquijDecisionRow({ decision }: { decision: SoquijDecision }) {
 }
 
 function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
+  const c = copy(locale);
   const payload = parseSoquijScreeningMessage(job.message);
   if (!payload) {
     return (
@@ -610,51 +647,51 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
     <div className="space-y-3 text-sm">
       {payload.query ? (
         <p className="text-[var(--ml-ink)]">
-          {locale === "fr" ? "Recherche" : "Query"}: <span className="font-medium">{payload.query}</span>
+          {c.soquijQuery}: <span className="font-medium">{payload.query}</span>
         </p>
       ) : null}
 
       {payload.status === "failed" ? (
         <p className={`${adminUi.alertWarn} !border-0 !bg-transparent !p-0`}>
-          {payload.reason || "Échec de la recherche"}
+          {payload.reason || c.soquijSearchFailed}
         </p>
       ) : count === 0 ? (
-        <p className="text-[var(--ml-steel)]">
-          {locale === "fr"
-            ? "Aucune décision écrite publiée trouvée"
-            : "No published written decisions found"}
-        </p>
+        <p className="text-[var(--ml-steel)]">{c.soquijNoDecisions}</p>
       ) : (
         <>
-          <p className={`font-medium ${count > 0 ? "text-amber-700" : "text-[var(--ml-ink)]"}`}>
-            {count} {locale === "fr" ? "décision(s) publiée(s) trouvée(s)" : "published decision(s) found"} — {locale === "fr" ? "révision recommandée" : "review recommended"}
-          </p>
+          <p className="font-medium text-amber-700">{c.soquijFound(count)}</p>
           {shown.length > 0 ? (
             <ul className="space-y-2">
               {shown.map((d, i) => (
-                <SoquijDecisionRow key={d.url ?? i} decision={d} />
+                <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
               ))}
             </ul>
           ) : null}
           {remaining > 0 ? (
-            <p className="text-xs text-[var(--ml-steel)]">
-              +{remaining} {locale === "fr" ? "autre(s) non affichée(s)" : "more not shown"}
-            </p>
+            <p className="text-xs text-[var(--ml-steel)]">{c.soquijMore(remaining)}</p>
           ) : null}
         </>
       )}
 
       {payload.note ? (
-        <p className="text-xs text-[var(--ml-steel)] italic">{payload.note}</p>
+        <p className="text-xs italic text-[var(--ml-steel)]">{payload.note}</p>
       ) : null}
       {payload.mock ? (
-        <p className="text-xs text-amber-600">Mode simulation</p>
+        <p className="text-xs text-amber-600">{c.soquijMock}</p>
       ) : null}
     </div>
   );
 }
 
-function TalJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
+function TalJobCard({
+  job,
+  locale,
+  docsAnchor,
+}: {
+  job: ApplicationJob;
+  locale: Locale;
+  docsAnchor?: string;
+}) {
   const c = copy(locale);
   const tal = parseTalScreeningMessage(job.message);
   if (!tal) {
@@ -676,7 +713,7 @@ function TalJobCard({ job, locale }: { job: ApplicationJob; locale: Locale }) {
       </p>
       {tal.id_extract ? (
         <div className="mt-2">
-          <IdExtractFlags summary={tal.id_extract} locale={locale} />
+          <IdExtractFlags summary={tal.id_extract} locale={locale} docsAnchor={docsAnchor} />
         </div>
       ) : null}
       <div className="space-y-2">
@@ -711,7 +748,7 @@ function JobRow({
       </div>
       {isTal ? (
         <div className="mt-3">
-          <TalJobCard job={job} locale={locale} />
+          <TalJobCard job={job} locale={locale} docsAnchor={docsAnchor} />
         </div>
       ) : isIdExtract ? (
         <div className="mt-3">

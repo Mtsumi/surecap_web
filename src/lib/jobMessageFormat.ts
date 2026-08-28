@@ -498,8 +498,25 @@ export function parseSoquijScreeningMessage(
   if (!message?.trim().startsWith("{")) return null;
   try {
     const parsed = JSON.parse(message) as unknown;
-    if (!parsed || typeof parsed !== "object") return null;
-    return parsed as SoquijScreeningPayload;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const obj = parsed as Record<string, unknown>;
+
+    // decisions must be an array of objects (or absent)
+    if (obj["decisions"] !== undefined) {
+      if (!Array.isArray(obj["decisions"])) return null;
+      for (const entry of obj["decisions"] as unknown[]) {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+      }
+    }
+
+    // decision_count must be a number or absent
+    if (
+      obj["decision_count"] !== undefined &&
+      typeof obj["decision_count"] !== "number"
+    )
+      return null;
+
+    return obj as SoquijScreeningPayload;
   } catch {
     return null;
   }
