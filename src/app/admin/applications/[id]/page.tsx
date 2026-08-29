@@ -123,8 +123,36 @@ function MemberCard({ member }: { member: ApplicationMember }) {
                     : "Non"
               }
             />
-            <AdminField label="Locateur actuel" value={member.landlord_name} />
-            <AdminField label="Tél. locateur actuel" value={member.landlord_phone} />
+            <div className="sm:col-span-2 grid sm:grid-cols-2 gap-4">
+              <div className="rounded-md border border-[var(--ml-line)] bg-[var(--ml-paper)] p-3 space-y-1">
+                <p className="admin-field-label">Locateur actuel</p>
+                <p className="admin-field-value">{member.landlord_name || "—"}</p>
+                {member.landlord_phone ? (
+                  <a
+                    href={`tel:${member.landlord_phone}`}
+                    className="block text-sm text-[var(--ml-accent)] underline-offset-2 hover:underline"
+                  >
+                    {member.landlord_phone}
+                  </a>
+                ) : (
+                  <p className="admin-field-value">—</p>
+                )}
+              </div>
+              <div className="rounded-md border border-[var(--ml-line)] bg-[var(--ml-paper)] p-3 space-y-1">
+                <p className="admin-field-label">Contact RH</p>
+                <p className="admin-field-value">{member.hr_name || "—"}</p>
+                {member.hr_phone ? (
+                  <a
+                    href={`tel:${member.hr_phone}`}
+                    className="block text-sm text-[var(--ml-accent)] underline-offset-2 hover:underline"
+                  >
+                    {member.hr_phone}
+                  </a>
+                ) : (
+                  <p className="admin-field-value">—</p>
+                )}
+              </div>
+            </div>
             {member.previous_address ? (
               <>
                 <AdminField
@@ -139,8 +167,22 @@ function MemberCard({ member }: { member: ApplicationMember }) {
             ) : null}
           </>
         )}
-        <AdminField label="Contact RH" value={member.hr_name} />
-        <AdminField label="Tél. RH" value={member.hr_phone} />
+        {member.housing_status === "own_home" && (member.hr_name || member.hr_phone) ? (
+          <div className="rounded-md border border-[var(--ml-line)] bg-[var(--ml-paper)] p-3 space-y-1">
+            <p className="admin-field-label">Contact RH</p>
+            <p className="admin-field-value">{member.hr_name || "—"}</p>
+            {member.hr_phone ? (
+              <a
+                href={`tel:${member.hr_phone}`}
+                className="block text-sm text-[var(--ml-accent)] underline-offset-2 hover:underline"
+              >
+                {member.hr_phone}
+              </a>
+            ) : (
+              <p className="admin-field-value">—</p>
+            )}
+          </div>
+        ) : null}
         {(member.role === "primary" || member.role === "roommate") && (
           <>
             {member.facebook_url ? (
@@ -409,34 +451,40 @@ export default function ApplicationDetailPage() {
           )}
         </AdminCollapsible>
 
-        <AdminCollapsible
-          title="Documents"
-          subtitle={
-            documentCount > 0
-              ? `${documentCount} fichier${documentCount === 1 ? "" : "s"}`
-              : "Aucun document pour le moment"
-          }
-        >
-          <ApplicationDocuments
-            applicationId={app.id}
-            members={sortedMembers}
-            summaryPdfAvailable={Boolean(app.summary_pdf_available)}
-            dropboxDossierReady={Boolean(app.dropbox_dossier_ready)}
-            memberRoleLabel={memberRoleLabel}
-            memberDisplayName={memberDisplayName}
-            onSummaryRegenerated={load}
-          />
-        </AdminCollapsible>
+        <div id="documents-section">
+          <AdminCollapsible
+            title="Documents"
+            subtitle={
+              documentCount > 0
+                ? `${documentCount} fichier${documentCount === 1 ? "" : "s"}`
+                : "Aucun document pour le moment"
+            }
+          >
+            <ApplicationDocuments
+              applicationId={app.id}
+              members={sortedMembers}
+              summaryPdfAvailable={Boolean(app.summary_pdf_available)}
+              dropboxDossierReady={Boolean(app.dropbox_dossier_ready)}
+              memberRoleLabel={memberRoleLabel}
+              memberDisplayName={memberDisplayName}
+              onSummaryRegenerated={load}
+            />
+          </AdminCollapsible>
+        </div>
 
         <AdminCollapsible
-          title="Screening TAL"
+          title="Screening"
           subtitle={
-            talJobCount > 0
-              ? `${talJobCount} recherche${talJobCount === 1 ? "" : "s"}`
+            jobs.length > 0
+              ? `${jobs.length} tâche${jobs.length === 1 ? "" : "s"}`
               : "Aucun résultat pour le moment"
           }
         >
-          <ScreeningJobs jobs={jobs} jobMemberLabel={jobMemberLabel} />
+          <ScreeningJobs
+            jobs={jobs}
+            jobMemberLabel={jobMemberLabel}
+            docsAnchor="#documents-section"
+          />
         </AdminCollapsible>
       </div>
     </>

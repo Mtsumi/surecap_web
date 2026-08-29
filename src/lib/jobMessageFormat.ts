@@ -468,6 +468,84 @@ export function idScreeningContextLabel(
   }
 }
 
+// ── SOQUIJ ──────────────────────────────────────────────────────────────────
+
+export type SoquijDecision = {
+  title?: string;
+  parties?: string;
+  date?: string;
+  tribunal?: string;
+  url?: string;
+  dossier?: string;
+};
+
+export type SoquijScreeningPayload = {
+  query?: string;
+  status?: string;
+  decision_count?: number;
+  decisions?: SoquijDecision[];
+  has_flags?: boolean;
+  elapsed_seconds?: number;
+  note?: string;
+  mock?: boolean;
+  summary?: string;
+  reason?: string;
+};
+
+/** Fields that must be a string (or absent) in a SOQUIJ payload. */
+const SOQUIJ_STRING_FIELDS = [
+  "query", "status", "note", "reason", "summary",
+] as const;
+
+/** Fields that must be a string (or absent) within each decision entry. */
+const SOQUIJ_DECISION_STRING_FIELDS = [
+  "title", "parties", "date", "tribunal", "url", "dossier",
+] as const;
+
+function isStringOrAbsent(v: unknown): boolean {
+  return v === undefined || v === null || typeof v === "string";
+}
+
+export function parseSoquijScreeningMessage(
+  message: string | null | undefined
+): SoquijScreeningPayload | null {
+  if (!message?.trim().startsWith("{")) return null;
+  try {
+    const parsed = JSON.parse(message) as unknown;
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+    const obj = parsed as Record<string, unknown>;
+
+    // Top-level string fields must not be non-string objects
+    for (const field of SOQUIJ_STRING_FIELDS) {
+      if (!isStringOrAbsent(obj[field])) return null;
+    }
+
+    // decision_count must be a number or absent
+    if (obj["decision_count"] !== undefined && typeof obj["decision_count"] !== "number")
+      return null;
+
+    // has_flags must be boolean or absent
+    if (obj["has_flags"] !== undefined && typeof obj["has_flags"] !== "boolean")
+      return null;
+
+    // decisions must be an array of well-shaped objects
+    if (obj["decisions"] !== undefined) {
+      if (!Array.isArray(obj["decisions"])) return null;
+      for (const entry of obj["decisions"] as unknown[]) {
+        if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+        const d = entry as Record<string, unknown>;
+        for (const field of SOQUIJ_DECISION_STRING_FIELDS) {
+          if (!isStringOrAbsent(d[field])) return null;
+        }
+      }
+    }
+
+    return obj as SoquijScreeningPayload;
+  } catch {
+    return null;
+  }
+}
+
 export function tenantFromDossier(dossier: TalDossier): string | null {
   const matched = dossier.matched_parties?.find((p) => p.name)?.name;
   if (matched) return matched;
