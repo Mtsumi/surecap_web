@@ -479,6 +479,9 @@ export type SoquijDecision = {
   dossier?: string;
   /** True when the family name token was found verbatim in the parties string. */
   name_match?: boolean;
+  /** 'respondent' = applicant was sued (red flag); 'plaintiff' = applicant sued someone */
+  applicant_role?: "respondent" | "plaintiff";
+  tribunal_rank?: number;
 };
 
 export type SoquijScreeningPayload = {
@@ -487,6 +490,8 @@ export type SoquijScreeningPayload = {
   decision_count?: number;
   /** Decisions where the family name matched verbatim. */
   name_match_count?: number;
+  /** Decisions where the applicant appears as respondent/defendant. */
+  respondent_count?: number;
   decisions?: SoquijDecision[];
   has_flags?: boolean;
   elapsed_seconds?: number;
@@ -500,6 +505,8 @@ export type SoquijScreeningPayload = {
 const SOQUIJ_STRING_FIELDS = [
   "query", "status", "note", "reason", "summary",
 ] as const;
+
+const VALID_APPLICANT_ROLES = new Set(["respondent", "plaintiff"]);
 
 /** Fields that must be a string (or absent) within each decision entry. */
 const SOQUIJ_DECISION_STRING_FIELDS = [
@@ -524,8 +531,8 @@ export function parseSoquijScreeningMessage(
       if (!isStringOrAbsent(obj[field])) return null;
     }
 
-    // decision_count and name_match_count must be non-negative safe integers or absent
-    for (const countField of ["decision_count", "name_match_count"] as const) {
+    // decision_count, name_match_count, respondent_count must be non-negative safe integers or absent
+    for (const countField of ["decision_count", "name_match_count", "respondent_count"] as const) {
       if (obj[countField] !== undefined) {
         const dc = obj[countField];
         if (
@@ -553,6 +560,11 @@ export function parseSoquijScreeningMessage(
           if (!isStringOrAbsent(d[field])) return null;
         }
         if (d["name_match"] !== undefined && typeof d["name_match"] !== "boolean")
+          return null;
+        if (
+          d["applicant_role"] !== undefined &&
+          !VALID_APPLICANT_ROLES.has(d["applicant_role"] as string)
+        )
           return null;
       }
     }

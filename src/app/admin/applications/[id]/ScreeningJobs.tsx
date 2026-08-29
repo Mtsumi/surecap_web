@@ -605,21 +605,38 @@ function SoquijDecisionRow({
 }) {
   const c = copy(locale);
   const safeUrl = isSoquijUrl(decision.url) ? decision.url : undefined;
+  const isRespondent = decision.applicant_role === "respondent";
+  const isPlaintiff = decision.applicant_role === "plaintiff";
+
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2 text-sm">
+    <li
+      className={`flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${
+        isRespondent
+          ? "border-red-200 bg-red-50"
+          : "border-[var(--ml-line)] bg-[var(--ml-card)]"
+      }`}
+    >
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-[var(--ml-ink)]">{decision.parties || decision.title || "—"}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-medium text-[var(--ml-ink)]">
+            {decision.parties || decision.title || "—"}
+          </p>
+          {isRespondent ? (
+            <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">
+              {locale === "fr" ? "défendeur" : "respondent"}
+            </span>
+          ) : isPlaintiff ? (
+            <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-600">
+              {locale === "fr" ? "demandeur" : "plaintiff"}
+            </span>
+          ) : null}
+        </div>
         <p className="mt-0.5 text-xs text-[var(--ml-steel)]">
           {[decision.date, decision.tribunal].filter(Boolean).join(" · ")}
         </p>
       </div>
       {safeUrl ? (
-        <a
-          href={safeUrl}
-          target="_blank"
-          rel="noreferrer"
-          className={adminUi.talLink}
-        >
+        <a href={safeUrl} target="_blank" rel="noreferrer" className={adminUi.talLink}>
           {c.soquijOpen}
         </a>
       ) : null}
@@ -670,14 +687,23 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
             directCount === 0 ? (
               <p className="text-[var(--ml-steel)]">
                 {locale === "fr"
-                  ? `0 correspondance directe (${totalCount} résultat(s) général/généraux de SOQUIJ)`
+                  ? `0 correspondance directe (${totalCount} résultat(s) général/généraux SOQUIJ)`
                   : `0 direct name matches (${totalCount} broader SOQUIJ result(s))`}
               </p>
             ) : (
               <>
-                <p className="font-medium text-amber-700">
-                  {c.soquijFound(directCount ?? 0)}
-                </p>
+                {/* Respondent count is the primary risk signal */}
+                {(payload.respondent_count ?? 0) > 0 ? (
+                  <p className="font-semibold text-red-700">
+                    {locale === "fr"
+                      ? `⚠ ${payload.respondent_count} décision(s) comme défendeur — révision requise`
+                      : `⚠ ${payload.respondent_count} decision(s) as respondent — review required`}
+                  </p>
+                ) : (
+                  <p className="font-medium text-amber-700">
+                    {c.soquijFound(directCount ?? 0)}
+                  </p>
+                )}
                 <ul className="space-y-2">
                   {shownDirect.map((d, i) => (
                     <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
