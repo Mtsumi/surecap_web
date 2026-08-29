@@ -520,13 +520,22 @@ export function parseSoquijScreeningMessage(
       if (!isStringOrAbsent(obj[field])) return null;
     }
 
-    // decision_count must be a number or absent
-    if (obj["decision_count"] !== undefined && typeof obj["decision_count"] !== "number")
-      return null;
+    // decision_count must be a non-negative safe integer or absent
+    if (obj["decision_count"] !== undefined) {
+      const dc = obj["decision_count"];
+      if (
+        typeof dc !== "number" ||
+        !Number.isInteger(dc) ||
+        dc < 0 ||
+        dc > Number.MAX_SAFE_INTEGER
+      )
+        return null;
+    }
 
-    // has_flags must be boolean or absent
-    if (obj["has_flags"] !== undefined && typeof obj["has_flags"] !== "boolean")
-      return null;
+    // boolean flags must be boolean or absent
+    for (const flag of ["has_flags", "mock"] as const) {
+      if (obj[flag] !== undefined && typeof obj[flag] !== "boolean") return null;
+    }
 
     // decisions must be an array of well-shaped objects
     if (obj["decisions"] !== undefined) {
