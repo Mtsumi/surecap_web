@@ -477,12 +477,16 @@ export type SoquijDecision = {
   tribunal?: string;
   url?: string;
   dossier?: string;
+  /** True when the family name token was found verbatim in the parties string. */
+  name_match?: boolean;
 };
 
 export type SoquijScreeningPayload = {
   query?: string;
   status?: string;
   decision_count?: number;
+  /** Decisions where the family name matched verbatim. */
+  name_match_count?: number;
   decisions?: SoquijDecision[];
   has_flags?: boolean;
   elapsed_seconds?: number;
@@ -520,16 +524,18 @@ export function parseSoquijScreeningMessage(
       if (!isStringOrAbsent(obj[field])) return null;
     }
 
-    // decision_count must be a non-negative safe integer or absent
-    if (obj["decision_count"] !== undefined) {
-      const dc = obj["decision_count"];
-      if (
-        typeof dc !== "number" ||
-        !Number.isInteger(dc) ||
-        dc < 0 ||
-        dc > Number.MAX_SAFE_INTEGER
-      )
-        return null;
+    // decision_count and name_match_count must be non-negative safe integers or absent
+    for (const countField of ["decision_count", "name_match_count"] as const) {
+      if (obj[countField] !== undefined) {
+        const dc = obj[countField];
+        if (
+          typeof dc !== "number" ||
+          !Number.isInteger(dc) ||
+          dc < 0 ||
+          dc > Number.MAX_SAFE_INTEGER
+        )
+          return null;
+      }
     }
 
     // boolean flags must be boolean or absent
@@ -546,6 +552,8 @@ export function parseSoquijScreeningMessage(
         for (const field of SOQUIJ_DECISION_STRING_FIELDS) {
           if (!isStringOrAbsent(d[field])) return null;
         }
+        if (d["name_match"] !== undefined && typeof d["name_match"] !== "boolean")
+          return null;
       }
     }
 

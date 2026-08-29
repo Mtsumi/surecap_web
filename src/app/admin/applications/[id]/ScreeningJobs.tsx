@@ -638,10 +638,16 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
     );
   }
 
-  const count = payload.decision_count ?? 0;
-  const decisions = payload.decisions ?? [];
-  const shown = decisions.slice(0, 25);
-  const remaining = decisions.length - shown.length;
+  const allDecisions = payload.decisions ?? [];
+  const directMatches = allDecisions.filter((d) => d.name_match === true);
+  const broaderResults = allDecisions.filter((d) => d.name_match !== true);
+  const totalCount = payload.decision_count ?? allDecisions.length;
+  // Fall back to full list if name_match is not tagged (older records)
+  const hasMatchData = allDecisions.some((d) => d.name_match !== undefined);
+  const shownDirect = hasMatchData ? directMatches : allDecisions.slice(0, 25);
+  const directCount = hasMatchData
+    ? (payload.name_match_count ?? directMatches.length)
+    : null;
 
   return (
     <div className="space-y-3 text-sm">
@@ -655,20 +661,66 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         <p className={`${adminUi.alertWarn} !border-0 !bg-transparent !p-0`}>
           {payload.reason || c.soquijSearchFailed}
         </p>
-      ) : count === 0 ? (
+      ) : totalCount === 0 ? (
         <p className="text-[var(--ml-steel)]">{c.soquijNoDecisions}</p>
       ) : (
         <>
-          <p className="font-medium text-amber-700">{c.soquijFound(count)}</p>
-          {shown.length > 0 ? (
-            <ul className="space-y-2">
-              {shown.map((d, i) => (
-                <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
-              ))}
-            </ul>
-          ) : null}
-          {remaining > 0 ? (
-            <p className="text-xs text-[var(--ml-steel)]">{c.soquijMore(remaining)}</p>
+          {/* Direct name matches — shown prominently with amber flag */}
+          {hasMatchData ? (
+            directCount === 0 ? (
+              <p className="text-[var(--ml-steel)]">
+                {locale === "fr"
+                  ? `0 correspondance directe (${totalCount} résultat(s) général/généraux de SOQUIJ)`
+                  : `0 direct name matches (${totalCount} broader SOQUIJ result(s))`}
+              </p>
+            ) : (
+              <>
+                <p className="font-medium text-amber-700">
+                  {c.soquijFound(directCount ?? 0)}
+                </p>
+                <ul className="space-y-2">
+                  {shownDirect.map((d, i) => (
+                    <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
+                  ))}
+                </ul>
+              </>
+            )
+          ) : (
+            /* Legacy record — no name_match data, show all */
+            <>
+              <p className="font-medium text-amber-700">{c.soquijFound(totalCount)}</p>
+              <ul className="space-y-2">
+                {shownDirect.map((d, i) => (
+                  <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
+                ))}
+              </ul>
+              {allDecisions.length > 25 ? (
+                <p className="text-xs text-[var(--ml-steel)]">
+                  {c.soquijMore(allDecisions.length - 25)}
+                </p>
+              ) : null}
+            </>
+          )}
+
+          {/* Broader SOQUIJ results — collapsed, labelled as unverified */}
+          {hasMatchData && broaderResults.length > 0 ? (
+            <details className="mt-1">
+              <summary className="cursor-pointer text-xs text-[var(--ml-steel)]">
+                {locale === "fr"
+                  ? `${broaderResults.length} résultat(s) général/généraux SOQUIJ (non liés au nom)`
+                  : `${broaderResults.length} broader SOQUIJ result(s) — name not matched`}
+              </summary>
+              <ul className="mt-2 space-y-2">
+                {broaderResults.slice(0, 30).map((d, i) => (
+                  <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
+                ))}
+                {broaderResults.length > 30 ? (
+                  <li className="text-xs text-[var(--ml-steel)]">
+                    {c.soquijMore(broaderResults.length - 30)}
+                  </li>
+                ) : null}
+              </ul>
+            </details>
           ) : null}
         </>
       )}
