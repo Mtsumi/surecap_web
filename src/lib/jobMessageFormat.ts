@@ -492,6 +492,20 @@ export type SoquijScreeningPayload = {
   reason?: string;
 };
 
+/** Fields that must be a string (or absent) in a SOQUIJ payload. */
+const SOQUIJ_STRING_FIELDS = [
+  "query", "status", "note", "reason", "summary",
+] as const;
+
+/** Fields that must be a string (or absent) within each decision entry. */
+const SOQUIJ_DECISION_STRING_FIELDS = [
+  "title", "parties", "date", "tribunal", "url", "dossier",
+] as const;
+
+function isStringOrAbsent(v: unknown): boolean {
+  return v === undefined || v === null || typeof v === "string";
+}
+
 export function parseSoquijScreeningMessage(
   message: string | null | undefined
 ): SoquijScreeningPayload | null {
@@ -501,20 +515,30 @@ export function parseSoquijScreeningMessage(
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
     const obj = parsed as Record<string, unknown>;
 
-    // decisions must be an array of objects (or absent)
+    // Top-level string fields must not be non-string objects
+    for (const field of SOQUIJ_STRING_FIELDS) {
+      if (!isStringOrAbsent(obj[field])) return null;
+    }
+
+    // decision_count must be a number or absent
+    if (obj["decision_count"] !== undefined && typeof obj["decision_count"] !== "number")
+      return null;
+
+    // has_flags must be boolean or absent
+    if (obj["has_flags"] !== undefined && typeof obj["has_flags"] !== "boolean")
+      return null;
+
+    // decisions must be an array of well-shaped objects
     if (obj["decisions"] !== undefined) {
       if (!Array.isArray(obj["decisions"])) return null;
       for (const entry of obj["decisions"] as unknown[]) {
         if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
+        const d = entry as Record<string, unknown>;
+        for (const field of SOQUIJ_DECISION_STRING_FIELDS) {
+          if (!isStringOrAbsent(d[field])) return null;
+        }
       }
     }
-
-    // decision_count must be a number or absent
-    if (
-      obj["decision_count"] !== undefined &&
-      typeof obj["decision_count"] !== "number"
-    )
-      return null;
 
     return obj as SoquijScreeningPayload;
   } catch {
