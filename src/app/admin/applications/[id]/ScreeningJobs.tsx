@@ -677,6 +677,14 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         </p>
       ) : null}
 
+      {(payload.respondent_count ?? 0) > 0 ? (
+        <p className="font-semibold text-red-700">
+          {locale === "fr"
+            ? `⚠ ${payload.respondent_count} décision(s) comme défendeur — révision requise`
+            : `⚠ ${payload.respondent_count} decision(s) as respondent — review required`}
+        </p>
+      ) : null}
+
       {payload.status === "failed" ? (
         <p className={`${adminUi.alertWarn} !border-0 !bg-transparent !p-0`}>
           {payload.reason || c.soquijSearchFailed}
@@ -685,15 +693,6 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         <p className="text-[var(--ml-steel)]">{c.soquijNoDecisions}</p>
       ) : (
         <>
-          {/* Respondent alert — rendered independently whenever respondent_count > 0 */}
-          {(payload.respondent_count ?? 0) > 0 ? (
-            <p className="font-semibold text-red-700">
-              {locale === "fr"
-                ? `⚠ ${payload.respondent_count} décision(s) comme défendeur — révision requise`
-                : `⚠ ${payload.respondent_count} decision(s) as respondent — review required`}
-            </p>
-          ) : null}
-
           {/* Direct name matches — shown prominently */}
           {hasMatchData ? (
             directCount === 0 ? (
