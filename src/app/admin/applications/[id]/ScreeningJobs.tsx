@@ -656,11 +656,14 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
   }
 
   const allDecisions = payload.decisions ?? [];
-  const directMatches = allDecisions.filter((d) => d.name_match === true);
-  const broaderResults = allDecisions.filter((d) => d.name_match !== true);
   const totalCount = payload.decision_count ?? allDecisions.length;
-  // Fall back to full list if name_match is not tagged (older records)
-  const hasMatchData = allDecisions.some((d) => d.name_match !== undefined);
+  // hasMatchData requires EVERY decision to carry a name_match tag.
+  // A partial tag (some decisions tagged, some not) means we can't safely
+  // split direct vs broader — fall back to showing the full list.
+  const hasMatchData =
+    allDecisions.length > 0 && allDecisions.every((d) => d.name_match !== undefined);
+  const directMatches = hasMatchData ? allDecisions.filter((d) => d.name_match === true) : [];
+  const broaderResults = hasMatchData ? allDecisions.filter((d) => d.name_match !== true) : [];
   const shownDirect = hasMatchData ? directMatches : allDecisions.slice(0, 25);
   const directCount = hasMatchData
     ? (payload.name_match_count ?? directMatches.length)
@@ -682,7 +685,16 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         <p className="text-[var(--ml-steel)]">{c.soquijNoDecisions}</p>
       ) : (
         <>
-          {/* Direct name matches — shown prominently with amber flag */}
+          {/* Respondent alert — rendered independently whenever respondent_count > 0 */}
+          {(payload.respondent_count ?? 0) > 0 ? (
+            <p className="font-semibold text-red-700">
+              {locale === "fr"
+                ? `⚠ ${payload.respondent_count} décision(s) comme défendeur — révision requise`
+                : `⚠ ${payload.respondent_count} decision(s) as respondent — review required`}
+            </p>
+          ) : null}
+
+          {/* Direct name matches — shown prominently */}
           {hasMatchData ? (
             directCount === 0 ? (
               <p className="text-[var(--ml-steel)]">
@@ -692,18 +704,11 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
               </p>
             ) : (
               <>
-                {/* Respondent count is the primary risk signal */}
-                {(payload.respondent_count ?? 0) > 0 ? (
-                  <p className="font-semibold text-red-700">
-                    {locale === "fr"
-                      ? `⚠ ${payload.respondent_count} décision(s) comme défendeur — révision requise`
-                      : `⚠ ${payload.respondent_count} decision(s) as respondent — review required`}
-                  </p>
-                ) : (
+                {(payload.respondent_count ?? 0) === 0 ? (
                   <p className="font-medium text-amber-700">
                     {c.soquijFound(directCount ?? 0)}
                   </p>
-                )}
+                ) : null}
                 <ul className="space-y-2">
                   {shownDirect.map((d, i) => (
                     <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />

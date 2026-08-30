@@ -566,6 +566,8 @@ export function parseSoquijScreeningMessage(
           !VALID_APPLICANT_ROLES.has(d["applicant_role"] as string)
         )
           return null;
+        if (d["tribunal_rank"] !== undefined && typeof d["tribunal_rank"] !== "number")
+          return null;
       }
     }
 
