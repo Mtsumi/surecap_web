@@ -477,12 +477,21 @@ export type SoquijDecision = {
   tribunal?: string;
   url?: string;
   dossier?: string;
+  /** True when the family name token was found verbatim in the parties string. */
+  name_match?: boolean;
+  /** 'respondent' = applicant was sued (red flag); 'plaintiff' = applicant sued someone */
+  applicant_role?: "respondent" | "plaintiff";
+  tribunal_rank?: number;
 };
 
 export type SoquijScreeningPayload = {
   query?: string;
   status?: string;
   decision_count?: number;
+  /** Decisions where the family name matched verbatim. */
+  name_match_count?: number;
+  /** Decisions where the applicant appears as respondent/defendant. */
+  respondent_count?: number;
   decisions?: SoquijDecision[];
   has_flags?: boolean;
   elapsed_seconds?: number;
@@ -496,6 +505,8 @@ export type SoquijScreeningPayload = {
 const SOQUIJ_STRING_FIELDS = [
   "query", "status", "note", "reason", "summary",
 ] as const;
+
+const VALID_APPLICANT_ROLES = new Set(["respondent", "plaintiff"]);
 
 /** Fields that must be a string (or absent) within each decision entry. */
 const SOQUIJ_DECISION_STRING_FIELDS = [
@@ -520,13 +531,24 @@ export function parseSoquijScreeningMessage(
       if (!isStringOrAbsent(obj[field])) return null;
     }
 
-    // decision_count must be a number or absent
-    if (obj["decision_count"] !== undefined && typeof obj["decision_count"] !== "number")
-      return null;
+    // decision_count, name_match_count, respondent_count must be non-negative safe integers or absent
+    for (const countField of ["decision_count", "name_match_count", "respondent_count"] as const) {
+      if (obj[countField] !== undefined) {
+        const dc = obj[countField];
+        if (
+          typeof dc !== "number" ||
+          !Number.isInteger(dc) ||
+          dc < 0 ||
+          dc > Number.MAX_SAFE_INTEGER
+        )
+          return null;
+      }
+    }
 
-    // has_flags must be boolean or absent
-    if (obj["has_flags"] !== undefined && typeof obj["has_flags"] !== "boolean")
-      return null;
+    // boolean flags must be boolean or absent
+    for (const flag of ["has_flags", "mock"] as const) {
+      if (obj[flag] !== undefined && typeof obj[flag] !== "boolean") return null;
+    }
 
     // decisions must be an array of well-shaped objects
     if (obj["decisions"] !== undefined) {
@@ -537,6 +559,15 @@ export function parseSoquijScreeningMessage(
         for (const field of SOQUIJ_DECISION_STRING_FIELDS) {
           if (!isStringOrAbsent(d[field])) return null;
         }
+        if (d["name_match"] !== undefined && typeof d["name_match"] !== "boolean")
+          return null;
+        if (
+          d["applicant_role"] !== undefined &&
+          !VALID_APPLICANT_ROLES.has(d["applicant_role"] as string)
+        )
+          return null;
+        if (d["tribunal_rank"] !== undefined && typeof d["tribunal_rank"] !== "number")
+          return null;
       }
     }
 

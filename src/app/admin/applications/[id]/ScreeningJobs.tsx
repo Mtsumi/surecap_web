@@ -605,21 +605,38 @@ function SoquijDecisionRow({
 }) {
   const c = copy(locale);
   const safeUrl = isSoquijUrl(decision.url) ? decision.url : undefined;
+  const isRespondent = decision.applicant_role === "respondent";
+  const isPlaintiff = decision.applicant_role === "plaintiff";
+
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2 text-sm">
+    <li
+      className={`flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${
+        isRespondent
+          ? "border-red-200 bg-red-50"
+          : "border-[var(--ml-line)] bg-[var(--ml-card)]"
+      }`}
+    >
       <div className="min-w-0 flex-1">
-        <p className="font-medium text-[var(--ml-ink)]">{decision.parties || decision.title || "—"}</p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="font-medium text-[var(--ml-ink)]">
+            {decision.parties || decision.title || "—"}
+          </p>
+          {isRespondent ? (
+            <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">
+              {locale === "fr" ? "défendeur" : "respondent"}
+            </span>
+          ) : isPlaintiff ? (
+            <span className="rounded bg-blue-50 px-1.5 py-0.5 text-xs font-medium text-blue-600">
+              {locale === "fr" ? "demandeur" : "plaintiff"}
+            </span>
+          ) : null}
+        </div>
         <p className="mt-0.5 text-xs text-[var(--ml-steel)]">
           {[decision.date, decision.tribunal].filter(Boolean).join(" · ")}
         </p>
       </div>
       {safeUrl ? (
-        <a
-          href={safeUrl}
-          target="_blank"
-          rel="noreferrer"
-          className={adminUi.talLink}
-        >
+        <a href={safeUrl} target="_blank" rel="noreferrer" className={adminUi.talLink}>
           {c.soquijOpen}
         </a>
       ) : null}
@@ -638,10 +655,19 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
     );
   }
 
-  const count = payload.decision_count ?? 0;
-  const decisions = payload.decisions ?? [];
-  const shown = decisions.slice(0, 25);
-  const remaining = decisions.length - shown.length;
+  const allDecisions = payload.decisions ?? [];
+  const totalCount = payload.decision_count ?? allDecisions.length;
+  // hasMatchData requires EVERY decision to carry a name_match tag.
+  // A partial tag (some decisions tagged, some not) means we can't safely
+  // split direct vs broader — fall back to showing the full list.
+  const hasMatchData =
+    allDecisions.length > 0 && allDecisions.every((d) => d.name_match !== undefined);
+  const directMatches = hasMatchData ? allDecisions.filter((d) => d.name_match === true) : [];
+  const broaderResults = hasMatchData ? allDecisions.filter((d) => d.name_match !== true) : [];
+  const shownDirect = hasMatchData ? directMatches : allDecisions.slice(0, 25);
+  const directCount = hasMatchData
+    ? (payload.name_match_count ?? directMatches.length)
+    : null;
 
   return (
     <div className="space-y-3 text-sm">
@@ -651,24 +677,80 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         </p>
       ) : null}
 
+      {(payload.respondent_count ?? 0) > 0 ? (
+        <p className="font-semibold text-red-700">
+          {locale === "fr"
+            ? `⚠ ${payload.respondent_count} décision(s) comme défendeur — révision requise`
+            : `⚠ ${payload.respondent_count} decision(s) as respondent — review required`}
+        </p>
+      ) : null}
+
       {payload.status === "failed" ? (
         <p className={`${adminUi.alertWarn} !border-0 !bg-transparent !p-0`}>
           {payload.reason || c.soquijSearchFailed}
         </p>
-      ) : count === 0 ? (
+      ) : totalCount === 0 ? (
         <p className="text-[var(--ml-steel)]">{c.soquijNoDecisions}</p>
       ) : (
         <>
-          <p className="font-medium text-amber-700">{c.soquijFound(count)}</p>
-          {shown.length > 0 ? (
-            <ul className="space-y-2">
-              {shown.map((d, i) => (
-                <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
-              ))}
-            </ul>
-          ) : null}
-          {remaining > 0 ? (
-            <p className="text-xs text-[var(--ml-steel)]">{c.soquijMore(remaining)}</p>
+          {/* Direct name matches — shown prominently */}
+          {hasMatchData ? (
+            directCount === 0 ? (
+              <p className="text-[var(--ml-steel)]">
+                {locale === "fr"
+                  ? `0 correspondance directe (${totalCount} résultat(s) général/généraux SOQUIJ)`
+                  : `0 direct name matches (${totalCount} broader SOQUIJ result(s))`}
+              </p>
+            ) : (
+              <>
+                {(payload.respondent_count ?? 0) === 0 ? (
+                  <p className="font-medium text-amber-700">
+                    {c.soquijFound(directCount ?? 0)}
+                  </p>
+                ) : null}
+                <ul className="space-y-2">
+                  {shownDirect.map((d, i) => (
+                    <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
+                  ))}
+                </ul>
+              </>
+            )
+          ) : (
+            /* Legacy record — no name_match data, show all */
+            <>
+              <p className="font-medium text-amber-700">{c.soquijFound(totalCount)}</p>
+              <ul className="space-y-2">
+                {shownDirect.map((d, i) => (
+                  <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
+                ))}
+              </ul>
+              {allDecisions.length > 25 ? (
+                <p className="text-xs text-[var(--ml-steel)]">
+                  {c.soquijMore(allDecisions.length - 25)}
+                </p>
+              ) : null}
+            </>
+          )}
+
+          {/* Broader SOQUIJ results — collapsed, labelled as unverified */}
+          {hasMatchData && broaderResults.length > 0 ? (
+            <details className="mt-1">
+              <summary className="cursor-pointer text-xs text-[var(--ml-steel)]">
+                {locale === "fr"
+                  ? `${broaderResults.length} résultat(s) général/généraux SOQUIJ (non liés au nom)`
+                  : `${broaderResults.length} broader SOQUIJ result(s) — name not matched`}
+              </summary>
+              <ul className="mt-2 space-y-2">
+                {broaderResults.slice(0, 30).map((d, i) => (
+                  <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
+                ))}
+                {broaderResults.length > 30 ? (
+                  <li className="text-xs text-[var(--ml-steel)]">
+                    {c.soquijMore(broaderResults.length - 30)}
+                  </li>
+                ) : null}
+              </ul>
+            </details>
           ) : null}
         </>
       )}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ACCEPTED_ID_UPLOAD_TYPES,
+  ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF,
   ID_DOCUMENT_SLOTS,
   IdDocumentKind,
   idSlotsForKind,
@@ -79,6 +80,7 @@ export default function StepDocumentUpload(props: Props) {
   const [error, setError] = useState<string | null>(null);
   const [cameraSlot, setCameraSlot] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const fileBrowseRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const onDocumentsChangeRef = useRef(onDocumentsChange);
   onDocumentsChangeRef.current = onDocumentsChange;
@@ -160,10 +162,12 @@ export default function StepDocumentUpload(props: Props) {
     try {
       // Normalize first — Android may report empty/octet-stream for JPEGs.
       const normalized = await normalizeUploadFile(file);
-      if (!normalized.type.startsWith("image/")) {
+      const isPdf = normalized.type === "application/pdf";
+      if (!normalized.type.startsWith("image/") && !isPdf) {
         setError(t(locale, "idUploadImageOnly"));
         return;
       }
+      // compressImageForUpload returns PDFs unchanged; safe to call for both.
       const uploadFile = await compressImageForUpload(normalized);
       const uploadResult =
         props.mode === "member"
@@ -301,6 +305,7 @@ export default function StepDocumentUpload(props: Props) {
                 </p>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-3">
+                {/* Camera input — opens device camera directly on mobile */}
                 <input
                   ref={(el) => {
                     fileInputRefs.current[slot] = el;
@@ -316,6 +321,21 @@ export default function StepDocumentUpload(props: Props) {
                   }}
                   className="sr-only"
                 />
+                {/* Browse input — file picker without capture, accepts images + PDFs */}
+                <input
+                  ref={(el) => {
+                    fileBrowseRefs.current[slot] = el;
+                  }}
+                  type="file"
+                  accept={ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF}
+                  disabled={busy}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    void handleFile(slot, file);
+                    e.target.value = "";
+                  }}
+                  className="sr-only"
+                />
                 <button
                   type="button"
                   disabled={busy}
@@ -323,6 +343,14 @@ export default function StepDocumentUpload(props: Props) {
                   className="rounded border-0 bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] transition hover:bg-[#d4e4d6] disabled:opacity-60"
                 >
                   {uploaded ? t(locale, "idRetakePhoto") : t(locale, "idTakePhoto")}
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => fileBrowseRefs.current[slot]?.click()}
+                  className="rounded border border-[#c8bfb0] bg-white px-3 py-2 text-sm font-medium text-[#3d3229] transition hover:bg-[#f5f0eb] disabled:opacity-60"
+                >
+                  {t(locale, "idBrowseFile")}
                 </button>
                 {uploaded && (
                   <button
