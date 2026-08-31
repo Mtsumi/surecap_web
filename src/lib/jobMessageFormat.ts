@@ -400,6 +400,14 @@ export function sourceLabel(source: string | undefined, locale: Locale = "fr"): 
   }
 }
 
+/** Legacy stub / non-screening job rows hidden from the admin Screening panel. */
+export const HIDDEN_SCREENING_JOB_TYPES = new Set([
+  "ai_id_check",
+  "ai_social_check",
+  "applicant_confirmation",
+  "admin_notify",
+]);
+
 export function jobTypeLabel(jobType: string, locale: Locale = "fr"): string {
   switch (jobType) {
     case "tal_screening":
