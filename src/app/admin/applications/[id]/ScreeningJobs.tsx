@@ -596,6 +596,57 @@ function isSoquijUrl(url: string | undefined): boolean {
   }
 }
 
+function isTalTribunal(tribunal: string | undefined): boolean {
+  if (!tribunal) return false;
+  const t = tribunal.toUpperCase();
+  return t.includes("T.A.L") || t.includes("TAL") || t.includes("R.D.L") || t.includes("RDL");
+}
+
+function SoquijDecisionList({
+  decisions,
+  locale,
+}: {
+  decisions: SoquijDecision[];
+  locale: Locale;
+}) {
+  if (decisions.length === 0) return null;
+  return (
+    <ul className="space-y-2">
+      {decisions.map((d, i) => (
+        <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
+      ))}
+    </ul>
+  );
+}
+
+function SoquijCollapsedGroup({
+  title,
+  decisions,
+  locale,
+  limit = 30,
+}: {
+  title: string;
+  decisions: SoquijDecision[];
+  locale: Locale;
+  limit?: number;
+}) {
+  const c = copy(locale);
+  if (decisions.length === 0) return null;
+  return (
+    <details className="mt-1">
+      <summary className="cursor-pointer text-xs text-[var(--ml-steel)]">
+        {title} ({decisions.length})
+      </summary>
+      <div className="mt-2">
+        <SoquijDecisionList decisions={decisions.slice(0, limit)} locale={locale} />
+        {decisions.length > limit ? (
+          <p className="mt-1 text-xs text-[var(--ml-steel)]">{c.soquijMore(decisions.length - limit)}</p>
+        ) : null}
+      </div>
+    </details>
+  );
+}
+
 function SoquijDecisionRow({
   decision,
   locale,
@@ -664,10 +715,22 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
     allDecisions.length > 0 && allDecisions.every((d) => d.name_match !== undefined);
   const directMatches = hasMatchData ? allDecisions.filter((d) => d.name_match === true) : [];
   const broaderResults = hasMatchData ? allDecisions.filter((d) => d.name_match !== true) : [];
-  const shownDirect = hasMatchData ? directMatches : allDecisions.slice(0, 25);
   const directCount = hasMatchData
     ? (payload.name_match_count ?? directMatches.length)
     : null;
+
+  // Rental DD priority: TAL respondents expanded; everything else collapsed.
+  const talRespondents = directMatches.filter(
+    (d) => d.applicant_role === "respondent" && isTalTribunal(d.tribunal)
+  );
+  const otherRespondents = directMatches.filter(
+    (d) => d.applicant_role === "respondent" && !isTalTribunal(d.tribunal)
+  );
+  const plaintiffs = directMatches.filter((d) => d.applicant_role === "plaintiff");
+  const otherDirect = directMatches.filter(
+    (d) => d.applicant_role !== "respondent" && d.applicant_role !== "plaintiff"
+  );
+  const shownLegacy = allDecisions.slice(0, 25);
 
   return (
     <div className="space-y-3 text-sm">
@@ -677,7 +740,13 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         </p>
       ) : null}
 
-      {(payload.respondent_count ?? 0) > 0 ? (
+      {talRespondents.length > 0 ? (
+        <p className="font-semibold text-red-700">
+          {locale === "fr"
+            ? `⚠ ${talRespondents.length} décision(s) TAL comme défendeur — révision requise`
+            : `⚠ ${talRespondents.length} TAL decision(s) as respondent — review required`}
+        </p>
+      ) : (payload.respondent_count ?? 0) > 0 ? (
         <p className="font-semibold text-red-700">
           {locale === "fr"
             ? `⚠ ${payload.respondent_count} décision(s) comme défendeur — révision requise`
@@ -703,27 +772,42 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
               </p>
             ) : (
               <>
-                {(payload.respondent_count ?? 0) === 0 ? (
+                {talRespondents.length === 0 && (payload.respondent_count ?? 0) === 0 ? (
                   <p className="font-medium text-amber-700">
                     {c.soquijFound(directCount ?? 0)}
                   </p>
                 ) : null}
-                <ul className="space-y-2">
-                  {shownDirect.map((d, i) => (
-                    <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
-                  ))}
-                </ul>
+                <SoquijDecisionList decisions={talRespondents} locale={locale} />
+                <SoquijCollapsedGroup
+                  title={
+                    locale === "fr"
+                      ? "Autres décisions comme défendeur (hors TAL)"
+                      : "Other respondent decisions (non-TAL)"
+                  }
+                  decisions={otherRespondents}
+                  locale={locale}
+                />
+                <SoquijCollapsedGroup
+                  title={locale === "fr" ? "Décisions comme demandeur" : "Plaintiff decisions"}
+                  decisions={plaintiffs}
+                  locale={locale}
+                />
+                <SoquijCollapsedGroup
+                  title={
+                    locale === "fr"
+                      ? "Autres correspondances directes (rôle inconnu)"
+                      : "Other direct matches (role unknown)"
+                  }
+                  decisions={otherDirect}
+                  locale={locale}
+                />
               </>
             )
           ) : (
             /* Legacy record — no name_match data, show all */
             <>
               <p className="font-medium text-amber-700">{c.soquijFound(totalCount)}</p>
-              <ul className="space-y-2">
-                {shownDirect.map((d, i) => (
-                  <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
-                ))}
-              </ul>
+              <SoquijDecisionList decisions={shownLegacy} locale={locale} />
               {allDecisions.length > 25 ? (
                 <p className="text-xs text-[var(--ml-steel)]">
                   {c.soquijMore(allDecisions.length - 25)}
