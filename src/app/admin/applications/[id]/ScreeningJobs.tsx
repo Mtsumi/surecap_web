@@ -16,6 +16,7 @@ import {
   pluralCount,
   sourceLabel,
   tenantFromDossier,
+  HIDDEN_SCREENING_JOB_TYPES,
   jobTypeLabel,
   type SoquijDecision,
   type TalDossier,
@@ -949,13 +950,14 @@ export default function ScreeningJobs({
 }) {
   const { locale } = useAdminLocaleContext();
   const c = copy(locale);
+  const visibleJobs = jobs.filter((job) => !HIDDEN_SCREENING_JOB_TYPES.has(job.job_type));
 
-  if (jobs.length === 0) {
+  if (visibleJobs.length === 0) {
     return <p className={adminUi.empty}>{c.noJobs}</p>;
   }
 
   const byMember = new Map<number, ApplicationJob[]>();
-  for (const job of jobs) {
+  for (const job of visibleJobs) {
     const list = byMember.get(job.application_member_id) ?? [];
     list.push(job);
     byMember.set(job.application_member_id, list);
