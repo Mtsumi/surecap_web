@@ -67,6 +67,8 @@ function inviteToValidationInput(
     previous_landlord_name: form.previous_landlord_name,
     hr_phone: form.hr_phone,
     hr_name: form.hr_name,
+    employer_name: form.employer_name,
+    employment_type: form.employment_type,
     monthly_net_income: form.monthly_net_income,
     ...toAddressValidationInput(form, {
       requireLeaseInName: role === "roommate" && form.housing_status !== "own_home",
@@ -118,6 +120,7 @@ const PYDANTIC_FIELD_STEP: Record<string, ApplyFormStep> = {
   previous_landlord_name: "addresses",
   previous_landlord_phone: "addresses",
   hr_name: "references",
+  employer_name: "references",
   hr_phone: "references",
   referral_source: "other",
   facebook_url: "other",

@@ -4,8 +4,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ACCEPTED_UPLOAD_TYPES } from "@/lib/documentUpload";
 import {
   EmploymentType,
+  employmentRequiresIncome,
   incomeSlotsForType,
   incomeUploadComplete,
+  isOptionalIncomeSlot,
   staleIncomeDocumentTypes,
 } from "@/lib/incomeUpload";
 import { compressImageForUpload, uploadFileTooLargeMessage } from "@/lib/compressImage";
@@ -61,6 +63,7 @@ type Props = (MemberMode | InviteMode) & {
   employmentType: EmploymentType;
   onEmploymentTypeChange: (type: EmploymentType) => void;
   onDocumentsChange?: (documents: MemberDocument[]) => void;
+  showNoIncomeOption?: boolean;
 };
 
 function documentsEqual(a: MemberDocument[], b: MemberDocument[]): boolean {
@@ -77,6 +80,7 @@ export default function StepIncomeUpload(props: Props) {
     employmentType,
     onEmploymentTypeChange,
     onDocumentsChange,
+    showNoIncomeOption = true,
   } = props;
   const isMember = props.mode === "member";
   const applicationId = isMember ? props.applicationId : 0;
@@ -89,6 +93,7 @@ export default function StepIncomeUpload(props: Props) {
   const [loadingList, setLoadingList] = useState(true);
   const [busySlot, setBusySlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const uploadErrorMessage = (e: unknown) =>
     e instanceof Error ? formatUploadErrorMessage(e.message) : t(locale, "uploadFailed");
@@ -248,11 +253,18 @@ export default function StepIncomeUpload(props: Props) {
   return (
     <div className="rounded border border-[#d4e4d6] bg-[#fafcfa] px-4 py-5">
       <h3 className="text-sm font-medium text-[#1a3d22]">
-        {t(locale, "incomeDocumentsTitle")}
+        {t(
+          locale,
+          employmentRequiresIncome(employmentType)
+            ? "incomeDocumentsTitle"
+            : "incomeEmploymentTitle"
+        )}
       </h3>
-      <p className="mt-1 text-sm leading-relaxed text-[#57534e]">
-        {t(locale, "incomeDocumentsHint")}
-      </p>
+      {employmentRequiresIncome(employmentType) ? (
+        <p className="mt-1 text-sm leading-relaxed text-[#57534e]">
+          {t(locale, "incomeDocumentsHint")}
+        </p>
+      ) : null}
 
       <label className="mt-4 block text-sm text-[#57534e]">
         {t(locale, "employmentType")}
@@ -267,18 +279,32 @@ export default function StepIncomeUpload(props: Props) {
           <option value="employed">{t(locale, "employmentEmployed")}</option>
           <option value="self_employed">{t(locale, "employmentSelfEmployed")}</option>
           <option value="other">{t(locale, "employmentOther")}</option>
+          {showNoIncomeOption ? (
+            <option value="no_income">{t(locale, "employmentNoIncome")}</option>
+          ) : null}
         </select>
       </label>
 
+      {!employmentRequiresIncome(employmentType) ? (
+        <p className="mt-4 text-sm leading-relaxed text-[#57534e]">
+          {t(locale, "incomeNoIncomeHint")}
+        </p>
+      ) : (
       <div className="mt-4 space-y-3">
         {slots.map((slot) => {
           const labelKey = SLOT_LABEL[slot];
           const uploaded = documents.find((doc) => doc.document_type === slot);
           const busy = busySlot === slot || switchingType;
+          const optional = isOptionalIncomeSlot(employmentType, slot);
           return (
             <div key={slot} className="rounded border border-[#e7e0d5] bg-white px-4 py-3">
               <p className="text-sm font-medium text-[#292524]">
                 {labelKey ? t(locale, labelKey) : slot}
+                {optional ? (
+                  <span className="ml-1 font-normal text-[#78716c]">
+                    {t(locale, "incomeOptionalSuffix")}
+                  </span>
+                ) : null}
               </p>
               {uploaded && (
                 <p className="mt-1 text-xs text-[#3d5a45]">
@@ -297,22 +323,39 @@ export default function StepIncomeUpload(props: Props) {
                 </p>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-3">
-                <label>
-                  <span className="sr-only">
-                    {uploaded ? t(locale, "uploadReplaceFile") : t(locale, "uploadChooseFile")}
-                  </span>
-                  <input
-                    type="file"
-                    accept={ACCEPTED_UPLOAD_TYPES}
+                <input
+                  ref={(element) => {
+                    fileInputRefs.current[slot] = element;
+                  }}
+                  type="file"
+                  accept={ACCEPTED_UPLOAD_TYPES}
+                  disabled={busy}
+                  className="sr-only"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] ?? null;
+                    void handleFile(slot, file);
+                    e.target.value = "";
+                  }}
+                />
+                {uploaded ? (
+                  <button
+                    type="button"
                     disabled={busy}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] ?? null;
-                      void handleFile(slot, file);
-                      e.target.value = "";
-                    }}
-                    className="block w-full text-sm text-[#57534e] file:mr-3 file:rounded file:border-0 file:bg-[#e8f0ea] file:px-3 file:py-2 file:text-sm file:font-medium file:text-[#1a3d22] hover:file:bg-[#d4e4d6] disabled:opacity-60"
-                  />
-                </label>
+                    onClick={() => fileInputRefs.current[slot]?.click()}
+                    className="rounded border border-[#d4e4d6] bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] hover:bg-[#d4e4d6] disabled:opacity-60"
+                  >
+                    {t(locale, "uploadReplaceFile")}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => fileInputRefs.current[slot]?.click()}
+                    className="rounded border border-[#d4e4d6] bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] hover:bg-[#d4e4d6] disabled:opacity-60"
+                  >
+                    {t(locale, "uploadChooseFile")}
+                  </button>
+                )}
                 {uploaded && (
                   <button
                     type="button"
@@ -333,6 +376,7 @@ export default function StepIncomeUpload(props: Props) {
           );
         })}
       </div>
+      )}
 
       {error && (
         <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
@@ -340,7 +384,9 @@ export default function StepIncomeUpload(props: Props) {
         </p>
       )}
 
-      {!loadingList && incomeUploadComplete(employmentType, incomeDocTypes) && (
+      {!loadingList &&
+        employmentRequiresIncome(employmentType) &&
+        incomeUploadComplete(employmentType, incomeDocTypes) && (
         <p className="mt-4 text-sm text-[#3d5a45]">{t(locale, "incomeUploadComplete")}</p>
       )}
     </div>

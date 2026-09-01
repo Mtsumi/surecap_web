@@ -56,6 +56,7 @@ export type Application = {
   hr_phone: string | null;
   landlord_name: string | null;
   hr_name: string | null;
+  employer_name: string | null;
   previous_landlord_phone: string | null;
   previous_landlord_name: string | null;
   landlord_email: string | null;
@@ -136,6 +137,7 @@ export type ApplicationUpdate = Partial<{
   hr_phone: string;
   landlord_name: string | null;
   hr_name: string;
+  employer_name?: string;
   previous_landlord_phone?: string | null;
   previous_landlord_name?: string | null;
   landlord_email?: string | null;
@@ -143,7 +145,7 @@ export type ApplicationUpdate = Partial<{
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
-  employment_type: "employed" | "self_employed" | "other";
+  employment_type: "employed" | "self_employed" | "other" | "no_income";
   monthly_net_income: number;
   preferred_locale?: "en" | "fr";
   roommates: RoommateContact[];
@@ -444,12 +446,13 @@ export type InviteeSubmitPayload = {
   hr_phone?: string;
   landlord_name?: string;
   hr_name?: string;
+  employer_name?: string;
   previous_landlord_phone?: string;
   previous_landlord_name?: string;
   referral_source?: string;
   facebook_url?: string;
   linkedin_url?: string;
-  employment_type: "employed" | "self_employed" | "other";
+  employment_type: "employed" | "self_employed" | "other" | "no_income";
   monthly_net_income: number;
   preferred_locale?: "en" | "fr";
 };

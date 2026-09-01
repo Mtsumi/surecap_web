@@ -33,6 +33,7 @@ function roommateFields(overrides: Partial<InviteeFormFields> = {}): InviteeForm
     previous_landlord_name: "",
     previous_landlord_phone: "",
     hr_name: "HR Dept",
+    employer_name: "Acme Inc",
     hr_phone: "5145550102",
     employment_type: "employed",
     monthly_net_income: "4000",

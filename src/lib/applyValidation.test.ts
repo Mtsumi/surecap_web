@@ -44,7 +44,9 @@ function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidati
     previous_landlord_name: "",
     previous_landlord_phone: "",
     hr_name: "Jean HR",
+    employer_name: "Acme Inc",
     hr_phone: "5145550102",
+    employment_type: "employed",
     monthly_net_income: "4000",
     current_address: "123 Rue Example",
     current_address_lived_from: "2024-01-01",
@@ -364,7 +366,9 @@ describe("field error maps", () => {
     });
     expect(
       incomeFieldErrors({
+        employment_type: "employed",
         monthly_net_income: "4000",
+        employer_name: "Acme",
         landlord_phone: "5145550101",
         hr_name: "Jean",
         hr_phone: "",
@@ -372,7 +376,9 @@ describe("field error maps", () => {
     ).toEqual({ hr_phone: "required" });
     expect(
       incomeFieldErrors({
+        employment_type: "employed",
         monthly_net_income: "4000",
+        employer_name: "Acme",
         landlord_phone: "5145550100",
         hr_name: "Jean",
         hr_phone: "5145550100",
@@ -380,12 +386,24 @@ describe("field error maps", () => {
     ).toEqual({ hr_phone: "landlord_hr_same_phone" });
     expect(
       incomeFieldErrors({
+        employment_type: "employed",
         monthly_net_income: "4000",
+        employer_name: "",
         landlord_phone: "",
         hr_name: "",
         hr_phone: "5145550102",
       })
-    ).toEqual({ hr_name: "required" });
+    ).toEqual({ employer_name: "required", hr_name: "required" });
+    expect(
+      incomeFieldErrors({
+        employment_type: "no_income",
+        monthly_net_income: "",
+        employer_name: "",
+        landlord_phone: "",
+        hr_name: "",
+        hr_phone: "",
+      })
+    ).toEqual({});
   });
 
   it("validateDateOfBirth and findFirstValidationIssue reject underage / future DOB", () => {

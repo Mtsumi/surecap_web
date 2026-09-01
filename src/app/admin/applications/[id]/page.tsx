@@ -139,6 +139,10 @@ function MemberCard({ member }: { member: ApplicationMember }) {
                 )}
               </div>
               <div className="rounded-md border border-[var(--ml-line)] bg-[var(--ml-paper)] p-3 space-y-1">
+                <p className="admin-field-label">Employeur</p>
+                <p className="admin-field-value">{member.employer_name || "—"}</p>
+              </div>
+              <div className="rounded-md border border-[var(--ml-line)] bg-[var(--ml-paper)] p-3 space-y-1">
                 <p className="admin-field-label">Contact RH</p>
                 <p className="admin-field-value">{member.hr_name || "—"}</p>
                 {member.hr_phone ? (
@@ -445,6 +449,7 @@ export default function ApplicationDetailPage() {
                   />
                 </>
               ) : null}
+              <AdminField label="Employeur" value={app.employer_name} />
               <AdminField label="Contact RH" value={app.hr_name} />
               <AdminField label="Tél. RH" value={app.hr_phone} />
             </dl>

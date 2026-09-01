@@ -35,6 +35,8 @@ import {
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
 import {
   EmploymentType,
+  employmentRequiresIncome,
+  employmentTypeMessageKey,
   incomeUploadComplete,
   parseMonthlyNetIncome,
   formatMonthlyNetIncome,
@@ -129,6 +131,7 @@ type FormFields = {
   previous_landlord_name: string;
   previous_landlord_phone: string;
   hr_name: string;
+  employer_name: string;
   hr_phone: string;
   employment_type: EmploymentType;
   monthly_net_income: string;
@@ -164,6 +167,7 @@ const emptyForm: FormFields = {
   previous_landlord_name: "",
   previous_landlord_phone: "",
   hr_name: "",
+  employer_name: "",
   hr_phone: "",
   employment_type: "employed",
   monthly_net_income: "",
@@ -246,10 +250,17 @@ function formPayload(
       fields.housing_status === "own_home" || !fields.previous_address.trim()
         ? null
         : fields.previous_landlord_phone.trim(),
-    hr_name: fields.hr_name.trim(),
-    hr_phone: fields.hr_phone.trim(),
+    hr_name: fields.employment_type === "no_income" ? undefined : fields.hr_name.trim(),
+    employer_name:
+      fields.employment_type === "no_income"
+        ? undefined
+        : fields.employer_name.trim() || undefined,
+    hr_phone: fields.employment_type === "no_income" ? undefined : fields.hr_phone.trim(),
     employment_type: fields.employment_type,
-    monthly_net_income: parseMonthlyNetIncome(fields.monthly_net_income) ?? 0,
+    monthly_net_income:
+      fields.employment_type === "no_income"
+        ? 0
+        : parseMonthlyNetIncome(fields.monthly_net_income) ?? 0,
     referral_source: fields.referral_source.trim(),
     facebook_url: fields.facebook_url.trim() || undefined,
     linkedin_url: fields.linkedin_url.trim() || undefined,
@@ -886,6 +897,8 @@ export default function ApplyForm() {
     previous_landlord_name: form.previous_landlord_name,
     hr_phone: form.hr_phone,
     hr_name: form.hr_name,
+    employer_name: form.employer_name,
+    employment_type: form.employment_type,
     monthly_net_income: form.monthly_net_income,
     ...addressValidationFields(),
   });
@@ -2017,7 +2030,12 @@ export default function ApplyForm() {
             {t(locale, "references")}
           </h2>
           <p className="mb-5 text-sm leading-relaxed text-[#78716c]">
-            {t(locale, "referencesNote")}
+            {t(
+              locale,
+              employmentRequiresIncome(form.employment_type)
+                ? "referencesNote"
+                : "referencesNoteNoIncome"
+            )}
           </p>
           <form
             onSubmit={(e) => {
@@ -2053,6 +2071,7 @@ export default function ApplyForm() {
                 onDocumentsChange={setIncomeDocuments}
               />
             )}
+            {employmentRequiresIncome(form.employment_type) && (
             <div id="apply-field-monthly_net_income">
               <label className="block text-sm text-[#57534e]">
                 {t(locale, "monthlyNetIncome")}
@@ -2076,9 +2095,25 @@ export default function ApplyForm() {
               </label>
               {fieldHint("monthly_net_income")}
             </div>
+            )}
+            {employmentRequiresIncome(form.employment_type) && (
+            <>
             <h3 className="pt-2 text-sm font-medium text-[#292524]">
               {t(locale, "incomeReferencesHeading")}
             </h3>
+            <div id="apply-field-employer_name">
+            <label className="block text-sm text-[#57534e]">
+              {t(locale, "employerName")}
+              <input
+                type="text"
+                required
+                autoComplete="organization"
+                value={form.employer_name}
+                onChange={(e) => setField("employer_name", e.target.value)}
+                className={inputClassFor("employer_name")}
+              />
+            </label>
+            </div>
             <div id="apply-field-hr_name">
             <label className="block text-sm text-[#57534e]">
               {t(locale, "hrName")}
@@ -2106,6 +2141,8 @@ export default function ApplyForm() {
               />
               {fieldHint("hr_phone")}
             </div>
+            </>
+            )}
             <StepAlert />
             <button
               type="submit"
@@ -2293,21 +2330,19 @@ export default function ApplyForm() {
             />
             <ReviewRow
               label={t(locale, "employmentType")}
-              value={t(
-                locale,
-                form.employment_type === "employed"
-                  ? "employmentEmployed"
-                  : form.employment_type === "self_employed"
-                    ? "employmentSelfEmployed"
-                    : "employmentOther"
-              )}
+              value={t(locale, employmentTypeMessageKey(form.employment_type))}
             />
+            {employmentRequiresIncome(form.employment_type) && (
+              <>
             <ReviewRow
               label={t(locale, "monthlyNetIncome")}
               value={formatMonthlyNetIncome(locale, form.monthly_net_income)}
             />
+            <ReviewRow label={t(locale, "employerName")} value={form.employer_name} />
             <ReviewRow label={t(locale, "hrName")} value={form.hr_name} />
             <ReviewRow label={t(locale, "hrPhone")} value={form.hr_phone} />
+              </>
+            )}
             <ReviewRow
               label={t(locale, "referralSource")}
               value={form.referral_source}
