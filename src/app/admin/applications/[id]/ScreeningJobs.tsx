@@ -96,6 +96,7 @@ function copy(locale: Locale) {
       soquijFound: (n: number) => `${n} published decision(s) found — review recommended`,
       soquijMore: (n: number) => `+${n} more not shown`,
       soquijMock: "Simulation mode",
+      soquijQuery: "Query",
       soquijRelated: "Related — verify in decision (name may be inside text)",
       soquijOther: "Other SOQUIJ results",
       soquijStrong: "High confidence",
@@ -147,6 +148,7 @@ function copy(locale: Locale) {
     soquijFound: (n: number) => `${n} décision(s) publiée(s) trouvée(s) — révision recommandée`,
     soquijMore: (n: number) => `+${n} autre(s) non affichée(s)`,
     soquijMock: "Mode simulation",
+    soquijQuery: "Recherche",
     soquijRelated: "Connexe — vérifier dans la décision (nom possiblement dans le texte)",
     soquijOther: "Autres résultats SOQUIJ",
     soquijStrong: "Haute confiance",
@@ -667,6 +669,7 @@ function SoquijDecisionRow({
   const isPlaintiff = decision.applicant_role === "plaintiff";
   const isRelated = decision.match_level === "related";
   const isStrong = decision.match_level === "strong";
+  const isSurname = decision.match_level === "surname";
 
   return (
     <li
@@ -686,6 +689,10 @@ function SoquijDecisionRow({
           {isStrong ? (
             <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800">
               {c.soquijStrong}
+            </span>
+          ) : isSurname ? (
+            <span className="rounded bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-700">
+              {c.soquijSurname}
             </span>
           ) : isRelated ? (
             <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">
@@ -734,13 +741,24 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
       (d) => d.match_level !== undefined || d.name_match !== undefined
     );
   const personMatches = hasMatchData
-    ? allDecisions.filter((d) => d.name_match === true)
+    ? allDecisions.filter(
+        (d) =>
+          d.match_level === "strong" ||
+          d.match_level === "surname" ||
+          (d.match_level !== "related" && d.name_match === true)
+      )
     : [];
   const relatedResults = hasMatchData
     ? allDecisions.filter((d) => d.match_level === "related")
     : [];
   const otherResults = hasMatchData
-    ? allDecisions.filter((d) => !d.name_match && d.match_level !== "related")
+    ? allDecisions.filter(
+        (d) =>
+          d.match_level !== "strong" &&
+          d.match_level !== "surname" &&
+          d.match_level !== "related" &&
+          d.name_match !== true
+      )
     : [];
   const directCount = hasMatchData
     ? (payload.name_match_count ?? personMatches.length)
