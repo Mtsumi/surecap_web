@@ -485,7 +485,9 @@ export type SoquijDecision = {
   tribunal?: string;
   url?: string;
   dossier?: string;
-  /** True when the family name token was found verbatim in the parties string. */
+  /** strong = given+family in parties; surname = family only; related = verify in decision */
+  match_level?: "strong" | "surname" | "related" | null;
+  /** True when match_level is strong or surname. */
   name_match?: boolean;
   /** 'respondent' = applicant was sued (red flag); 'plaintiff' = applicant sued someone */
   applicant_role?: "respondent" | "plaintiff";
@@ -496,8 +498,12 @@ export type SoquijScreeningPayload = {
   query?: string;
   status?: string;
   decision_count?: number;
-  /** Decisions where the family name matched verbatim. */
+  /** Decisions with given + family name in parties. */
+  strong_match_count?: number;
+  /** Decisions where the family name matched in parties (includes strong). */
   name_match_count?: number;
+  /** Corporate / full-text SOQUIJ hits — open decision to verify. */
+  related_count?: number;
   /** Decisions where the applicant appears as respondent/defendant. */
   respondent_count?: number;
   decisions?: SoquijDecision[];
@@ -540,7 +546,13 @@ export function parseSoquijScreeningMessage(
     }
 
     // decision_count, name_match_count, respondent_count must be non-negative safe integers or absent
-    for (const countField of ["decision_count", "name_match_count", "respondent_count"] as const) {
+    for (const countField of [
+      "decision_count",
+      "name_match_count",
+      "strong_match_count",
+      "related_count",
+      "respondent_count",
+    ] as const) {
       if (obj[countField] !== undefined) {
         const dc = obj[countField];
         if (
@@ -568,6 +580,14 @@ export function parseSoquijScreeningMessage(
           if (!isStringOrAbsent(d[field])) return null;
         }
         if (d["name_match"] !== undefined && typeof d["name_match"] !== "boolean")
+          return null;
+        if (
+          d["match_level"] !== undefined &&
+          d["match_level"] !== null &&
+          d["match_level"] !== "strong" &&
+          d["match_level"] !== "surname" &&
+          d["match_level"] !== "related"
+        )
           return null;
         if (
           d["applicant_role"] !== undefined &&
