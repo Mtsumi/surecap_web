@@ -67,6 +67,7 @@ export type ApplicationMember = {
   hr_phone: string | null;
   landlord_name: string | null;
   hr_name: string | null;
+  employer_name: string | null;
   previous_landlord_phone: string | null;
   previous_landlord_name: string | null;
   referral_source: string | null;
@@ -99,6 +100,7 @@ export type ApplicationDetail = {
   hr_phone: string | null;
   landlord_name: string | null;
   hr_name: string | null;
+  employer_name: string | null;
   previous_landlord_phone: string | null;
   previous_landlord_name: string | null;
   landlord_email: string | null;

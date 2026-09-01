@@ -39,6 +39,7 @@ export type InviteeFormFields = {
   previous_landlord_name: string;
   previous_landlord_phone: string;
   hr_name: string;
+  employer_name: string;
   hr_phone: string;
   employment_type: EmploymentType;
   monthly_net_income: string;
@@ -57,6 +58,7 @@ const ROOMMATE_REQUIRED: (keyof InviteeFormFields)[] = [
   "date_of_birth",
   "email",
   "phone",
+  "employer_name",
   "hr_name",
   "hr_phone",
   "employment_type",
@@ -69,11 +71,19 @@ const GUARANTOR_REQUIRED: (keyof InviteeFormFields)[] = [
   "date_of_birth",
   "email",
   "phone",
+  "employer_name",
   "hr_name",
   "hr_phone",
   "employment_type",
   "monthly_net_income",
 ];
+
+const INCOME_REFERENCE_FIELDS = new Set<keyof InviteeFormFields>([
+  "employer_name",
+  "hr_name",
+  "hr_phone",
+  "monthly_net_income",
+]);
 
 export function validateInviteeEmailMatch(
   invitedEmail: string,
@@ -93,13 +103,19 @@ export function inviteeFieldErrors(
   invitedEmail: string
 ): InviteeFieldErrors {
   const errors: InviteeFieldErrors = {};
-  const required = role === "guarantor" ? GUARANTOR_REQUIRED : ROOMMATE_REQUIRED;
+  const baseRequired = role === "guarantor" ? GUARANTOR_REQUIRED : ROOMMATE_REQUIRED;
+  const required =
+    role === "roommate" && fields.employment_type === "no_income"
+      ? baseRequired.filter((key) => !INCOME_REFERENCE_FIELDS.has(key))
+      : baseRequired;
 
   for (const key of required) {
     const value = fields[key];
     if (key === "monthly_net_income") {
-      if (!parseMonthlyNetIncome(String(value ?? ""))) {
-        errors[key] = "required";
+      if (fields.employment_type !== "no_income" || role === "guarantor") {
+        if (!parseMonthlyNetIncome(String(value ?? ""))) {
+          errors[key] = "required";
+        }
       }
       continue;
     }

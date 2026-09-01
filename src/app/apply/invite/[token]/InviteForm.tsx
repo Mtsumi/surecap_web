@@ -14,7 +14,7 @@ import {
   submitInvite,
 } from "@/lib/api";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
-import { incomeUploadComplete, parseMonthlyNetIncome, formatMonthlyNetIncome } from "@/lib/incomeUpload";
+import { incomeUploadComplete, parseMonthlyNetIncome, formatMonthlyNetIncome, employmentRequiresIncome } from "@/lib/incomeUpload";
 import { Locale, MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
   addressDatePayload,
@@ -103,6 +103,7 @@ function emptyFields(): InviteeFormFields {
     previous_landlord_name: "",
     previous_landlord_phone: "",
     hr_name: "",
+    employer_name: "",
     hr_phone: "",
     employment_type: "employed",
     monthly_net_income: "",
@@ -238,9 +239,11 @@ export default function InviteForm({ token }: Props) {
       personal: ["given_name", "family_name", "date_of_birth", "email", "phone"],
       addresses: [],
       references:
-        role === "guarantor"
-          ? ["hr_name", "hr_phone", "monthly_net_income"]
-          : ["hr_name", "hr_phone", "monthly_net_income"],
+        role === "guarantor" || form.employment_type === "no_income"
+          ? role === "guarantor"
+            ? ["employer_name", "hr_name", "hr_phone", "monthly_net_income"]
+            : []
+          : ["employer_name", "hr_name", "hr_phone", "monthly_net_income"],
       review: [],
       done: [],
     };
@@ -264,7 +267,7 @@ export default function InviteForm({ token }: Props) {
     if (current === "addresses") {
       Object.assign(errors, addressFieldErrors(addressFields()));
     }
-    if (current === "references") {
+    if (current === "references" && employmentRequiresIncome(form.employment_type)) {
       if (!parseMonthlyNetIncome(form.monthly_net_income)) {
         errors.monthly_net_income = "required";
       }
@@ -376,7 +379,9 @@ export default function InviteForm({ token }: Props) {
       phone: form.phone.trim(),
       current_address: form.current_address.trim(),
       employment_type: form.employment_type,
-      monthly_net_income: parseMonthlyNetIncome(form.monthly_net_income) ?? 0,
+      monthly_net_income: employmentRequiresIncome(form.employment_type)
+        ? parseMonthlyNetIncome(form.monthly_net_income) ?? 0
+        : 0,
       preferred_locale: locale,
       ...addressDatePayload(form),
     };
@@ -409,12 +414,16 @@ export default function InviteForm({ token }: Props) {
           payload.previous_landlord_phone = form.previous_landlord_phone.trim();
         }
       }
-      payload.hr_name = form.hr_name.trim();
-      payload.hr_phone = form.hr_phone.trim();
+      if (employmentRequiresIncome(form.employment_type)) {
+        payload.employer_name = form.employer_name.trim();
+        payload.hr_name = form.hr_name.trim();
+        payload.hr_phone = form.hr_phone.trim();
+      }
       if (form.referral_source.trim()) payload.referral_source = form.referral_source.trim();
       if (form.facebook_url.trim()) payload.facebook_url = form.facebook_url.trim();
       if (form.linkedin_url.trim()) payload.linkedin_url = form.linkedin_url.trim();
     } else {
+      payload.employer_name = form.employer_name.trim();
       payload.hr_name = form.hr_name.trim();
       payload.hr_phone = form.hr_phone.trim();
     }
@@ -932,7 +941,14 @@ export default function InviteForm({ token }: Props) {
           }}
         >
           <h2 className="text-base font-medium text-[#292524]">{t(locale, "references")}</h2>
-          <p className="text-sm text-[#78716c]">{t(locale, "referencesNote")}</p>
+          <p className="text-sm text-[#78716c]">
+            {t(
+              locale,
+              employmentRequiresIncome(form.employment_type)
+                ? "referencesNote"
+                : "referencesNoteNoIncome"
+            )}
+          </p>
           <StepIncomeUpload
             mode="invite"
             locale={locale}
@@ -940,7 +956,10 @@ export default function InviteForm({ token }: Props) {
             employmentType={form.employment_type}
             onEmploymentTypeChange={(type) => setField("employment_type", type)}
             onDocumentsChange={setIncomeDocuments}
+            showNoIncomeOption={role === "roommate"}
           />
+          {employmentRequiresIncome(form.employment_type) && (
+          <>
           <label className="block text-sm text-[#57534e]">
             {t(locale, "monthlyNetIncome")}
             <span className="mt-0.5 block text-xs text-[#a8a29e]">
@@ -966,6 +985,16 @@ export default function InviteForm({ token }: Props) {
             {t(locale, "incomeReferencesHeading")}
           </h3>
           <label className="block text-sm text-[#57534e]">
+            {t(locale, "employerName")}
+            <input
+              required
+              value={form.employer_name}
+              onChange={(e) => setField("employer_name", e.target.value)}
+              className={inputClassFor("employer_name")}
+            />
+            {fieldHint("employer_name")}
+          </label>
+          <label className="block text-sm text-[#57534e]">
             {t(locale, "hrName")}
             <input
               required
@@ -986,6 +1015,8 @@ export default function InviteForm({ token }: Props) {
             />
             {fieldHint("hr_phone")}
           </div>
+          </>
+          )}
           {role === "roommate" && (
             <label className="block text-sm text-[#57534e]">
               {t(locale, "referralSource")}

@@ -4,7 +4,7 @@ import {
   isValidPhone,
   normalizePhoneDigits,
 } from "./phoneValidation";
-import { parseMonthlyNetIncome } from "./incomeUpload";
+import { EmploymentType, parseMonthlyNetIncome } from "./incomeUpload";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -61,7 +61,9 @@ export type ApplyValidationInput = {
   previous_landlord_name: string;
   previous_landlord_phone: string;
   hr_name: string;
+  employer_name: string;
   hr_phone: string;
+  employment_type: EmploymentType;
   monthly_net_income: string;
 } & AddressDatesInput;
 
@@ -556,12 +558,23 @@ export function referencesFieldErrors(
 export function incomeFieldErrors(
   fields: Pick<
     ApplyValidationInput,
-    "monthly_net_income" | "hr_name" | "hr_phone" | "landlord_phone"
+    | "monthly_net_income"
+    | "employer_name"
+    | "hr_name"
+    | "hr_phone"
+    | "landlord_phone"
+    | "employment_type"
   >
 ): ApplyFieldErrors {
+  if (fields.employment_type === "no_income") {
+    return {};
+  }
   const errors: ApplyFieldErrors = {};
   if (!parseMonthlyNetIncome(fields.monthly_net_income)) {
     errors.monthly_net_income = "required";
+  }
+  if (!fields.employer_name.trim()) {
+    errors.employer_name = "required";
   }
   if (!fields.hr_name.trim()) {
     errors.hr_name = "required";
