@@ -96,7 +96,10 @@ function copy(locale: Locale) {
       soquijFound: (n: number) => `${n} published decision(s) found — review recommended`,
       soquijMore: (n: number) => `+${n} more not shown`,
       soquijMock: "Simulation mode",
-      soquijQuery: "Query",
+      soquijRelated: "Related — verify in decision (name may be inside text)",
+      soquijOther: "Other SOQUIJ results",
+      soquijStrong: "High confidence",
+      soquijSurname: "Surname match",
     };
   }
   return {
@@ -144,7 +147,10 @@ function copy(locale: Locale) {
     soquijFound: (n: number) => `${n} décision(s) publiée(s) trouvée(s) — révision recommandée`,
     soquijMore: (n: number) => `+${n} autre(s) non affichée(s)`,
     soquijMock: "Mode simulation",
-    soquijQuery: "Recherche",
+    soquijRelated: "Connexe — vérifier dans la décision (nom possiblement dans le texte)",
+    soquijOther: "Autres résultats SOQUIJ",
+    soquijStrong: "Haute confiance",
+    soquijSurname: "Nom de famille",
   };
 }
 
@@ -659,13 +665,17 @@ function SoquijDecisionRow({
   const safeUrl = isSoquijUrl(decision.url) ? decision.url : undefined;
   const isRespondent = decision.applicant_role === "respondent";
   const isPlaintiff = decision.applicant_role === "plaintiff";
+  const isRelated = decision.match_level === "related";
+  const isStrong = decision.match_level === "strong";
 
   return (
     <li
       className={`flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-2 text-sm ${
         isRespondent
           ? "border-red-200 bg-red-50"
-          : "border-[var(--ml-line)] bg-[var(--ml-card)]"
+          : isRelated
+            ? "border-amber-200 bg-amber-50"
+            : "border-[var(--ml-line)] bg-[var(--ml-card)]"
       }`}
     >
       <div className="min-w-0 flex-1">
@@ -673,6 +683,15 @@ function SoquijDecisionRow({
           <p className="font-medium text-[var(--ml-ink)]">
             {decision.parties || decision.title || "—"}
           </p>
+          {isStrong ? (
+            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-xs font-medium text-emerald-800">
+              {c.soquijStrong}
+            </span>
+          ) : isRelated ? (
+            <span className="rounded bg-amber-100 px-1.5 py-0.5 text-xs font-medium text-amber-800">
+              {locale === "fr" ? "connexe" : "related"}
+            </span>
+          ) : null}
           {isRespondent ? (
             <span className="rounded bg-red-100 px-1.5 py-0.5 text-xs font-semibold text-red-700">
               {locale === "fr" ? "défendeur" : "respondent"}
@@ -709,26 +728,38 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
 
   const allDecisions = payload.decisions ?? [];
   const totalCount = payload.decision_count ?? allDecisions.length;
-  // hasMatchData requires EVERY decision to carry a name_match tag.
-  // A partial tag (some decisions tagged, some not) means we can't safely
-  // split direct vs broader — fall back to showing the full list.
   const hasMatchData =
-    allDecisions.length > 0 && allDecisions.every((d) => d.name_match !== undefined);
-  const directMatches = hasMatchData ? allDecisions.filter((d) => d.name_match === true) : [];
-  const broaderResults = hasMatchData ? allDecisions.filter((d) => d.name_match !== true) : [];
+    allDecisions.length > 0 &&
+    allDecisions.every(
+      (d) => d.match_level !== undefined || d.name_match !== undefined
+    );
+  const personMatches = hasMatchData
+    ? allDecisions.filter((d) => d.name_match === true)
+    : [];
+  const relatedResults = hasMatchData
+    ? allDecisions.filter((d) => d.match_level === "related")
+    : [];
+  const otherResults = hasMatchData
+    ? allDecisions.filter((d) => !d.name_match && d.match_level !== "related")
+    : [];
   const directCount = hasMatchData
-    ? (payload.name_match_count ?? directMatches.length)
+    ? (payload.name_match_count ?? personMatches.length)
     : null;
+  const relatedCount = hasMatchData
+    ? (payload.related_count ?? relatedResults.length)
+    : 0;
 
-  // Rental DD priority: TAL respondents expanded; everything else collapsed.
-  const talRespondents = directMatches.filter(
+  // Rental DD priority: TAL respondents expanded; related corporate/TAL visible; rest collapsed.
+  const talRespondents = personMatches.filter(
     (d) => d.applicant_role === "respondent" && isTalTribunal(d.tribunal)
   );
-  const otherRespondents = directMatches.filter(
+  const relatedTal = relatedResults.filter((d) => isTalTribunal(d.tribunal));
+  const relatedOther = relatedResults.filter((d) => !isTalTribunal(d.tribunal));
+  const otherRespondents = personMatches.filter(
     (d) => d.applicant_role === "respondent" && !isTalTribunal(d.tribunal)
   );
-  const plaintiffs = directMatches.filter((d) => d.applicant_role === "plaintiff");
-  const otherDirect = directMatches.filter(
+  const plaintiffs = personMatches.filter((d) => d.applicant_role === "plaintiff");
+  const otherDirect = personMatches.filter(
     (d) => d.applicant_role !== "respondent" && d.applicant_role !== "plaintiff"
   );
   const shownLegacy = allDecisions.slice(0, 25);
@@ -765,20 +796,39 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         <>
           {/* Direct name matches — shown prominently */}
           {hasMatchData ? (
-            directCount === 0 ? (
+            directCount === 0 && relatedCount === 0 ? (
               <p className="text-[var(--ml-steel)]">
                 {locale === "fr"
-                  ? `0 correspondance directe (${totalCount} résultat(s) général/généraux SOQUIJ)`
-                  : `0 direct name matches (${totalCount} broader SOQUIJ result(s))`}
+                  ? `0 correspondance personne (${totalCount} autre(s) résultat(s) SOQUIJ)`
+                  : `0 person matches (${totalCount} other SOQUIJ result(s))`}
               </p>
             ) : (
               <>
                 {talRespondents.length === 0 && (payload.respondent_count ?? 0) === 0 ? (
                   <p className="font-medium text-amber-700">
-                    {c.soquijFound(directCount ?? 0)}
+                    {directCount
+                      ? c.soquijFound(directCount)
+                      : locale === "fr"
+                        ? `${relatedCount} décision(s) connexe(s) — vérifier`
+                        : `${relatedCount} related decision(s) — verify`}
                   </p>
                 ) : null}
                 <SoquijDecisionList decisions={talRespondents} locale={locale} />
+                {relatedResults.length > 0 ? (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-amber-800">{c.soquijRelated}</p>
+                    <SoquijDecisionList decisions={relatedTal} locale={locale} />
+                    <SoquijCollapsedGroup
+                      title={
+                        locale === "fr"
+                          ? "Autres décisions connexes (hors TAL)"
+                          : "Other related decisions (non-TAL)"
+                      }
+                      decisions={relatedOther}
+                      locale={locale}
+                    />
+                  </div>
+                ) : null}
                 <SoquijCollapsedGroup
                   title={
                     locale === "fr"
@@ -818,20 +868,18 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
           )}
 
           {/* Broader SOQUIJ results — collapsed, labelled as unverified */}
-          {hasMatchData && broaderResults.length > 0 ? (
+          {hasMatchData && otherResults.length > 0 ? (
             <details className="mt-1">
               <summary className="cursor-pointer text-xs text-[var(--ml-steel)]">
-                {locale === "fr"
-                  ? `${broaderResults.length} résultat(s) général/généraux SOQUIJ (non liés au nom)`
-                  : `${broaderResults.length} broader SOQUIJ result(s) — name not matched`}
+                {c.soquijOther} ({otherResults.length})
               </summary>
               <ul className="mt-2 space-y-2">
-                {broaderResults.slice(0, 30).map((d, i) => (
+                {otherResults.slice(0, 30).map((d, i) => (
                   <SoquijDecisionRow key={d.url ?? i} decision={d} locale={locale} />
                 ))}
-                {broaderResults.length > 30 ? (
+                {otherResults.length > 30 ? (
                   <li className="text-xs text-[var(--ml-steel)]">
-                    {c.soquijMore(broaderResults.length - 30)}
+                    {c.soquijMore(otherResults.length - 30)}
                   </li>
                 ) : null}
               </ul>
