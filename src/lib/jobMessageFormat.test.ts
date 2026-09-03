@@ -9,6 +9,7 @@ import {
   parseTalScreeningMessage,
   pluralCount,
   sourceLabel,
+  talReasonLabel,
 } from "./jobMessageFormat";
 
 describe("jobMessageFormat", () => {
@@ -107,8 +108,19 @@ describe("jobMessageFormat", () => {
   });
 
   it("labels address sources in French and English", () => {
-    expect(sourceLabel("current_address", "fr")).toBe("Adresse actuelle");
-    expect(sourceLabel("id_pdf417_address", "fr")).toBe("Adresse permis (PDF417)");
-    expect(sourceLabel("id_sticker_address", "en")).toBe("SAAQ sticker address");
+    expect(sourceLabel("current_address", "fr")).toBe("Formulaire — adresse actuelle");
+    expect(sourceLabel("id_pdf417_address", "fr")).toBe("Pièce d'identité (code-barres)");
+    expect(sourceLabel("id_sticker_address", "en")).toBe("ID (sticker)");
+    expect(sourceLabel("income_doc_address", "en")).toBe("Proof of income");
+    expect(sourceLabel("income_doc_address", "fr")).toBe("Preuve de revenu");
+  });
+
+  it("labels payslip TAL unusable-address reason", () => {
+    expect(talReasonLabel("missing_postal_code", "income_doc_address", "en")).toBe(
+      "No usable address found on the payslip"
+    );
+    expect(talReasonLabel("payslip_address_unusable", "income_doc_address", "fr")).toBe(
+      "Aucune adresse utilisable trouvée sur le talon de paie"
+    );
   });
 });
