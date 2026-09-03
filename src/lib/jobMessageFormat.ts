@@ -416,9 +416,13 @@ export function talReasonLabel(
   locale: Locale = "fr"
 ): string {
   if (!reason) return "";
-  const isPayslip =
-    source === "income_doc_address" || reason === "payslip_address_unusable";
-  if (isPayslip) {
+  const isPayslipAddressIssue =
+    reason === "payslip_address_unusable" ||
+    (source === "income_doc_address" &&
+      ["missing_postal_code", "missing_civic_number", "empty_address"].includes(
+        reason
+      ));
+  if (isPayslipAddressIssue) {
     return locale === "fr"
       ? "Aucune adresse utilisable trouvée sur le talon de paie"
       : "No usable address found on the payslip";

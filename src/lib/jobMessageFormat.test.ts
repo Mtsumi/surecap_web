@@ -122,5 +122,8 @@ describe("jobMessageFormat", () => {
     expect(talReasonLabel("payslip_address_unusable", "income_doc_address", "fr")).toBe(
       "Aucune adresse utilisable trouvée sur le talon de paie"
     );
+    expect(talReasonLabel("not_quebec", "income_doc_address", "en")).toBe(
+      "Outside Quebec — not searched"
+    );
   });
 });
