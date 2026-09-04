@@ -15,6 +15,7 @@ import {
   precisionLabel,
   pluralCount,
   sourceLabel,
+  talReasonLabel,
   tenantFromDossier,
   HIDDEN_SCREENING_JOB_TYPES,
   jobTypeLabel,
@@ -229,22 +230,29 @@ function SearchBlock({ search, locale }: { search: TalSearch; locale: Locale }) 
     (d) => d.name_match !== true && d.landlord_match !== true
   );
   const dossierCount = search.dossier_count ?? dossiers.length;
-  const addressLine = formatSearchAddress(search.input, locale);
+  const addressLine =
+    formatSearchAddress(search.input, locale) ||
+    (typeof search.raw_address === "string" && search.raw_address.trim()
+      ? search.raw_address.trim()
+      : null);
 
   return (
     <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] p-3">
       <div className="text-sm font-semibold text-[var(--ml-ink)]">
-        {sourceLabel(search.source, locale)}{" "}
-        <span className="font-normal text-[var(--ml-steel)]">
-          ({precisionLabel(search.search_precision, locale)})
-        </span>
+        {sourceLabel(search.source, locale)}
+        {search.search_precision === "unit" || search.search_precision === "building" ? (
+          <span className="font-normal text-[var(--ml-steel)]">
+            {" "}
+            ({precisionLabel(search.search_precision, locale)})
+          </span>
+        ) : null}
       </div>
       {addressLine ? (
         <p className="mt-0.5 text-sm text-[var(--ml-ink)]">{addressLine}</p>
       ) : null}
       {search.status !== "completed" ? (
         <p className={`${adminUi.alertWarn} mt-2 !border-0 !bg-transparent !p-0`}>
-          {search.reason || search.status}
+          {talReasonLabel(search.reason || search.status, search.source, locale)}
         </p>
       ) : (
         <>

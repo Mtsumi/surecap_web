@@ -26,6 +26,7 @@ export type TalSearch = {
   search_precision?: string;
   status?: string;
   reason?: string;
+  raw_address?: string;
   applicant_name?: string;
   dossier_count?: number;
   name_match_count?: number;
@@ -371,32 +372,86 @@ export function sourceLabel(source: string | undefined, locale: Locale = "fr"): 
   if (locale === "en") {
     switch (source) {
       case "current_address":
-        return "Current address";
+        return "Form — current address";
       case "previous_address":
-        return "Previous address";
+        return "Form — previous address";
       case "id_pdf417_address":
-        return "Licence address (PDF417)";
+        return "ID (barcode)";
       case "id_front_ocr_address":
-        return "Licence address (front OCR)";
+        return "ID (front)";
+      case "id_back_ocr_address":
+        return "ID (back)";
       case "id_sticker_address":
-        return "SAAQ sticker address";
+        return "ID (sticker)";
+      case "income_doc_address":
+        return "Proof of income";
       default:
         return source || "Address";
     }
   }
   switch (source) {
     case "current_address":
-      return "Adresse actuelle";
+      return "Formulaire — adresse actuelle";
     case "previous_address":
-      return "Adresse précédente";
+      return "Formulaire — adresse précédente";
     case "id_pdf417_address":
-      return "Adresse permis (PDF417)";
+      return "Pièce d'identité (code-barres)";
     case "id_front_ocr_address":
-      return "Adresse permis (OCR recto)";
+      return "Pièce d'identité (recto)";
+    case "id_back_ocr_address":
+      return "Pièce d'identité (verso)";
     case "id_sticker_address":
-      return "Adresse autocollant SAAQ";
+      return "Pièce d'identité (autocollant)";
+    case "income_doc_address":
+      return "Preuve de revenu";
     default:
       return source || "Adresse";
+  }
+}
+
+/** Map TAL skip/fail reason codes to admin-facing copy. */
+export function talReasonLabel(
+  reason: string | undefined,
+  source: string | undefined,
+  locale: Locale = "fr"
+): string {
+  if (!reason) return "";
+  const isPayslipAddressIssue =
+    reason === "payslip_address_unusable" ||
+    (source === "income_doc_address" &&
+      ["missing_postal_code", "missing_civic_number", "empty_address"].includes(
+        reason
+      ));
+  if (isPayslipAddressIssue) {
+    return locale === "fr"
+      ? "Aucune adresse utilisable trouvée sur le talon de paie"
+      : "No usable address found on the payslip";
+  }
+  if (locale === "en") {
+    switch (reason) {
+      case "missing_postal_code":
+        return "Incomplete address — no postal code";
+      case "missing_civic_number":
+        return "Incomplete address — no street number";
+      case "empty_address":
+        return "No address provided";
+      case "not_quebec":
+        return "Outside Quebec — not searched";
+      default:
+        return reason;
+    }
+  }
+  switch (reason) {
+    case "missing_postal_code":
+      return "Adresse incomplète — code postal manquant";
+    case "missing_civic_number":
+      return "Adresse incomplète — numéro civique manquant";
+    case "empty_address":
+      return "Aucune adresse fournie";
+    case "not_quebec":
+      return "Hors Québec — non recherchée";
+    default:
+      return reason;
   }
 }
 
