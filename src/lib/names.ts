@@ -7,7 +7,7 @@ function normalizePersonName(name: string): string {
     .trim()
     .replace(/[\u2019\u2018\u0060\u00b4]/g, "'")
     .normalize("NFKD")
-    .replace(/\p{M}/gu, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
   return folded.replace(/[^a-z0-9'\s-]/g, " ").replace(/\s+/g, " ").trim();
 }
