@@ -105,4 +105,39 @@ describe("api client", () => {
       expect.objectContaining({ method: "POST" })
     );
   });
+
+  it("loads and posts janitor review by public token", async () => {
+    const review = {
+      stage: "janitor",
+      status: "submitted",
+      application_id: 1,
+      building_name: "Goyer",
+      building_address: "3270 Rue Goyer",
+      unit_number: "101",
+      members: [],
+      checklist: null,
+      token_expired: false,
+    };
+    const fetchMock = mockFetch({
+      status: "success",
+      message: "ok",
+      data: review,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { fetchJanitorReview, submitJanitorReview } = await import("./api");
+    await fetchJanitorReview("abc token");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/admin/janitor-review/abc%20token",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+      })
+    );
+
+    await submitJanitorReview("abc token", { action: "accept" });
+    expect(fetchMock).toHaveBeenLastCalledWith(
+      "http://localhost:8000/admin/janitor-review/abc%20token",
+      expect.objectContaining({ method: "POST" })
+    );
+  });
 });
