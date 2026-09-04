@@ -3,6 +3,8 @@ import {
   formatJobMessagePreview,
   formatSearchAddress,
   formatTalScreeningPreview,
+  formatIdPhotoQuality,
+  uniqueIncomeFlags,
   incomeExtractFlagLabel,
   parseIdDocumentExtractMessage,
   parseIncomeDocumentExtractMessage,
@@ -90,6 +92,19 @@ describe("jobMessageFormat", () => {
     );
   });
 
+  it("labels stale vs future pay dates in plain language", () => {
+    expect(incomeExtractFlagLabel("payslip_stale", "en")).toBe(
+      "Pay date is older than 6 months"
+    );
+    expect(incomeExtractFlagLabel("payslip_date_in_future", "en")).toBe(
+      "Pay date is in the future"
+    );
+    expect(incomeExtractFlagLabel("name_mismatch_payslip_form", "en")).toMatch(
+      /doesn't match the application/i
+    );
+    expect(incomeExtractFlagLabel("payslip_stale", "fr")).toContain("6 mois");
+  });
+
   it("parses income_document_extract JSON and formats preview", () => {
     const message = JSON.stringify({
       document_type: "pay_slip_1",
@@ -125,5 +140,24 @@ describe("jobMessageFormat", () => {
     expect(talReasonLabel("not_quebec", "income_doc_address", "en")).toBe(
       "Outside Quebec — not searched"
     );
+  });
+
+  it("omits blur jargon when the ID photo is clear and there is no back", () => {
+    expect(
+      formatIdPhotoQuality({ blur_front: { quality: "sharp" }, blur_back: null }, "en")
+    ).toBeNull();
+    expect(
+      formatIdPhotoQuality({ blur_front: { quality: "blurry" }, blur_back: null }, "en")
+    ).toMatch(/blurry/i);
+  });
+
+  it("hides duplicate payslip-not-recognized flags already shown on a slip", () => {
+    expect(
+      uniqueIncomeFlags({
+        payslip_like: false,
+        flags: ["payslip_not_recognized", "payslip_stale"],
+        slips: [{ flags: ["payslip_not_recognized"] }],
+      })
+    ).toEqual(["payslip_stale"]);
   });
 });

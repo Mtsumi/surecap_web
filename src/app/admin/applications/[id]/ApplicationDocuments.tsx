@@ -16,6 +16,12 @@ import {
   triggerBlobDownload,
 } from "@/lib/adminDocuments";
 
+export type DocumentReviewRequest = {
+  memberId: number;
+  documentTypes: string[];
+  nonce: number;
+};
+
 export type PreviewTarget =
   | {
       kind: "member";
@@ -37,16 +43,23 @@ type ApplicationDocumentsProps = {
   memberRoleLabel: (role: string) => string;
   memberDisplayName: (member: ApplicationMember) => string;
   onSummaryRegenerated?: () => void;
+  reviewRequest?: DocumentReviewRequest | null;
 };
 
 function DocumentPreviewModal({
   applicationId,
   target,
   onClose,
+  onPrev,
+  onNext,
+  positionLabel,
 }: {
   applicationId: number;
   target: PreviewTarget;
   onClose: () => void;
+  onPrev?: () => void;
+  onNext?: () => void;
+  positionLabel?: string | null;
 }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -120,10 +133,12 @@ function DocumentPreviewModal({
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
+      if (event.key === "ArrowLeft") onPrev?.();
+      if (event.key === "ArrowRight") onNext?.();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, onNext, onPrev]);
 
   return (
     <div
@@ -142,9 +157,29 @@ function DocumentPreviewModal({
             <h3 className="truncate text-sm font-semibold text-[var(--ml-ink)]">
               {target.title}
             </h3>
-            <p className="truncate text-xs text-[var(--ml-steel)]">{filename}</p>
+            <p className="truncate text-xs text-[var(--ml-steel)]">
+              {positionLabel ? `${positionLabel} · ${filename}` : filename}
+            </p>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {onPrev ? (
+              <button
+                type="button"
+                onClick={onPrev}
+                className={adminUi.btnSecondary + " !px-3 !py-1.5 !text-xs"}
+              >
+                ←
+              </button>
+            ) : null}
+            {onNext ? (
+              <button
+                type="button"
+                onClick={onNext}
+                className={adminUi.btnSecondary + " !px-3 !py-1.5 !text-xs"}
+              >
+                →
+              </button>
+            ) : null}
             <button
               type="button"
               onClick={() => void onDownload()}
@@ -203,14 +238,37 @@ export default function ApplicationDocuments({
   memberRoleLabel,
   memberDisplayName,
   onSummaryRegenerated,
+  reviewRequest,
 }: ApplicationDocumentsProps) {
-  const [preview, setPreview] = useState<PreviewTarget | null>(null);
+  const [previewQueue, setPreviewQueue] = useState<PreviewTarget[]>([]);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const preview = previewQueue[previewIndex] ?? null;
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regeneratingSummary, setRegeneratingSummary] = useState(false);
 
   const membersWithDocs = members.filter((member) => (member.documents?.length ?? 0) > 0);
   const hasMemberDocs = membersWithDocs.length > 0;
+
+  useEffect(() => {
+    if (!reviewRequest) return;
+    const member = members.find((item) => item.id === reviewRequest.memberId);
+    const docs = (member?.documents ?? []).filter((doc) =>
+      reviewRequest.documentTypes.includes(doc.document_type)
+    );
+    if (docs.length === 0) {
+      document.getElementById("documents-section")?.scrollIntoView({ behavior: "smooth" });
+      return;
+    }
+    setPreviewQueue(
+      docs.map((document) => ({
+        kind: "member" as const,
+        document,
+        title: documentTypeLabel(document.document_type),
+      }))
+    );
+    setPreviewIndex(0);
+  }, [members, reviewRequest]);
 
   if (!summaryPdfAvailable && !hasMemberDocs && !dropboxDossierReady) {
     return <p className={adminUi.empty}>Aucun document téléversé pour cette demande.</p>;
@@ -305,14 +363,17 @@ export default function ApplicationDocuments({
                   <div className="flex justify-end gap-3">
                     <button
                       type="button"
-                      onClick={() =>
-                        setPreview({
-                          kind: "summary",
-                          title: "Résumé du dossier",
-                          filename: "application_summary.pdf",
-                          contentType: "application/pdf",
-                        })
-                      }
+                      onClick={() => {
+                        setPreviewQueue([
+                          {
+                            kind: "summary",
+                            title: "Résumé du dossier",
+                            filename: "application_summary.pdf",
+                            contentType: "application/pdf",
+                          },
+                        ]);
+                        setPreviewIndex(0);
+                      }}
                       className={adminUi.link + " text-xs font-medium"}
                     >
                       Aperçu
@@ -352,13 +413,16 @@ export default function ApplicationDocuments({
                       <div className="flex justify-end gap-3">
                         <button
                           type="button"
-                          onClick={() =>
-                            setPreview({
-                              kind: "member",
-                              document,
-                              title: label,
-                            })
-                          }
+                          onClick={() => {
+                            setPreviewQueue([
+                              {
+                                kind: "member",
+                                document,
+                                title: label,
+                              },
+                            ]);
+                            setPreviewIndex(0);
+                          }}
                           className={adminUi.link + " text-xs font-medium"}
                         >
                           Aperçu
@@ -389,7 +453,25 @@ export default function ApplicationDocuments({
         <DocumentPreviewModal
           applicationId={applicationId}
           target={preview}
-          onClose={() => setPreview(null)}
+          onClose={() => {
+            setPreviewQueue([]);
+            setPreviewIndex(0);
+          }}
+          onPrev={
+            previewQueue.length > 1 && previewIndex > 0
+              ? () => setPreviewIndex((index) => index - 1)
+              : undefined
+          }
+          onNext={
+            previewQueue.length > 1 && previewIndex < previewQueue.length - 1
+              ? () => setPreviewIndex((index) => index + 1)
+              : undefined
+          }
+          positionLabel={
+            previewQueue.length > 1
+              ? `${previewIndex + 1} / ${previewQueue.length}`
+              : null
+          }
         />
       ) : null}
     </>

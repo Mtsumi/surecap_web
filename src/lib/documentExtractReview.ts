@@ -63,14 +63,14 @@ export function inconclusiveReviewBody(
 ): string {
   if (locale === "fr") {
     if (kind === "income") {
-      return "Le système n'a pas pu interpréter ce document comme un talon de paie fiable (ou l'a lu partiellement). Vérifiez le fichier téléversé avant de conclure sur le revenu.";
+      return "Le système n'a pas pu tout lire automatiquement. Ouvrez l'aperçu du talon (ou des talons) avant de conclure sur le revenu.";
     }
-    return "La pièce d'identité n'a pas fourni assez d'information fiable (nom illisible, photo floue, etc.). Vérifiez le document avant de conclure.";
+    return "Le nom n'a pas pu être lu automatiquement sur cette pièce. Ouvrez l'aperçu pour confirmer qu'elle correspond à la demande.";
   }
   if (kind === "income") {
-    return "The system could not reliably interpret this file as a payslip (or only partially read it). Review the uploaded document before drawing income conclusions.";
+    return "The system could not read everything automatically. Open the payslip preview(s) before drawing income conclusions.";
   }
-  return "The ID did not yield enough reliable information (unreadable name, blurry photo, etc.). Review the document before drawing conclusions.";
+  return "The name could not be read automatically from this ID. Open the preview to confirm it matches the application.";
 }
 
 export function incomeSlipSlotLabel(
@@ -91,10 +91,14 @@ export function incomeSlipSlotLabel(
 
 export function slipRecognizedLabel(
   payslipLike: boolean | undefined,
-  locale: Locale
+  locale: Locale,
+  hasExtractedFields = false
 ): string {
   if (payslipLike) {
     return locale === "fr" ? "Reconnu comme talon" : "Recognized as payslip";
+  }
+  if (hasExtractedFields) {
+    return locale === "fr" ? "Lu en partie" : "Partially read";
   }
   return locale === "fr" ? "Non reconnu comme talon" : "Not recognized as payslip";
 }

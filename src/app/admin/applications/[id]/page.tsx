@@ -18,8 +18,12 @@ import { formatAddressDateRange } from "@/lib/addressFormUtils";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
 import { guarantorAddressOutsideQuebec } from "@/lib/quebecAddress";
 import { applicationStatusLabel, memberStatusLabel } from "@/lib/adminStatus";
-import ApplicationDocuments from "./ApplicationDocuments";
+import ApplicationDocuments, { type DocumentReviewRequest } from "./ApplicationDocuments";
 import ScreeningJobs from "./ScreeningJobs";
+import {
+  ID_REVIEW_DOCUMENT_TYPES,
+  INCOME_REVIEW_DOCUMENT_TYPES,
+} from "@/lib/adminDocuments";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 
 function formatLivedDates(
@@ -240,6 +244,7 @@ export default function ApplicationDetailPage() {
   const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [reviewRequest, setReviewRequest] = useState<DocumentReviewRequest | null>(null);
 
   const load = () => {
     Promise.all([getApplication(id), getApplicationJobs(id)])
@@ -473,6 +478,7 @@ export default function ApplicationDetailPage() {
               memberRoleLabel={memberRoleLabel}
               memberDisplayName={memberDisplayName}
               onSummaryRegenerated={load}
+              reviewRequest={reviewRequest}
             />
           </AdminCollapsible>
         </div>
@@ -489,6 +495,14 @@ export default function ApplicationDetailPage() {
             jobs={jobs}
             jobMemberLabel={jobMemberLabel}
             docsAnchor="#documents-section"
+            onReviewDocuments={(memberId, kind) => {
+              setReviewRequest({
+                memberId,
+                documentTypes:
+                  kind === "id" ? ID_REVIEW_DOCUMENT_TYPES : INCOME_REVIEW_DOCUMENT_TYPES,
+                nonce: Date.now(),
+              });
+            }}
           />
         </AdminCollapsible>
       </div>
