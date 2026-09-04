@@ -26,6 +26,19 @@ describe("documentExtractReview", () => {
     ).toBe(true);
   });
 
+  it("flags review when a sibling slip failed even if the merged payload looks fine", () => {
+    expect(
+      isIncomeExtractInconclusive({
+        payslip_like: true,
+        flags: [],
+        slips: [
+          { payslip_like: true, flags: [] },
+          { payslip_like: false, flags: ["income_doc_unreadable"] },
+        ],
+      })
+    ).toBe(true);
+  });
+
   it("flags ID extracts with blur or missing name on Canadian ID", () => {
     expect(
       isIdExtractInconclusive({

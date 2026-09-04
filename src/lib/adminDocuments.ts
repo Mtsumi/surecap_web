@@ -30,6 +30,20 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   selfie: "Selfie",
 };
 
+export const ID_REVIEW_DOCUMENT_TYPES = [
+  "id_driver_licence_front",
+  "id_driver_licence_back",
+  "id_medicare",
+  "id_passport",
+];
+
+export const INCOME_REVIEW_DOCUMENT_TYPES = [
+  "pay_slip_1",
+  "pay_slip_2",
+  "pay_slip_3",
+  "proof_of_income",
+];
+
 export function documentTypeLabel(documentType: string): string {
   return DOCUMENT_TYPE_LABELS[documentType] ?? documentType.replaceAll("_", " ");
 }

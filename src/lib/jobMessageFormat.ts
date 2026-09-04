@@ -179,11 +179,13 @@ export function parseIncomeDocumentExtractMessage(
 export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): string {
   const fr: Record<string, string> = {
     payslip_not_recognized: "Ne ressemble pas à un talon de paie",
-    name_mismatch_payslip_form: "Nom du talon ≠ formulaire",
+    name_mismatch_payslip_form: "Nom du talon différent du formulaire",
     employer_mismatch_form: "Employeur du talon ≠ contact RH",
     net_vs_declared_income: "Net du talon ≠ revenu déclaré",
     pay_math_inconsistent: "Calcul heures × taux incohérent",
-    payslip_stale_or_future: "Date de paie trop ancienne ou future",
+    payslip_stale: "Date de paie trop ancienne (plus de 6 mois)",
+    payslip_date_in_future: "Date de paie dans le futur",
+    payslip_stale_or_future: "Date de paie trop ancienne ou dans le futur",
     income_doc_missing: "Talon de paie manquant",
     income_doc_unreadable: "Talon illisible",
     income_doc_partial: "Moins de 3 talons",
@@ -193,11 +195,13 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
   };
   const en: Record<string, string> = {
     payslip_not_recognized: "Does not look like a payslip",
-    name_mismatch_payslip_form: "Payslip name ≠ form",
+    name_mismatch_payslip_form: "Name on the payslip doesn't match the application",
     employer_mismatch_form: "Payslip employer ≠ HR contact",
     net_vs_declared_income: "Payslip net ≠ declared income",
     pay_math_inconsistent: "Hours × rate math inconsistent",
-    payslip_stale_or_future: "Pay date too old or in the future",
+    payslip_stale: "Pay date is older than 6 months",
+    payslip_date_in_future: "Pay date is in the future",
+    payslip_stale_or_future: "Pay date is older than 6 months or in the future",
     income_doc_missing: "Payslip missing",
     income_doc_unreadable: "Payslip unreadable",
     income_doc_partial: "Fewer than 3 payslips",
@@ -207,6 +211,48 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
   };
   const map = locale === "en" ? en : fr;
   return map[flag] || flag.replaceAll("_", " ");
+}
+
+export function uniqueIncomeFlags(payload: IncomeDocumentExtractPayload): string[] {
+  const flags = payload.flags ?? [];
+  const slipFlags = new Set(
+    (payload.slips ?? []).flatMap((slip) => {
+      const value = slip.flags;
+      return Array.isArray(value) ? value.filter((flag): flag is string => typeof flag === "string") : [];
+    })
+  );
+  return flags.filter((flag) => {
+    if (slipFlags.has(flag)) return false;
+    if (flag === "payslip_not_recognized" && payload.payslip_like === false) return false;
+    return true;
+  });
+}
+
+function photoQualityWord(quality: string | undefined, locale: Locale): string | null {
+  if (quality === "sharp") return locale === "fr" ? "nette" : "clear";
+  if (quality === "soft") return locale === "fr" ? "un peu floue" : "a bit soft";
+  if (quality === "blurry") return locale === "fr" ? "floue — à revérifier" : "blurry — check the photo";
+  return null;
+}
+
+/** Plain-language ID photo quality. Omits the back when none was uploaded. */
+export function formatIdPhotoQuality(
+  payload: { blur_front?: { quality?: string } | null; blur_back?: { quality?: string } | null },
+  locale: Locale = "fr"
+): string | null {
+  const front = photoQualityWord(payload.blur_front?.quality, locale);
+  const back = photoQualityWord(payload.blur_back?.quality, locale);
+  if (!front && !back) return null;
+  // Don't nag when the photo is already clear.
+  if (front && payload.blur_front?.quality === "sharp" && !back) return null;
+  const parts: string[] = [];
+  if (front && payload.blur_front?.quality !== "sharp") {
+    parts.push(locale === "fr" ? `Photo de la pièce : ${front}` : `ID photo: ${front}`);
+  }
+  if (back && payload.blur_back?.quality !== "sharp") {
+    parts.push(locale === "fr" ? `Verso : ${back}` : `Back of ID: ${back}`);
+  }
+  return parts.length ? parts.join(" · ") : null;
 }
 
 export function formatIncomeExtractPreview(
@@ -246,7 +292,6 @@ export function formatIncomeExtractPreview(
       locale === "fr" ? `net ${payload.net_pay}` : `net ${payload.net_pay}`
     );
   }
-  if (payload.read_path) bits.push(payload.read_path);
   if (bits.length === 0) {
     return locale === "fr" ? `Vérification revenu${flags}` : `Income check${flags}`;
   }

@@ -4,6 +4,8 @@ import {
   formatJobMessagePreview,
   formatSearchAddress,
   formatTalScreeningPreview,
+  formatIdPhotoQuality,
+  uniqueIncomeFlags,
   idExtractFlagLabel,
   idScreeningContextLabel,
   incomeExtractFlagLabel,
@@ -31,6 +33,7 @@ import {
   incomeSlipSlotLabel,
   isIdExtractInconclusive,
   isIncomeExtractInconclusive,
+  isIncomeSlipInconclusive,
   slipRecognizedLabel,
 } from "@/lib/documentExtractReview";
 import type { Locale } from "@/lib/i18n";
@@ -74,15 +77,11 @@ function copy(locale: Locale) {
       idAddressesUsed: "ID addresses used for TAL",
       extractedAddresses: "Extracted addresses",
       notUsedForTal: "not used for TAL",
-      blur: "Blur",
-      front: "front",
-      back: "back",
       nameRead: "Name read",
       name: "Name",
       formMismatch: "≠ form",
       formDiffers: "differs from form",
       incomeTitle: "Payslip check",
-      incomeReadPath: "Read path",
       incomeEmployee: "Employee (slip)",
       incomeEmployer: "Employer (slip)",
       incomeNet: "Net pay",
@@ -126,15 +125,11 @@ function copy(locale: Locale) {
     idAddressesUsed: "Adresses ID utilisées pour TAL",
     extractedAddresses: "Adresses extraites",
     notUsedForTal: "non utilisée pour TAL",
-    blur: "Flou",
-    front: "recto",
-    back: "verso",
     nameRead: "Nom lu",
     name: "Nom",
     formMismatch: "≠ formulaire",
     formDiffers: "différent du formulaire",
     incomeTitle: "Vérification talon de paie",
-    incomeReadPath: "Lecture",
     incomeEmployee: "Employé (talon)",
     incomeEmployer: "Employeur (talon)",
     incomeNet: "Paie nette",
@@ -334,11 +329,14 @@ function ManualReviewBanner({
   kind,
   locale,
   docsAnchor,
+  onReview,
 }: {
   kind: "income" | "id";
   locale: Locale;
   docsAnchor?: string;
+  onReview?: () => void;
 }) {
+  const label = locale === "fr" ? "Voir le document" : "Review document";
   return (
     <div className={`${adminUi.alertWarn} text-sm`}>
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -348,12 +346,20 @@ function ManualReviewBanner({
           </p>
           <p className="mt-1 text-[var(--ml-steel)]">{inconclusiveReviewBody(kind, locale)}</p>
         </div>
-        {docsAnchor ? (
+        {onReview ? (
+          <button
+            type="button"
+            onClick={onReview}
+            className="shrink-0 text-xs font-medium text-[var(--ml-accent)] underline-offset-2 hover:underline"
+          >
+            {label}
+          </button>
+        ) : docsAnchor ? (
           <a
             href={docsAnchor}
             className="shrink-0 text-xs font-medium text-[var(--ml-accent)] underline-offset-2 hover:underline"
           >
-            {locale === "fr" ? "Voir le document ↓" : "Review document ↓"}
+            {label} ↓
           </a>
         ) : null}
       </div>
@@ -365,10 +371,12 @@ function IdExtractFlags({
   summary,
   locale,
   docsAnchor,
+  onReview,
 }: {
   summary: NonNullable<ReturnType<typeof parseTalScreeningMessage>>["id_extract"];
   locale: Locale;
   docsAnchor?: string;
+  onReview?: () => void;
 }) {
   if (!summary) return null;
   const c = copy(locale);
@@ -378,7 +386,7 @@ function IdExtractFlags({
     <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] p-3 text-sm">
       {inconclusive ? (
         <div className="mb-3">
-          <ManualReviewBanner kind="id" locale={locale} docsAnchor={docsAnchor} />
+          <ManualReviewBanner kind="id" locale={locale} docsAnchor={docsAnchor} onReview={onReview} />
         </div>
       ) : null}
       <p className="font-semibold text-[var(--ml-ink)]">{c.idCheck}</p>
@@ -417,10 +425,12 @@ function IdExtractJobCard({
   job,
   locale,
   docsAnchor,
+  onReview,
 }: {
   job: ApplicationJob;
   locale: Locale;
   docsAnchor?: string;
+  onReview?: () => void;
 }) {
   const c = copy(locale);
   const payload = parseIdDocumentExtractMessage(job.message);
@@ -433,9 +443,12 @@ function IdExtractJobCard({
   }
   const flags = payload.flags || [];
   const inconclusive = isIdExtractInconclusive(payload);
+  const photoQuality = formatIdPhotoQuality(payload, locale);
   return (
     <div className="space-y-3 text-sm">
-      {inconclusive ? <ManualReviewBanner kind="id" locale={locale} docsAnchor={docsAnchor} /> : null}
+      {inconclusive ? (
+        <ManualReviewBanner kind="id" locale={locale} docsAnchor={docsAnchor} onReview={onReview} />
+      ) : null}
       <p className="text-[var(--ml-steel)]">
         {idScreeningContextLabel(payload.screening_context, locale)}
         {payload.pdf417_ok ? ` · PDF417 (${payload.pdf417_variant || "ok"})` : ""}
@@ -463,12 +476,9 @@ function IdExtractJobCard({
           </ul>
         </div>
       ) : null}
-      {(payload.blur_front || payload.blur_back) && (
-        <p className="text-xs text-[var(--ml-steel)]">
-          {c.blur}: {c.front} {payload.blur_front?.quality || "—"} · {c.back}{" "}
-          {payload.blur_back?.quality || "—"}
-        </p>
-      )}
+      {photoQuality ? (
+        <p className="text-xs text-[var(--ml-steel)]">{photoQuality}</p>
+      ) : null}
       {flags.length > 0 ? (
         <ul className="space-y-1 text-xs text-[var(--ml-steel)]">
           {flags.map((flag) => (
@@ -484,10 +494,12 @@ function IncomeExtractJobCard({
   job,
   locale,
   docsAnchor,
+  onReview,
 }: {
   job: ApplicationJob;
   locale: Locale;
   docsAnchor?: string;
+  onReview?: () => void;
 }) {
   const c = copy(locale);
   const payload = parseIncomeDocumentExtractMessage(job.message);
@@ -498,34 +510,48 @@ function IncomeExtractJobCard({
       </p>
     );
   }
-  const flags = payload.flags || [];
+  const flags = uniqueIncomeFlags(payload);
   const inconclusive = isIncomeExtractInconclusive(payload);
+  const hasFields = Boolean(
+    payload.net_pay != null ||
+      payload.pay_date ||
+      payload.hourly_rate ||
+      payload.employee_name ||
+      payload.employer_name
+  );
   const period =
     payload.pay_period_start || payload.pay_period_end
       ? `${payload.pay_period_start || "—"} → ${payload.pay_period_end || "—"}`
       : null;
   return (
     <div className="space-y-3 text-sm">
-      {inconclusive ? <ManualReviewBanner kind="income" locale={locale} docsAnchor={docsAnchor} /> : null}
+      {inconclusive ? (
+        <ManualReviewBanner
+          kind="income"
+          locale={locale}
+          docsAnchor={docsAnchor}
+          onReview={onReview}
+        />
+      ) : null}
       <p className="font-semibold text-[var(--ml-ink)]">{c.incomeTitle}</p>
       <p className="text-[var(--ml-steel)]">
-        {c.incomeReadPath}: {payload.read_path || "—"}
-        {payload.slip_count ? ` · ${payload.slip_count} ${locale === "fr" ? "talon(s)" : "slip(s)"}` : ""}
-        {payload.payslip_like === false ? ` · ${c.incomeNotPayslip}` : ""}
+        {payload.slip_count
+          ? locale === "fr"
+            ? `${payload.slip_count} talon${payload.slip_count === 1 ? "" : "s"}`
+            : `${payload.slip_count} payslip${payload.slip_count === 1 ? "" : "s"}`
+          : null}
+        {payload.payslip_like === false && !hasFields ? ` · ${c.incomeNotPayslip}` : ""}
       </p>
       {payload.slips && payload.slips.length > 0 ? (
         <ul className="space-y-2">
           {payload.slips.map((slip) => {
             const slipFlags = (slip.flags as string[] | undefined) ?? [];
-            const slipInconclusive =
-              slip.payslip_like === false ||
-              slipFlags.some((flag) =>
-                [
-                  "income_doc_unreadable",
-                  "payslip_not_recognized",
-                  "income_doc_missing",
-                ].includes(flag)
-              );
+            const slipInconclusive = isIncomeSlipInconclusive({
+              payslip_like: typeof slip.payslip_like === "boolean" ? slip.payslip_like : undefined,
+              flags: slipFlags,
+            });
+            const visibleSlipFlags = slipFlags.filter((flag) => flag !== "payslip_not_recognized");
+            const slipHasFields = Boolean(slip.net_pay != null || slip.employee_name || slip.employer_name);
             return (
               <li
                 key={String(slip.document_type)}
@@ -537,7 +563,7 @@ function IncomeExtractJobCard({
               >
                 <p className="font-medium text-[var(--ml-ink)]">
                   {incomeSlipSlotLabel(String(slip.document_type), locale)} —{" "}
-                  {slipRecognizedLabel(Boolean(slip.payslip_like), locale)}
+                  {slipRecognizedLabel(Boolean(slip.payslip_like), locale, slipHasFields)}
                 </p>
                 {slip.employer_name ? (
                   <p className="mt-1">{slip.employer_name as string}</p>
@@ -547,9 +573,9 @@ function IncomeExtractJobCard({
                     {c.incomeNet}: {String(slip.net_pay)}
                   </p>
                 ) : null}
-                {slipFlags.length > 0 ? (
+                {visibleSlipFlags.length > 0 ? (
                   <ul className="mt-1 space-y-0.5">
-                    {slipFlags.map((flag) => (
+                    {visibleSlipFlags.map((flag) => (
                       <li key={flag}>• {incomeExtractFlagLabel(flag, locale)}</li>
                     ))}
                   </ul>
@@ -928,10 +954,12 @@ function TalJobCard({
   job,
   locale,
   docsAnchor,
+  onReviewId,
 }: {
   job: ApplicationJob;
   locale: Locale;
   docsAnchor?: string;
+  onReviewId?: () => void;
 }) {
   const c = copy(locale);
   const tal = parseTalScreeningMessage(job.message);
@@ -954,7 +982,12 @@ function TalJobCard({
       </p>
       {tal.id_extract ? (
         <div className="mt-2">
-          <IdExtractFlags summary={tal.id_extract} locale={locale} docsAnchor={docsAnchor} />
+          <IdExtractFlags
+            summary={tal.id_extract}
+            locale={locale}
+            docsAnchor={docsAnchor}
+            onReview={onReviewId}
+          />
         </div>
       ) : null}
       <div className="space-y-2">
@@ -970,10 +1003,12 @@ function JobRow({
   job,
   locale,
   docsAnchor,
+  onReviewDocuments,
 }: {
   job: ApplicationJob;
   locale: Locale;
   docsAnchor?: string;
+  onReviewDocuments?: (kind: "id" | "income") => void;
 }) {
   const isTal = job.job_type === "tal_screening";
   const isIdExtract = job.job_type === "id_document_extract";
@@ -989,15 +1024,30 @@ function JobRow({
       </div>
       {isTal ? (
         <div className="mt-3">
-          <TalJobCard job={job} locale={locale} docsAnchor={docsAnchor} />
+          <TalJobCard
+            job={job}
+            locale={locale}
+            docsAnchor={docsAnchor}
+            onReviewId={onReviewDocuments ? () => onReviewDocuments("id") : undefined}
+          />
         </div>
       ) : isIdExtract ? (
         <div className="mt-3">
-          <IdExtractJobCard job={job} locale={locale} docsAnchor={docsAnchor} />
+          <IdExtractJobCard
+            job={job}
+            locale={locale}
+            docsAnchor={docsAnchor}
+            onReview={onReviewDocuments ? () => onReviewDocuments("id") : undefined}
+          />
         </div>
       ) : isIncomeExtract ? (
         <div className="mt-3">
-          <IncomeExtractJobCard job={job} locale={locale} docsAnchor={docsAnchor} />
+          <IncomeExtractJobCard
+            job={job}
+            locale={locale}
+            docsAnchor={docsAnchor}
+            onReview={onReviewDocuments ? () => onReviewDocuments("income") : undefined}
+          />
         </div>
       ) : isSoquij ? (
         <div className="mt-3">
@@ -1016,11 +1066,13 @@ export default function ScreeningJobs({
   jobs,
   jobMemberLabel,
   docsAnchor,
+  onReviewDocuments,
 }: {
   jobs: ApplicationJob[];
   jobMemberLabel: (memberId: number) => string;
   /** href to scroll to the documents section for "review document" links */
   docsAnchor?: string;
+  onReviewDocuments?: (memberId: number, kind: "id" | "income") => void;
 }) {
   const { locale } = useAdminLocaleContext();
   const c = copy(locale);
@@ -1050,7 +1102,17 @@ export default function ScreeningJobs({
           </div>
           <div className="px-4 sm:px-5">
             {memberJobs.map((job) => (
-              <JobRow key={job.id} job={job} locale={locale} docsAnchor={docsAnchor} />
+              <JobRow
+                key={job.id}
+                job={job}
+                locale={locale}
+                docsAnchor={docsAnchor}
+                onReviewDocuments={
+                  onReviewDocuments
+                    ? (kind) => onReviewDocuments(memberId, kind)
+                    : undefined
+                }
+              />
             ))}
           </div>
         </div>
