@@ -73,7 +73,22 @@ export type ApplicationMember = {
   referral_source: string | null;
   facebook_url: string | null;
   linkedin_url: string | null;
+  employment_type?: string | null;
+  monthly_net_income?: number | null;
   documents?: MemberDocument[];
+};
+
+export type HouseholdAffordability = {
+  rent: number | null;
+  declared_monthly: number | null;
+  declared_ratio: number | null;
+  declared_tone: string;
+  declared_label: string;
+  ocr_monthly: number | null;
+  ocr_note: string | null;
+  ocr_ratio: number | null;
+  ocr_tone: string;
+  ocr_label: string;
 };
 
 export type ApplicationDetail = {
@@ -121,6 +136,8 @@ export type ApplicationDetail = {
   has_guarantor?: boolean;
   summary_pdf_available?: boolean;
   dropbox_dossier_ready?: boolean;
+  unit_rent?: number | null;
+  household_affordability?: HouseholdAffordability | null;
 };
 
 export type ApplicationList = {

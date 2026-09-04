@@ -493,6 +493,8 @@ export default function ApplicationDetailPage() {
         >
           <ScreeningJobs
             jobs={jobs}
+            members={members}
+            householdAffordability={app.household_affordability}
             jobMemberLabel={jobMemberLabel}
             docsAnchor="#documents-section"
             onReviewDocuments={(memberId, kind) => {
