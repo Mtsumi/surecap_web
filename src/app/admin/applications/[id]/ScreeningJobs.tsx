@@ -33,6 +33,7 @@ import {
   incomeSlipSlotLabel,
   isIdExtractInconclusive,
   isIncomeExtractInconclusive,
+  isIncomeSlipInconclusive,
   slipRecognizedLabel,
 } from "@/lib/documentExtractReview";
 import type { Locale } from "@/lib/i18n";
@@ -512,7 +513,11 @@ function IncomeExtractJobCard({
   const flags = uniqueIncomeFlags(payload);
   const inconclusive = isIncomeExtractInconclusive(payload);
   const hasFields = Boolean(
-    payload.net_pay != null || payload.pay_date || payload.hourly_rate || payload.employee_name
+    payload.net_pay != null ||
+      payload.pay_date ||
+      payload.hourly_rate ||
+      payload.employee_name ||
+      payload.employer_name
   );
   const period =
     payload.pay_period_start || payload.pay_period_end
@@ -541,15 +546,10 @@ function IncomeExtractJobCard({
         <ul className="space-y-2">
           {payload.slips.map((slip) => {
             const slipFlags = (slip.flags as string[] | undefined) ?? [];
-            const slipInconclusive =
-              slip.payslip_like === false ||
-              slipFlags.some((flag) =>
-                [
-                  "income_doc_unreadable",
-                  "payslip_not_recognized",
-                  "income_doc_missing",
-                ].includes(flag)
-              );
+            const slipInconclusive = isIncomeSlipInconclusive({
+              payslip_like: typeof slip.payslip_like === "boolean" ? slip.payslip_like : undefined,
+              flags: slipFlags,
+            });
             const visibleSlipFlags = slipFlags.filter((flag) => flag !== "payslip_not_recognized");
             const slipHasFields = Boolean(slip.net_pay != null || slip.employee_name || slip.employer_name);
             return (

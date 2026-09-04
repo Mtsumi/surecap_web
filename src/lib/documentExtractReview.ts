@@ -32,11 +32,35 @@ export type IncomeSlipSummary = {
   flags?: string[];
 };
 
+const SLIP_INCONCLUSIVE_FLAGS = new Set([
+  "income_doc_unreadable",
+  "payslip_not_recognized",
+  "income_doc_missing",
+]);
+
+export function isIncomeSlipInconclusive(slip: {
+  payslip_like?: boolean;
+  flags?: string[];
+}): boolean {
+  if (slip.payslip_like === false) return true;
+  return (slip.flags ?? []).some((flag) => SLIP_INCONCLUSIVE_FLAGS.has(flag));
+}
+
 export function isIncomeExtractInconclusive(
   payload: IncomeDocumentExtractPayload
 ): boolean {
   if (payload.payslip_like === false) return true;
-  return (payload.flags ?? []).some((flag) => INCOME_INCONCLUSIVE_FLAGS.has(flag));
+  if ((payload.flags ?? []).some((flag) => INCOME_INCONCLUSIVE_FLAGS.has(flag))) {
+    return true;
+  }
+  return (payload.slips ?? []).some((slip) =>
+    isIncomeSlipInconclusive({
+      payslip_like: typeof slip.payslip_like === "boolean" ? slip.payslip_like : undefined,
+      flags: Array.isArray(slip.flags)
+        ? slip.flags.filter((flag): flag is string => typeof flag === "string")
+        : undefined,
+    })
+  );
 }
 
 export function isIdExtractInconclusive(
