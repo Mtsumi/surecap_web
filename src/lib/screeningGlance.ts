@@ -12,15 +12,29 @@ import {
   isIdExtractInconclusive,
   isIncomeExtractInconclusive,
 } from "./documentExtractReview";
+import { nameSimilarity } from "./names";
 
 export type GlanceTone = "ok" | "warn" | "bad" | "pending" | "neutral";
 
 export type ScreeningGlanceRow = {
-  key: "id" | "income";
+  key: "id" | "income" | "household";
   tone: GlanceTone;
   checkLabel: string;
   summary: string;
   issues: string[];
+};
+
+export type HouseholdAffordability = {
+  rent: number | null;
+  declared_monthly: number | null;
+  declared_ratio: number | null;
+  declared_tone: string;
+  declared_label: string;
+  ocr_monthly: number | null;
+  ocr_note: string | null;
+  ocr_ratio: number | null;
+  ocr_tone: string;
+  ocr_label: string;
 };
 
 const PAYSLIP_BAD_FLAGS = new Set([
@@ -60,7 +74,8 @@ function jobTone(status: string): GlanceTone | null {
 export function idScreeningGlance(
   payload: IdDocumentExtractPayload | null,
   status: string,
-  locale: Locale
+  locale: Locale,
+  formName?: string | null
 ): ScreeningGlanceRow {
   const checkLabel = locale === "fr" ? "Pièce d'identité" : "ID";
   const fromJob = jobTone(status);
@@ -91,7 +106,27 @@ export function idScreeningGlance(
   const issues: string[] = [];
   if (photo) issues.push(photo);
 
-  if (payload.name_mismatch === true || !name) {
+  const form = (formName || "").trim();
+  const similarity = form && name ? nameSimilarity(form, name) : null;
+  const mismatched =
+    similarity === "mismatch" ||
+    (similarity === null && (payload.name_mismatch === true || !name));
+
+  if (similarity === "near") {
+    return {
+      key: "id",
+      tone: "warn",
+      checkLabel,
+      summary:
+        locale === "fr" ? `${name} ≈ formulaire` : `${name} ≈ form`,
+      issues: [
+        ...issues,
+        locale === "fr" ? `Formulaire : ${form}` : `Form: ${form}`,
+      ],
+    };
+  }
+
+  if (mismatched) {
     return {
       key: "id",
       tone: "bad",
@@ -204,5 +239,58 @@ export function incomeScreeningGlance(
     checkLabel,
     summary: facts.join(" · ") || (locale === "fr" ? "Lu" : "Read"),
     issues,
+  };
+}
+
+function asGlanceTone(value: string): GlanceTone {
+  if (value === "ok" || value === "warn" || value === "bad" || value === "pending") {
+    return value;
+  }
+  return "neutral";
+}
+
+export function householdAffordabilityGlance(
+  snapshot: HouseholdAffordability,
+  locale: Locale
+): ScreeningGlanceRow {
+  const checkLabel = locale === "fr" ? "Ménage vs loyer" : "Household vs rent";
+  const issues: string[] = [];
+  if (snapshot.ocr_monthly != null) {
+    if (snapshot.ocr_note) issues.push(snapshot.ocr_note);
+    if (snapshot.declared_label && snapshot.declared_label !== "—") {
+      issues.push(
+        locale === "fr"
+          ? `Déclaré : ${snapshot.declared_label}`
+          : `Declared: ${snapshot.declared_label}`
+      );
+    }
+    return {
+      key: "household",
+      tone: asGlanceTone(snapshot.ocr_tone),
+      checkLabel,
+      summary: snapshot.ocr_label,
+      issues,
+    };
+  }
+  if (snapshot.declared_monthly != null) {
+    issues.push(
+      locale === "fr" ? "Talons : pas encore de total OCR" : "Payslip OCR: no household total yet"
+    );
+    return {
+      key: "household",
+      tone: asGlanceTone(snapshot.declared_tone),
+      checkLabel,
+      summary: snapshot.declared_label,
+      issues,
+    };
+  }
+  return {
+    key: "household",
+    tone: "neutral",
+    checkLabel,
+    summary: locale === "fr" ? "Loyer ou revenus indisponibles" : "Rent or income unavailable",
+    issues: snapshot.rent == null
+      ? [locale === "fr" ? "Loyer non saisi sur l'unité" : "No rent on unit"]
+      : [],
   };
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { idScreeningGlance, incomeScreeningGlance } from "./screeningGlance";
+import {
+  householdAffordabilityGlance,
+  idScreeningGlance,
+  incomeScreeningGlance,
+} from "./screeningGlance";
 
 describe("screeningGlance", () => {
   it("marks a matching ID name as ok", () => {
@@ -11,13 +15,30 @@ describe("screeningGlance", () => {
         flags: [],
       },
       "completed",
-      "en"
+      "en",
+      "Catherine Mathieu"
     );
     expect(row.tone).toBe("ok");
     expect(row.summary).toBe("Catherine Mathieu");
   });
 
-  it("marks a mismatched ID name as bad", () => {
+  it("treats last-name-first OCR as an exact match", () => {
+    const row = idScreeningGlance(
+      {
+        screening_context: "canadian",
+        ocr_name: "Khounch Ali",
+        name_mismatch: true,
+        flags: [],
+      },
+      "completed",
+      "en",
+      "Ali Khounch"
+    );
+    expect(row.tone).toBe("ok");
+    expect(row.summary).toBe("Khounch Ali");
+  });
+
+  it("treats a one-letter OCR typo as a near match, not a failure", () => {
     const row = idScreeningGlance(
       {
         screening_context: "canadian",
@@ -26,7 +47,25 @@ describe("screeningGlance", () => {
         flags: [],
       },
       "completed",
-      "en"
+      "en",
+      "Ali Khounch"
+    );
+    expect(row.tone).toBe("warn");
+    expect(row.summary).toMatch(/≈ form/);
+    expect(row.issues.some((issue) => /Ali Khounch/.test(issue))).toBe(true);
+  });
+
+  it("marks a mismatched ID name as bad", () => {
+    const row = idScreeningGlance(
+      {
+        screening_context: "canadian",
+        ocr_name: "Wrong Name",
+        name_mismatch: true,
+        flags: [],
+      },
+      "completed",
+      "en",
+      "Jane Doe"
     );
     expect(row.tone).toBe("bad");
     expect(row.summary).toMatch(/≠ form/);
@@ -60,5 +99,26 @@ describe("screeningGlance", () => {
       "en"
     );
     expect(row.tone).toBe("bad");
+  });
+
+  it("shows household OCR vs rent from the shared API snapshot", () => {
+    const row = householdAffordabilityGlance(
+      {
+        rent: 1500,
+        declared_monthly: 4500,
+        declared_ratio: 3,
+        declared_tone: "ok",
+        declared_label: "3.0× rent ($4,500.00 net / $1,500.00 rent)",
+        ocr_monthly: 4500,
+        ocr_note: "2 tenants",
+        ocr_ratio: 3,
+        ocr_tone: "ok",
+        ocr_label: "3.0× rent ($4,500.00 net / $1,500.00 rent)",
+      },
+      "en"
+    );
+    expect(row.tone).toBe("ok");
+    expect(row.summary).toMatch(/3\.0× rent/);
+    expect(row.issues).toContain("2 tenants");
   });
 });

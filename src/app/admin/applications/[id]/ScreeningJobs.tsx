@@ -20,15 +20,17 @@ import {
   type TalDossier,
   type TalSearch,
 } from "@/lib/jobMessageFormat";
-import type { ApplicationJob } from "@/lib/adminApi";
-import { adminUi } from "@/lib/adminUi";
-import type { Locale } from "@/lib/i18n";
 import {
   idScreeningGlance,
   incomeScreeningGlance,
+  householdAffordabilityGlance,
   type GlanceTone,
+  type HouseholdAffordability,
   type ScreeningGlanceRow,
 } from "@/lib/screeningGlance";
+import type { ApplicationJob, ApplicationMember } from "@/lib/adminApi";
+import { adminUi } from "@/lib/adminUi";
+import type { Locale } from "@/lib/i18n";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 
 function jobStatusClass(status: string): string {
@@ -165,37 +167,15 @@ function glanceMark(tone: GlanceTone): { symbol: string; className: string; labe
   }
 }
 
-function DocumentsGlanceTable({
-  idJob,
-  incomeJob,
+function GlanceTable({
+  rows,
   locale,
-  onReviewDocuments,
 }: {
-  idJob?: ApplicationJob;
-  incomeJob?: ApplicationJob;
+  rows: Array<ScreeningGlanceRow & { onReview?: () => void }>;
   locale: Locale;
-  onReviewDocuments?: (kind: "id" | "income") => void;
 }) {
   const c = copy(locale);
-  const rows: Array<ScreeningGlanceRow & { onReview?: () => void }> = [];
-  if (idJob) {
-    rows.push({
-      ...idScreeningGlance(parseIdDocumentExtractMessage(idJob.message), idJob.status, locale),
-      onReview: onReviewDocuments ? () => onReviewDocuments("id") : undefined,
-    });
-  }
-  if (incomeJob) {
-    rows.push({
-      ...incomeScreeningGlance(
-        parseIncomeDocumentExtractMessage(incomeJob.message),
-        incomeJob.status,
-        locale
-      ),
-      onReview: onReviewDocuments ? () => onReviewDocuments("income") : undefined,
-    });
-  }
   if (rows.length === 0) return null;
-
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-left text-sm">
@@ -244,6 +224,50 @@ function DocumentsGlanceTable({
       </table>
     </div>
   );
+}
+
+function memberFormName(member?: ApplicationMember): string {
+  if (!member) return "";
+  const legal = [member.given_name, member.family_name].filter(Boolean).join(" ");
+  return legal || member.invited_name || "";
+}
+
+function DocumentsGlanceTable({
+  idJob,
+  incomeJob,
+  locale,
+  formName,
+  onReviewDocuments,
+}: {
+  idJob?: ApplicationJob;
+  incomeJob?: ApplicationJob;
+  locale: Locale;
+  formName?: string | null;
+  onReviewDocuments?: (kind: "id" | "income") => void;
+}) {
+  const rows: Array<ScreeningGlanceRow & { onReview?: () => void }> = [];
+  if (idJob) {
+    rows.push({
+      ...idScreeningGlance(
+        parseIdDocumentExtractMessage(idJob.message),
+        idJob.status,
+        locale,
+        formName
+      ),
+      onReview: onReviewDocuments ? () => onReviewDocuments("id") : undefined,
+    });
+  }
+  if (incomeJob) {
+    rows.push({
+      ...incomeScreeningGlance(
+        parseIncomeDocumentExtractMessage(incomeJob.message),
+        incomeJob.status,
+        locale
+      ),
+      onReview: onReviewDocuments ? () => onReviewDocuments("income") : undefined,
+    });
+  }
+  return <GlanceTable rows={rows} locale={locale} />;
 }
 
 function DossierRow({
@@ -808,11 +832,15 @@ function JobRow({
 export default function ScreeningJobs({
   jobs,
   jobMemberLabel,
+  members,
+  householdAffordability,
   docsAnchor: _docsAnchor,
   onReviewDocuments,
 }: {
   jobs: ApplicationJob[];
   jobMemberLabel: (memberId: number) => string;
+  members?: ApplicationMember[];
+  householdAffordability?: HouseholdAffordability | null;
   /** href to scroll to the documents section for "review document" links */
   docsAnchor?: string;
   onReviewDocuments?: (memberId: number, kind: "id" | "income") => void;
@@ -820,8 +848,9 @@ export default function ScreeningJobs({
   const { locale } = useAdminLocaleContext();
   const c = copy(locale);
   const visibleJobs = jobs.filter((job) => !HIDDEN_SCREENING_JOB_TYPES.has(job.job_type));
+  const memberById = new Map((members ?? []).map((member) => [member.id, member]));
 
-  if (visibleJobs.length === 0) {
+  if (visibleJobs.length === 0 && !householdAffordability) {
     return <p className={adminUi.empty}>{c.noJobs}</p>;
   }
 
@@ -836,6 +865,16 @@ export default function ScreeningJobs({
 
   return (
     <div className="space-y-4">
+      {householdAffordability ? (
+        <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)]">
+          <div className="px-4 py-3 sm:px-5">
+            <GlanceTable
+              rows={[householdAffordabilityGlance(householdAffordability, locale)]}
+              locale={locale}
+            />
+          </div>
+        </div>
+      ) : null}
       {groups.map(([memberId, memberJobs]) => (
         <div key={memberId} className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)]">
           <div className="admin-card-header">
@@ -849,6 +888,7 @@ export default function ScreeningJobs({
                 idJob={memberJobs.find((job) => job.job_type === "id_document_extract")}
                 incomeJob={memberJobs.find((job) => job.job_type === "income_document_extract")}
                 locale={locale}
+                formName={memberFormName(memberById.get(memberId))}
                 onReviewDocuments={
                   onReviewDocuments
                     ? (kind) => onReviewDocuments(memberId, kind)
