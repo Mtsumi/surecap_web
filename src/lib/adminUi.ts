@@ -37,6 +37,7 @@ export function applicationStatusClass(status: string): string {
     rejected: "admin-status admin-status-rejected",
     submitted: "admin-status admin-status-submitted",
     collecting: "admin-status admin-status-collecting",
+    awaiting_credit_check: "admin-status admin-status-collecting",
     draft: "admin-status admin-status-draft",
   };
   return map[status] ?? "admin-status admin-status-draft";

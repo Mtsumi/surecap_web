@@ -210,6 +210,12 @@ function isNetworkFetchError(error: unknown): boolean {
   );
 }
 
+function jsonNetworkError(): Error {
+  return new Error(
+    "Impossible de joindre le serveur. Vérifiez la connexion, puis réessayez."
+  );
+}
+
 function networkFetchError(detail?: string): Error {
   return new Error(uploadNetworkErrorMessage(detail));
 }
@@ -230,7 +236,7 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
       headers: apiHeaders(init),
     });
   } catch (error) {
-    if (isNetworkFetchError(error)) throw networkFetchError();
+    if (isNetworkFetchError(error)) throw jsonNetworkError();
     throw error;
   }
 
@@ -263,7 +269,7 @@ async function apiFetchVoid(path: string, init?: RequestInit): Promise<void> {
       headers: apiHeaders(init),
     });
   } catch (error) {
-    if (isNetworkFetchError(error)) throw networkFetchError();
+    if (isNetworkFetchError(error)) throw jsonNetworkError();
     throw error;
   }
 
@@ -560,5 +566,66 @@ export function deleteInviteDocument(
   return apiFetchVoid(
     `/applications/invites/${encodeURIComponent(inviteToken)}/uploads/${encodeURIComponent(documentType)}`,
     { method: "DELETE" }
+  );
+}
+
+export type JanitorReviewStage = "janitor" | "steve" | "done";
+
+export type JanitorReviewMember = {
+  id: number;
+  role: string;
+  name: string;
+  landlord_name?: string | null;
+  landlord_phone?: string | null;
+  previous_landlord_name?: string | null;
+  previous_landlord_phone?: string | null;
+  hr_name?: string | null;
+  hr_phone?: string | null;
+  employer_name?: string | null;
+  facebook_url?: string | null;
+  linkedin_url?: string | null;
+};
+
+export type JanitorReviewChecklist = {
+  called_landlord: boolean;
+  called_employer: boolean;
+  checked_social: boolean;
+};
+
+export type JanitorReview = {
+  stage: JanitorReviewStage;
+  status: string;
+  application_id: number;
+  building_name: string;
+  building_address: string;
+  unit_number: string;
+  members: JanitorReviewMember[];
+  checklist: JanitorReviewChecklist | null;
+  rejection_reason?: string | null;
+  token_expired: boolean;
+};
+
+export type JanitorReviewAction = "request_credit_check" | "accept" | "reject";
+
+export function fetchJanitorReview(token: string): Promise<JanitorReview> {
+  return apiFetch<JanitorReview>(
+    `/admin/janitor-review/${encodeURIComponent(token)}`
+  );
+}
+
+export function submitJanitorReview(
+  token: string,
+  payload: {
+    action: JanitorReviewAction;
+    checklist?: JanitorReviewChecklist;
+    reason?: string;
+  }
+): Promise<JanitorReview> {
+  return apiFetch<JanitorReview>(
+    `/admin/janitor-review/${encodeURIComponent(token)}`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
   );
 }

@@ -11,6 +11,8 @@ export function applicationStatusLabel(status: string): string {
       return "Envoyée";
     case "collecting":
       return "En collecte";
+    case "awaiting_credit_check":
+      return "Crédit en cours";
     case "draft":
       return "Brouillon";
     default:
