@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import {
   JanitorReview,
   JanitorReviewChecklist,
@@ -10,6 +11,7 @@ import {
 } from "@/lib/api";
 import { applicationStatusLabel } from "@/lib/adminStatus";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
+import { facebookLink } from "@/lib/facebookSearch";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   called_landlord: false,
@@ -49,6 +51,21 @@ function ContactRow({ label, value }: { label: string; value?: string | null }) 
   );
 }
 
+function FacebookRow({ member }: { member: JanitorReviewMember }) {
+  const link = facebookLink(member.facebook_url, member.name);
+  if (!link) return null;
+  return (
+    <div>
+      <dt className="admin-field-label">Facebook</dt>
+      <dd className="admin-field-value">
+        <a href={link.href} target="_blank" rel="noreferrer" className={adminUi.link}>
+          {link.label}
+        </a>
+      </dd>
+    </div>
+  );
+}
+
 function MemberCard({ member }: { member: JanitorReviewMember }) {
   return (
     <section className={adminUi.card}>
@@ -66,7 +83,7 @@ function MemberCard({ member }: { member: JanitorReviewMember }) {
         <ContactRow label="Employeur" value={member.employer_name} />
         <ContactRow label="RH" value={member.hr_name} />
         <ContactRow label="Téléphone RH" value={member.hr_phone} />
-        <ContactRow label="Facebook" value={member.facebook_url} />
+        <FacebookRow member={member} />
         <ContactRow label="LinkedIn" value={member.linkedin_url} />
       </dl>
     </section>
@@ -161,6 +178,13 @@ export default function ReviewForm({ token }: { token: string }) {
           <p className={adminUi.pageSubtitle}>
             Demande #{review.application_id}
             {unitLine ? ` · ${unitLine}` : ""}
+            {" · "}
+            <Link
+              href={`/admin/applications/${review.application_id}`}
+              className={adminUi.link}
+            >
+              Dossier admin ↗
+            </Link>
           </p>
         </div>
         <span className={applicationStatusClass(review.status)}>
@@ -206,7 +230,7 @@ export default function ReviewForm({ token }: { token: string }) {
               [
                 ["called_landlord", "J’ai appelé le(s) locateur(s)"],
                 ["called_employer", "J’ai appelé l’employeur / les RH"],
-                ["checked_social", "J’ai vérifié Facebook / LinkedIn"],
+                ["checked_social", "J’ai vérifié Facebook"],
               ] as const
             ).map(([key, label]) => (
               <label key={key} className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">

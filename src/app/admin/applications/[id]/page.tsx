@@ -25,6 +25,7 @@ import {
   INCOME_REVIEW_DOCUMENT_TYPES,
 } from "@/lib/adminDocuments";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
+import { facebookLink } from "@/lib/facebookSearch";
 
 function formatLivedDates(
   from: string | null | undefined,
@@ -191,40 +192,44 @@ function MemberCard({ member }: { member: ApplicationMember }) {
             )}
           </div>
         ) : null}
-        {(member.role === "primary" || member.role === "roommate") && (
-          <>
-            {member.facebook_url ? (
-              <div>
-                <dt className="admin-field-label">Facebook</dt>
-                <dd className="admin-field-value">
-                  <a
-                    href={member.facebook_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[var(--ml-accent)] underline-offset-2 hover:underline break-all"
-                  >
-                    {member.facebook_url}
-                  </a>
-                </dd>
-              </div>
-            ) : null}
-            {member.linkedin_url ? (
-              <div>
-                <dt className="admin-field-label">LinkedIn</dt>
-                <dd className="admin-field-value">
-                  <a
-                    href={member.linkedin_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[var(--ml-accent)] underline-offset-2 hover:underline break-all"
-                  >
-                    {member.linkedin_url}
-                  </a>
-                </dd>
-              </div>
-            ) : null}
-          </>
-        )}
+        {(() => {
+          const fb = facebookLink(member.facebook_url, memberDisplayName(member));
+          if (!fb && !member.linkedin_url) return null;
+          return (
+            <>
+              {fb ? (
+                <div>
+                  <dt className="admin-field-label">Facebook</dt>
+                  <dd className="admin-field-value">
+                    <a
+                      href={fb.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[var(--ml-accent)] underline-offset-2 hover:underline break-all"
+                    >
+                      {fb.label}
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
+              {member.linkedin_url ? (
+                <div>
+                  <dt className="admin-field-label">LinkedIn</dt>
+                  <dd className="admin-field-value">
+                    <a
+                      href={member.linkedin_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[var(--ml-accent)] underline-offset-2 hover:underline break-all"
+                    >
+                      {member.linkedin_url}
+                    </a>
+                  </dd>
+                </div>
+              ) : null}
+            </>
+          );
+        })()}
         {member.referral_source && (
           <AdminField
             label="Comment nous avez-vous trouvé?"
