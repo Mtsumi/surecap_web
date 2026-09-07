@@ -63,7 +63,9 @@ export const messages = {
       "Tell us about your employment and upload proof of income. We may also call the references below.",
     incomeDocumentsTitle: "Proof of income",
     incomeDocumentsHint:
-      "Upload a clear photo or PDF. Employed: your most recent pay slip (up to two more optional). Self-employed: your two most recent CRA notices of assessment.",
+      "Take a photo of the full page (A4 frame) or upload a PDF. Employed: your most recent pay slip (up to two more optional). Self-employed: your two most recent CRA notices of assessment.",
+    incomeCameraTitle: "Payslip photo",
+    incomeCameraAlignHint: "Fit the full payslip inside the page frame",
     employmentType: "Employment status",
     employmentEmployed: "Employed",
     employmentSelfEmployed: "Self-employed",
@@ -289,7 +291,9 @@ export const messages = {
       "Indiquez votre situation d'emploi et téléversez une preuve de revenu. Nous pourrions aussi appeler les références ci-dessous.",
     incomeDocumentsTitle: "Preuve de revenu",
     incomeDocumentsHint:
-      "Téléversez une photo ou un PDF lisible. Salarié : votre talon de paie le plus récent (jusqu'à deux autres facultatifs). Travailleur autonome : vos deux avis de cotisation de l'ARC les plus récents.",
+      "Photographiez la page entière (cadre A4) ou téléversez un PDF. Salarié : votre talon de paie le plus récent (jusqu'à deux autres facultatifs). Travailleur autonome : vos deux avis de cotisation de l'ARC les plus récents.",
+    incomeCameraTitle: "Photo du talon de paie",
+    incomeCameraAlignHint: "Placez le talon de paie entier dans le cadre",
     employmentType: "Statut d'emploi",
     employmentEmployed: "Salarié",
     employmentSelfEmployed: "Travailleur autonome",

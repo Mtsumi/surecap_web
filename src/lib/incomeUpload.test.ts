@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  A4_PORTRAIT_ASPECT,
+  ID_CARD_ASPECT,
+  guidedCaptureAspect,
+} from "./guidedCapture";
+import {
   employmentRequiresIncome,
+  incomeSlotSupportsPhotoCapture,
   incomeSlotsForType,
   incomeUploadComplete,
   isOptionalIncomeSlot,
@@ -72,5 +78,23 @@ describe("incomeUpload", () => {
   it("formats monthly net income as CAD currency", () => {
     expect(formatMonthlyNetIncome("en", "3500")).toMatch(/\$3,500\.00/);
     expect(formatMonthlyNetIncome("fr", 4200)).toContain("4");
+  });
+
+  it("offers A4 photo capture for payslips and proof of income, not ID cards", () => {
+    expect(incomeSlotSupportsPhotoCapture("pay_slip_1")).toBe(true);
+    expect(incomeSlotSupportsPhotoCapture("pay_slip_2")).toBe(true);
+    expect(incomeSlotSupportsPhotoCapture("pay_slip_3")).toBe(true);
+    expect(incomeSlotSupportsPhotoCapture("proof_of_income")).toBe(true);
+    expect(incomeSlotSupportsPhotoCapture("notice_of_assessment_year_1")).toBe(
+      false
+    );
+    expect(incomeSlotSupportsPhotoCapture("id_medicare")).toBe(false);
+  });
+
+  it("uses a portrait A4 frame for income photos, not the ID card crop", () => {
+    expect(guidedCaptureAspect("a4")).toBe(A4_PORTRAIT_ASPECT);
+    expect(guidedCaptureAspect("id")).toBe(ID_CARD_ASPECT);
+    expect(A4_PORTRAIT_ASPECT).toBeLessThan(1);
+    expect(ID_CARD_ASPECT).toBeGreaterThan(1);
   });
 });
