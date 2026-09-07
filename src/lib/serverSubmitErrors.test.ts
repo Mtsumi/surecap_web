@@ -116,6 +116,23 @@ describe("mapServerSubmitError", () => {
       messageKey: "validationDateOfBirthUnderage",
     });
   });
+
+  it("pins a Google-pick error onto the previous address when that field is the one missing a pick", () => {
+    const result = mapServerSubmitError(
+      "Select a Canadian address from the suggestions",
+      baseInput({
+        current_place_id: "ChIJCurrent",
+        previous_address: "10 Old St",
+        previous_place_id: "",
+        previous_address_lived_from: "2022-01-01",
+        previous_address_lived_to: "2024-01-01",
+        previous_landlord_name: "Old Landlord",
+        previous_landlord_phone: "5145550199",
+      })
+    );
+    expect(result?.fieldErrors.previous_address).toBe("pick_google_address");
+    expect(result?.fieldErrors.current_address).toBeUndefined();
+  });
 });
 
 describe("mapPydanticValidationErrors", () => {

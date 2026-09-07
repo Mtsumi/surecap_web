@@ -841,6 +841,7 @@ export default function InviteForm({ token }: Props) {
               {fieldHint("lease_in_name")}
             </fieldset>
           )}
+          <div id="apply-field-previous_address">
           <AddressAutocomplete
             fieldKey="previous-address"
             locale={locale}
@@ -861,8 +862,10 @@ export default function InviteForm({ token }: Props) {
                 setField("previous_place_id", placeId ?? "");
               }
             }}
-            inputClass={inputClass}
+            inputClass={inputClassFor("previous_address")}
           />
+          {fieldHint("previous_address")}
+          </div>
           {form.previous_address.trim() ? (
             <label className="block text-sm text-[#57534e]">
               {t(locale, "addressApartment")}

@@ -321,9 +321,20 @@ export function mapServerSubmitError(
   }
 
   if (trimmed === "Select a Canadian address from the suggestions") {
+    const addressErrors = addressFieldErrors(input);
+    const fieldErrors: ApplyFieldErrors = {};
+    if (addressErrors.current_address === "pick_google_address") {
+      fieldErrors.current_address = "pick_google_address";
+    }
+    if (addressErrors.previous_address === "pick_google_address") {
+      fieldErrors.previous_address = "pick_google_address";
+    }
+    if (Object.keys(fieldErrors).length === 0) {
+      fieldErrors.current_address = "pick_google_address";
+    }
     return {
       step: "addresses",
-      fieldErrors: { current_address: "pick_google_address" },
+      fieldErrors,
       messageKey: "validationPickGoogleAddress",
     };
   }

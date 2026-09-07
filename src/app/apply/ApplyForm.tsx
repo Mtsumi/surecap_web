@@ -1650,6 +1650,7 @@ export default function ApplyForm() {
             </fieldset>
               </>
             ) : null}
+            <div id="apply-field-previous_address">
             <AddressAutocomplete
               fieldKey="previous-address"
               locale={locale}
@@ -1657,6 +1658,7 @@ export default function ApplyForm() {
               value={form.previous_address}
               onChange={(address, placeId) => {
                 setField("previous_address", address);
+                clearFieldError("previous_address");
                 if (!address.trim()) {
                   setForm((prev) => ({
                     ...prev,
@@ -1670,8 +1672,10 @@ export default function ApplyForm() {
                   setField("previous_place_id", placeId ?? "");
                 }
               }}
-              inputClass={inputClass}
+              inputClass={inputClassFor("previous_address")}
             />
+            {fieldHint("previous_address")}
+            </div>
             {form.previous_address.trim() ? (
               <label className="block text-sm text-[#57534e]">
                 {t(locale, "addressApartment")}
