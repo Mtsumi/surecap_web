@@ -1016,9 +1016,11 @@ export default function ApplyForm() {
   };
 
   /** Sync the draft and create/reuse the DocuSeal signing submission (Review step). */
+  const consentBusyRef = useRef(false);
   const prepareConsent = useCallback(async () => {
     const session = draftSessionRef.current;
-    if (!session) return;
+    if (!session || consentBusyRef.current) return;
+    consentBusyRef.current = true;
     setConsentPreparing(true);
     setConsentError(null);
     try {
@@ -1055,6 +1057,7 @@ export default function ApplyForm() {
           : t(locale, "consentError")
       );
     } finally {
+      consentBusyRef.current = false;
       setConsentPreparing(false);
     }
   }, [locale]);
