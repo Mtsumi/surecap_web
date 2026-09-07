@@ -7,6 +7,7 @@ import {
   JanitorReviewChecklist,
   JanitorReviewMember,
   fetchJanitorReview,
+  fetchReviewCreditConsentBlob,
   submitJanitorReview,
 } from "@/lib/api";
 import { applicationStatusLabel } from "@/lib/adminStatus";
@@ -66,7 +67,79 @@ function FacebookRow({ member }: { member: JanitorReviewMember }) {
   );
 }
 
-function MemberCard({ member }: { member: JanitorReviewMember }) {
+function CreditConsentPreview({
+  token,
+  documentId,
+}: {
+  token: string;
+  documentId: number;
+}) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    fetchReviewCreditConsentBlob(token, documentId, "inline")
+      .then((blob) => {
+        if (cancelled) return;
+        objectUrl = URL.createObjectURL(blob);
+        setBlobUrl(objectUrl);
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Impossible d'ouvrir le PDF");
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [documentId, token]);
+
+  const download = async () => {
+    try {
+      const blob = await fetchReviewCreditConsentBlob(token, documentId, "attachment");
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = "credit_consent.pdf";
+      anchor.click();
+      anchor.remove();
+      window.setTimeout(() => URL.revokeObjectURL(url), 0);
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Impossible de télécharger le PDF");
+    }
+  };
+
+  return (
+    <div className="sm:col-span-2">
+      <dt className="admin-field-label">Formulaire de crédit signé</dt>
+      <dd className="admin-field-value">
+        <button type="button" onClick={() => void download()} className={adminUi.link}>
+          Télécharger le PDF
+        </button>
+        {error ? <p className="mt-1 text-sm text-[#7f1d1d]">{error}</p> : null}
+        {blobUrl ? (
+          <iframe
+            title="Formulaire de crédit signé"
+            src={blobUrl}
+            className="mt-3 h-80 w-full rounded border border-[var(--ml-line)] bg-white"
+          />
+        ) : !error ? (
+          <p className="mt-2 text-sm text-[var(--ml-steel)]">Chargement du PDF…</p>
+        ) : null}
+      </dd>
+    </div>
+  );
+}
+
+function MemberCard({
+  member,
+  token,
+}: {
+  member: JanitorReviewMember;
+  token: string;
+}) {
   return (
     <section className={adminUi.card}>
       <div className={adminUi.cardHeader}>
@@ -85,6 +158,16 @@ function MemberCard({ member }: { member: JanitorReviewMember }) {
         <ContactRow label="Téléphone RH" value={member.hr_phone} />
         <FacebookRow member={member} />
         <ContactRow label="LinkedIn" value={member.linkedin_url} />
+        {member.credit_consent_document_id ? (
+          <CreditConsentPreview token={token} documentId={member.credit_consent_document_id} />
+        ) : (
+          <div className="sm:col-span-2">
+            <dt className="admin-field-label">Formulaire de crédit signé</dt>
+            <dd className="admin-field-value text-[var(--ml-steel)]">
+              PDF introuvable pour ce membre.
+            </dd>
+          </div>
+        )}
       </dl>
     </section>
   );
@@ -211,7 +294,7 @@ export default function ReviewForm({ token }: { token: string }) {
 
       <div className={`${adminUi.sectionGap} mt-6`}>
         {review.members.map((member) => (
-          <MemberCard key={member.id} member={member} />
+          <MemberCard key={member.id} member={member} token={token} />
         ))}
       </div>
 
