@@ -102,6 +102,10 @@ describe("jobMessageFormat", () => {
     expect(incomeExtractFlagLabel("name_mismatch_payslip_form", "en")).toMatch(
       /doesn't match the application/i
     );
+    expect(incomeExtractFlagLabel("name_partial_missing", "en")).toBe(
+      "Partial match (missing name)"
+    );
+    expect(incomeExtractFlagLabel("name_partial_missing", "fr")).toMatch(/partielle/i);
     expect(incomeExtractFlagLabel("payslip_stale", "fr")).toContain("6 mois");
     expect(incomeExtractFlagLabel("payslip_stale_or_future", "en")).toMatch(/future/i);
     expect(incomeExtractFlagLabel("payslip_stale_or_future", "fr")).toMatch(/futur/i);
@@ -122,6 +126,21 @@ describe("jobMessageFormat", () => {
       "Etalex"
     );
     expect(incomeExtractFlagLabel("payslip_not_recognized", "en")).toContain("payslip");
+  });
+
+  it("lists both employers on a two-job income preview", () => {
+    const message = JSON.stringify({
+      document_type: "pay_slip_1",
+      read_path: "pdf_text",
+      employer_name: "SANTE QUEBEC - CHUM",
+      employers: ["SANTE QUEBEC - CHUM", "4437911 Canada Inc."],
+      net_pay: 1558.2,
+      payslip_like: true,
+      flags: [],
+    });
+    expect(formatJobMessagePreview("income_document_extract", message, "en")).toContain(
+      "2 jobs: SANTE QUEBEC - CHUM; 4437911 Canada Inc."
+    );
   });
 
   it("labels address sources in French and English", () => {
