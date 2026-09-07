@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AddressAutocomplete from "../../AddressAutocomplete";
 import AddressLivedDates from "../../AddressLivedDates";
 import CreditConsentSection from "../../CreditConsentSection";
@@ -469,8 +469,10 @@ export default function InviteForm({ token }: Props) {
   };
 
   /** Persist review data server-side and create/reuse the DocuSeal submission. */
+  const consentBusyRef = useRef(false);
   const prepareConsent = useCallback(async () => {
-    if (!role) return;
+    if (!role || consentBusyRef.current) return;
+    consentBusyRef.current = true;
     setConsentPreparing(true);
     setConsentError(null);
     try {
@@ -496,6 +498,7 @@ export default function InviteForm({ token }: Props) {
         err instanceof Error && err.message ? err.message : t(locale, "consentError")
       );
     } finally {
+      consentBusyRef.current = false;
       setConsentPreparing(false);
     }
   }, [role, form, locale, token]);
