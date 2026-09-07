@@ -8,6 +8,7 @@ import {
 } from "@/lib/api";
 import { formattedAddressWithPostal } from "@/lib/canadianPostal";
 import { Locale, t } from "@/lib/i18n";
+import { moveSuggestionIndex } from "./addressSuggestNav";
 
 type Props = {
   locale: Locale;
@@ -356,12 +357,12 @@ export default function AddressAutocomplete({
         }}
         onKeyDown={(e) => {
           if (!useServerSuggest || !listOpen || predictions.length === 0) return;
-          if (e.key === "ArrowDown") {
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
             e.preventDefault();
-            setActiveIndex((index) => Math.min(index + 1, predictions.length - 1));
-          } else if (e.key === "ArrowUp") {
-            e.preventDefault();
-            setActiveIndex((index) => Math.max(index - 1, 0));
+            const key = e.key;
+            setActiveIndex((index) =>
+              moveSuggestionIndex(index, key, predictions.length)
+            );
           } else if (e.key === "Enter" && activeIndex >= 0) {
             e.preventDefault();
             void pickPrediction(predictions[activeIndex]);
