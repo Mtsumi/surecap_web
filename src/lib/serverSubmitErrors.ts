@@ -319,6 +319,14 @@ export function mapServerSubmitError(
     };
   }
 
+  if (trimmed === "Select a Canadian address from the suggestions") {
+    return {
+      step: "addresses",
+      fieldErrors: { current_address: "pick_google_address" },
+      messageKey: "validationPickGoogleAddress",
+    };
+  }
+
   if (trimmed === "Invalid address date range") {
     return {
       step: "addresses",

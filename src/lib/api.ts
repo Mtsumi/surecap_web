@@ -359,6 +359,42 @@ async function apiFetchForm<T>(path: string, form: FormData): Promise<T> {
   }
 }
 
+export type AddressPrediction = {
+  place_id: string;
+  description: string;
+};
+
+export type AddressDetails = {
+  place_id: string;
+  formatted_address: string;
+};
+
+export function suggestAddresses(
+  query: string,
+  opts: { sessionToken: string; language: LocaleCode }
+): Promise<{ predictions: AddressPrediction[] }> {
+  const params = new URLSearchParams({
+    q: query,
+    sessiontoken: opts.sessionToken,
+    language: opts.language,
+  });
+  return apiFetch<{ predictions: AddressPrediction[] }>(
+    `/public/address-suggest?${params.toString()}`
+  );
+}
+
+export function fetchAddressDetails(
+  placeId: string,
+  opts: { sessionToken: string; language: LocaleCode }
+): Promise<AddressDetails> {
+  const params = new URLSearchParams({
+    place_id: placeId,
+    sessiontoken: opts.sessionToken,
+    language: opts.language,
+  });
+  return apiFetch<AddressDetails>(`/public/address-details?${params.toString()}`);
+}
+
 export function fetchBuildings(): Promise<Building[]> {
   return apiFetch<Building[]>("/buildings");
 }

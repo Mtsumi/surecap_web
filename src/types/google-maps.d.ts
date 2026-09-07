@@ -14,7 +14,11 @@ declare namespace google.maps.places {
       }
     );
     addListener(event: string, handler: () => void): void;
-    getPlace(): { formatted_address?: string; place_id?: string };
+    getPlace(): {
+      formatted_address?: string;
+      place_id?: string;
+      address_components?: Array<{ long_name?: string; types?: string[] }>;
+    };
     setOptions(opts: {
       sessionToken?: AutocompleteSessionToken;
       componentRestrictions?: { country: string | string[] };

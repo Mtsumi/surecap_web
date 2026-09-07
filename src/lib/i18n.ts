@@ -160,9 +160,10 @@ export const messages = {
     loading: "Loading…",
     error: "Something went wrong. Please try again.",
     langToggle: "Français",
-    addressManualHint: "Start typing to search, or enter your address manually.",
+    addressManualHint: "Enter your address outside Canada.",
+    addressPickHint: "Start typing, then pick an address from the list.",
     addressSuggestionsUnavailable:
-      "Address suggestions unavailable (often blocked by Brave or ad blockers). Type your full address manually.",
+      "Address suggestions are temporarily unavailable. Try again in a moment.",
     uploadStayOnTab: "Uploading… please stay on this page.",
     uploadQualityBlurry:
       "This file looks blurry. You can continue, but a clearer upload helps verification.",
@@ -202,6 +203,8 @@ export const messages = {
     validationAddressDateInFuture: "Address dates cannot be in the future.",
     validationAddressDatesChain:
       "Your previous address must end on or before you started living at your current address.",
+    validationPickGoogleAddress:
+      "Pick an address from the suggestions so we can include the postal code.",
     validationDateOfBirthInvalid: "Please enter a valid date of birth.",
     validationDateOfBirthUnderage: "Applicants must be at least 18 years old.",
     dateOfBirthHint: "You must be at least 18 years old.",
@@ -390,10 +393,10 @@ export const messages = {
     loading: "Chargement…",
     error: "Une erreur s'est produite. Veuillez réessayer.",
     langToggle: "English",
-    addressManualHint:
-      "Commencez à taper pour rechercher, ou entrez l'adresse manuellement.",
+    addressManualHint: "Entrez votre adresse hors Canada.",
+    addressPickHint: "Commencez à taper, puis choisissez une adresse dans la liste.",
     addressSuggestionsUnavailable:
-      "Suggestions d'adresse indisponibles (souvent bloquées par Brave ou un bloqueur). Entrez l'adresse manuellement.",
+      "Les suggestions d'adresse sont temporairement indisponibles. Réessayez dans un instant.",
     uploadStayOnTab: "Téléversement en cours… veuillez rester sur cette page.",
     uploadQualityBlurry:
       "Ce fichier semble flou. Vous pouvez continuer, mais un fichier plus net aide la vérification.",
@@ -440,6 +443,8 @@ export const messages = {
       "Les dates d'adresse ne peuvent pas être dans le futur.",
     validationAddressDatesChain:
       "Votre adresse précédente doit se terminer au plus tard à la date de début de votre adresse actuelle.",
+    validationPickGoogleAddress:
+      "Choisissez une adresse dans les suggestions pour inclure le code postal.",
     validationDateOfBirthInvalid: "Veuillez entrer une date de naissance valide.",
     validationDateOfBirthUnderage: "Les demandeurs doivent avoir au moins 18 ans.",
     dateOfBirthHint: "Vous devez avoir au moins 18 ans.",

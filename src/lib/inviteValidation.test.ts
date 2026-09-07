@@ -15,7 +15,7 @@ function roommateFields(overrides: Partial<InviteeFormFields> = {}): InviteeForm
     phone: "5145550100",
     current_address: "123 Rue Example, Montréal",
     current_apartment: "",
-    current_place_id: "",
+    current_place_id: "ChIJInviteTest",
     address_not_in_canada: false,
     previous_address: "",
     previous_apartment: "",

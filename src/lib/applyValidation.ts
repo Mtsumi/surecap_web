@@ -5,6 +5,7 @@ import {
   normalizePhoneDigits,
 } from "./phoneValidation";
 import { EmploymentType, parseMonthlyNetIncome } from "./incomeUpload";
+import { isPickedCanadianAddress } from "./canadianPostal";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -23,7 +24,8 @@ export type ApplyValidationCode =
   | "date_of_birth_invalid"
   | "date_of_birth_underage"
   | "guarantor_required_abroad"
-  | "guarantor_address_not_quebec";
+  | "guarantor_address_not_quebec"
+  | "pick_google_address";
 
 export type ApplyFormStep = "personal" | "addresses" | "housing" | "references" | "other";
 
@@ -43,6 +45,9 @@ export type AddressDatesInput = {
   previous_landlord_phone?: string;
   /** Primary + roommate collect landlords; guarantors pass false. Default true. */
   require_landlord?: boolean;
+  current_place_id?: string;
+  previous_place_id?: string;
+  address_not_in_canada?: boolean;
 };
 
 export type ApplyValidationInput = {
@@ -320,6 +325,11 @@ export function addressFieldErrors(fields: AddressDatesInput): ApplyFieldErrors 
 
   if (!fields.current_address.trim()) {
     errors.current_address = "required";
+  } else if (
+    !fields.address_not_in_canada &&
+    !isPickedCanadianAddress(fields.current_address, fields.current_place_id)
+  ) {
+    errors.current_address = "pick_google_address";
   }
 
   const currentFrom = fields.current_address_lived_from.trim();
@@ -364,6 +374,12 @@ export function addressFieldErrors(fields: AddressDatesInput): ApplyFieldErrors 
 
   const previousText = fields.previous_address.trim();
   if (previousText) {
+    if (
+      !fields.address_not_in_canada &&
+      !isPickedCanadianAddress(previousText, fields.previous_place_id)
+    ) {
+      errors.previous_address = "pick_google_address";
+    }
     const previousFrom = fields.previous_address_lived_from.trim();
     const previousTo = fields.previous_address_lived_to.trim();
     if (!previousFrom) {
@@ -433,6 +449,7 @@ export function stepForValidationCode(code: ApplyValidationCode): ApplyFormStep 
     case "invalid_address_date_range":
     case "address_date_in_future":
     case "address_dates_chain":
+    case "pick_google_address":
       return "addresses";
     default:
       return "personal";

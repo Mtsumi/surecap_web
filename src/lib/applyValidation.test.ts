@@ -49,6 +49,7 @@ function baseInput(overrides: Partial<ApplyValidationInput> = {}): ApplyValidati
     employment_type: "employed",
     monthly_net_income: "4000",
     current_address: "123 Rue Example",
+    current_place_id: "ChIJTestCurrentAddress",
     current_address_lived_from: "2024-01-01",
     current_address_lived_to: "",
     still_at_current_address: true,
@@ -183,6 +184,7 @@ describe("address date validation", () => {
     const errors = addressFieldErrors(
       baseInput({
         previous_address: "10 Old St",
+        previous_place_id: "ChIJTestPreviousAddress",
         previous_address_lived_from: "2022-01-01",
         previous_address_lived_to: "2024-06-01",
         previous_landlord_name: "Old Landlord",
@@ -198,6 +200,7 @@ describe("address date validation", () => {
     const errors = addressFieldErrors(
       baseInput({
         previous_address: "10 Old St",
+        previous_place_id: "ChIJTestPreviousAddress",
         previous_address_lived_from: "2022-01-01",
         previous_address_lived_to: "2024-01-01",
         previous_landlord_name: "Old Landlord",
@@ -219,6 +222,7 @@ describe("address date validation", () => {
     const previousErrors = addressFieldErrors(
       baseInput({
         previous_address: "10 Old St",
+        previous_place_id: "ChIJTestPreviousAddress",
         previous_address_lived_from: "2022-01-01",
         previous_address_lived_to: "2024-01-01",
       })
@@ -249,6 +253,7 @@ describe("address date validation", () => {
           require_landlord: false,
           require_lease_in_name: false,
           previous_address: "10 Old St",
+        previous_place_id: "ChIJTestPreviousAddress",
           previous_address_lived_from: "2022-01-01",
           previous_address_lived_to: "2024-01-01",
           previous_landlord_name: "",
@@ -256,6 +261,34 @@ describe("address date validation", () => {
         })
       )
     ).toEqual({});
+  });
+
+  it("requires a Google pick or postal for Canadian current addresses", () => {
+    expect(
+      addressFieldErrors(
+        baseInput({ current_place_id: "", current_address: "3400 avenue Linton" })
+      ).current_address
+    ).toBe("pick_google_address");
+    expect(
+      addressFieldErrors(
+        baseInput({
+          current_place_id: "",
+          current_address: "3400 avenue Linton, Montréal, QC H3T 1A8",
+        })
+      ).current_address
+    ).toBeUndefined();
+  });
+
+  it("skips the Google pick when the address is not in Canada", () => {
+    expect(
+      addressFieldErrors(
+        baseInput({
+          address_not_in_canada: true,
+          current_place_id: "",
+          current_address: "12 Rue de Rivoli, Paris",
+        })
+      ).current_address
+    ).toBeUndefined();
   });
 });
 

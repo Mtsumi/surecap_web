@@ -16,6 +16,9 @@ export type AddressDateFormFields = {
   landlord_phone?: string;
   previous_landlord_name?: string;
   previous_landlord_phone?: string;
+  current_place_id?: string;
+  previous_place_id?: string;
+  address_not_in_canada?: boolean;
 };
 
 export function toAddressValidationInput(
@@ -44,6 +47,9 @@ export function toAddressValidationInput(
       options?.requireLandlord !== undefined
         ? options.requireLandlord
         : !ownsHome,
+    current_place_id: fields.current_place_id,
+    previous_place_id: fields.previous_place_id,
+    address_not_in_canada: fields.address_not_in_canada,
   };
 }
 
