@@ -27,6 +27,8 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   notice_of_assessment_year_2: "Avis de cotisation (2)",
   proof_of_income: "Preuve de revenu",
   signature: "Signature",
+  signed_declaration: "Déclaration signée",
+  credit_consent: "Formulaire de crédit signé",
   selfie: "Selfie",
 };
 

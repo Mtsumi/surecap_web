@@ -1,15 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AddressAutocomplete from "../../AddressAutocomplete";
 import AddressLivedDates from "../../AddressLivedDates";
+import CreditConsentSection from "../../CreditConsentSection";
 import PhoneField from "../../PhoneField";
 import StepDocumentUpload from "../../StepDocumentUpload";
 import StepIncomeUpload from "../../StepIncomeUpload";
 import {
+  ApiError,
+  type CreditConsent,
   InviteContext,
   InviteeSubmitPayload,
   MemberDocument,
+  createInviteCreditConsent,
   fetchInvite,
   submitInvite,
 } from "@/lib/api";
@@ -114,6 +118,71 @@ function emptyFields(): InviteeFormFields {
   };
 }
 
+/** Build the submit payload from form state (shared by consent + final submit). */
+function buildInviteePayload(
+  role: InviteeRole,
+  form: InviteeFormFields,
+  locale: Locale
+): InviteeSubmitPayload {
+  const payload: InviteeSubmitPayload = {
+    given_name: form.given_name.trim(),
+    family_name: form.family_name.trim(),
+    date_of_birth: form.date_of_birth,
+    email: form.email.trim(),
+    phone: form.phone.trim(),
+    current_address: form.current_address.trim(),
+    employment_type: form.employment_type,
+    monthly_net_income: employmentRequiresIncome(form.employment_type)
+      ? parseMonthlyNetIncome(form.monthly_net_income) ?? 0
+      : 0,
+    preferred_locale: locale,
+    ...addressDatePayload(form),
+  };
+  if (form.current_apartment.trim()) {
+    payload.current_apartment = form.current_apartment.trim();
+  }
+  if (form.address_not_in_canada) {
+    payload.address_not_in_canada = true;
+  } else if (form.current_place_id) {
+    payload.current_place_id = form.current_place_id;
+  }
+  if (form.previous_address.trim()) {
+    payload.previous_address = form.previous_address.trim();
+  }
+  if (form.previous_apartment.trim()) {
+    payload.previous_apartment = form.previous_apartment.trim();
+  }
+  if (form.previous_place_id) payload.previous_place_id = form.previous_place_id;
+
+  if (role === "roommate") {
+    payload.housing_status = form.housing_status;
+    if (form.housing_status === "own_home") {
+      payload.lease_in_name = false;
+    } else {
+      payload.lease_in_name = form.lease_in_name === true;
+      payload.landlord_name = form.landlord_name.trim();
+      payload.landlord_phone = form.landlord_phone.trim();
+      if (form.previous_address.trim()) {
+        payload.previous_landlord_name = form.previous_landlord_name.trim();
+        payload.previous_landlord_phone = form.previous_landlord_phone.trim();
+      }
+    }
+    if (employmentRequiresIncome(form.employment_type)) {
+      payload.employer_name = form.employer_name.trim();
+      payload.hr_name = form.hr_name.trim();
+      payload.hr_phone = form.hr_phone.trim();
+    }
+    if (form.referral_source.trim()) payload.referral_source = form.referral_source.trim();
+    if (form.facebook_url.trim()) payload.facebook_url = form.facebook_url.trim();
+    if (form.linkedin_url.trim()) payload.linkedin_url = form.linkedin_url.trim();
+  } else {
+    payload.employer_name = form.employer_name.trim();
+    payload.hr_name = form.hr_name.trim();
+    payload.hr_phone = form.hr_phone.trim();
+  }
+  return payload;
+}
+
 function stepLabel(locale: Locale, step: Step): string {
   const map: Record<Step, MessageKey> = {
     personal: "stepPersonal",
@@ -139,6 +208,10 @@ export default function InviteForm({ token }: Props) {
   const [idKind, setIdKind] = useState<IdDocumentKind>("passport");
   const [idDocuments, setIdDocuments] = useState<MemberDocument[]>([]);
   const [incomeDocuments, setIncomeDocuments] = useState<MemberDocument[]>([]);
+  const [consent, setConsent] = useState<CreditConsent | null>(null);
+  const [consentPreparing, setConsentPreparing] = useState(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
+  const [consentUnavailable, setConsentUnavailable] = useState(false);
 
   const inputClass =
     "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-base text-[#292524] outline-none transition focus:border-[#3d5a45]";
@@ -373,62 +446,7 @@ export default function InviteForm({ token }: Props) {
       return;
     }
 
-    const payload: InviteeSubmitPayload = {
-      given_name: form.given_name.trim(),
-      family_name: form.family_name.trim(),
-      date_of_birth: form.date_of_birth,
-      email: form.email.trim(),
-      phone: form.phone.trim(),
-      current_address: form.current_address.trim(),
-      employment_type: form.employment_type,
-      monthly_net_income: employmentRequiresIncome(form.employment_type)
-        ? parseMonthlyNetIncome(form.monthly_net_income) ?? 0
-        : 0,
-      preferred_locale: locale,
-      ...addressDatePayload(form),
-    };
-    if (form.current_apartment.trim()) {
-      payload.current_apartment = form.current_apartment.trim();
-    }
-    if (form.address_not_in_canada) {
-      payload.address_not_in_canada = true;
-    } else if (form.current_place_id) {
-      payload.current_place_id = form.current_place_id;
-    }
-    if (form.previous_address.trim()) {
-      payload.previous_address = form.previous_address.trim();
-    }
-    if (form.previous_apartment.trim()) {
-      payload.previous_apartment = form.previous_apartment.trim();
-    }
-    if (form.previous_place_id) payload.previous_place_id = form.previous_place_id;
-
-    if (role === "roommate") {
-      payload.housing_status = form.housing_status;
-      if (form.housing_status === "own_home") {
-        payload.lease_in_name = false;
-      } else {
-        payload.lease_in_name = form.lease_in_name === true;
-        payload.landlord_name = form.landlord_name.trim();
-        payload.landlord_phone = form.landlord_phone.trim();
-        if (form.previous_address.trim()) {
-          payload.previous_landlord_name = form.previous_landlord_name.trim();
-          payload.previous_landlord_phone = form.previous_landlord_phone.trim();
-        }
-      }
-      if (employmentRequiresIncome(form.employment_type)) {
-        payload.employer_name = form.employer_name.trim();
-        payload.hr_name = form.hr_name.trim();
-        payload.hr_phone = form.hr_phone.trim();
-      }
-      if (form.referral_source.trim()) payload.referral_source = form.referral_source.trim();
-      if (form.facebook_url.trim()) payload.facebook_url = form.facebook_url.trim();
-      if (form.linkedin_url.trim()) payload.linkedin_url = form.linkedin_url.trim();
-    } else {
-      payload.employer_name = form.employer_name.trim();
-      payload.hr_name = form.hr_name.trim();
-      payload.hr_phone = form.hr_phone.trim();
-    }
+    const payload = buildInviteePayload(role, form, locale);
 
     setSubmitting(true);
     setError(null);
@@ -449,6 +467,47 @@ export default function InviteForm({ token }: Props) {
       setSubmitting(false);
     }
   };
+
+  /** Persist review data server-side and create/reuse the DocuSeal submission. */
+  const prepareConsent = useCallback(async () => {
+    if (!role) return;
+    setConsentPreparing(true);
+    setConsentError(null);
+    try {
+      const result = await createInviteCreditConsent(
+        token,
+        buildInviteePayload(role, form, locale)
+      );
+      // Keep the locally observed "signed" only for the same submission — a new
+      // slug means the data changed and the applicant must sign again.
+      setConsent((current) =>
+        current?.signed && current.slug === result.slug
+          ? { ...result, signed: true }
+          : result
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 503) {
+        // E-signing not configured server-side — submit stays allowed.
+        setConsentUnavailable(true);
+        return;
+      }
+      setConsent(null);
+      setConsentError(
+        err instanceof Error && err.message ? err.message : t(locale, "consentError")
+      );
+    } finally {
+      setConsentPreparing(false);
+    }
+  }, [role, form, locale, token]);
+
+  useEffect(() => {
+    if (step === "review") void prepareConsent();
+    // Re-running on prepareConsent identity would loop while signing; the
+    // review data cannot change while this step is displayed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step]);
+
+  const consentSatisfied = consentUnavailable || consent?.signed === true;
 
   if (loading) {
     return <p className="text-sm text-[#78716c]">{t(locale, "loading")}</p>;
@@ -1143,6 +1202,19 @@ export default function InviteForm({ token }: Props) {
               </>
             )}
           </dl>
+          <CreditConsentSection
+            locale={locale}
+            consent={consent}
+            preparing={consentPreparing}
+            error={consentError}
+            unavailable={consentUnavailable}
+            signerEmail={form.email}
+            signerName={`${form.given_name} ${form.family_name}`.trim()}
+            onSigned={() =>
+              setConsent((current) => ({ slug: current?.slug ?? null, signed: true }))
+            }
+            onRetry={() => void prepareConsent()}
+          />
           {error && (
             <p
               className="mb-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]"
@@ -1161,13 +1233,18 @@ export default function InviteForm({ token }: Props) {
             </button>
             <button
               type="button"
-              disabled={submitting}
+              disabled={submitting || !consentSatisfied}
               onClick={handleSubmit}
               className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
             >
               {submitting ? t(locale, "loading") : t(locale, "submit")}
             </button>
           </div>
+          {!consentSatisfied && !consentError ? (
+            <p className="text-xs text-[#78716c]">
+              {t(locale, "consentRequiredToSubmit")}
+            </p>
+          ) : null}
         </div>
       )}
     </div>

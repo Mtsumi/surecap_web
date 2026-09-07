@@ -4,17 +4,21 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import AddressAutocomplete from "./AddressAutocomplete";
 import AddressLivedDates from "./AddressLivedDates";
+import CreditConsentSection from "./CreditConsentSection";
 import PhoneField from "./PhoneField";
 import StepDocumentUpload from "./StepDocumentUpload";
 import StepIncomeUpload from "./StepIncomeUpload";
 import {
+  ApiError,
   ApplicationSubmit,
   Building,
+  type CreditConsent,
   GuarantorContact,
   MemberDocument,
   RoommateContact,
   Unit,
   createApplicationDraft,
+  createCreditConsent,
   fetchBuildings,
   fetchUnits,
   submitApplicationById,
@@ -318,6 +322,10 @@ export default function ApplyForm() {
     Partial<Record<string, ApplyValidationCode>>
   >({});
   const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [consent, setConsent] = useState<CreditConsent | null>(null);
+  const [consentPreparing, setConsentPreparing] = useState(false);
+  const [consentError, setConsentError] = useState<string | null>(null);
+  const [consentUnavailable, setConsentUnavailable] = useState(false);
 
   // Keep latest values for flush on app-switch (Android often freezes before debounced save).
   const formRef = useRef(form);
@@ -1006,6 +1014,57 @@ export default function ApplyForm() {
       setSubmitting(false);
     }
   };
+
+  /** Sync the draft and create/reuse the DocuSeal signing submission (Review step). */
+  const prepareConsent = useCallback(async () => {
+    const session = draftSessionRef.current;
+    if (!session) return;
+    setConsentPreparing(true);
+    setConsentError(null);
+    try {
+      await updateApplication(
+        session.applicationId,
+        session.uploadToken,
+        formPayload(
+          formRef.current,
+          roommatesRef.current,
+          includeGuarantorRef.current ? guarantorRef.current : null
+        )
+      );
+      const result = await createCreditConsent(
+        session.applicationId,
+        session.uploadToken
+      );
+      // Keep the locally observed "signed" only for the same submission — a new
+      // slug means the data changed and the applicant must sign again.
+      setConsent((current) =>
+        current?.signed && current.slug === result.slug
+          ? { ...result, signed: true }
+          : result
+      );
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 503) {
+        // E-signing not configured server-side — submit stays allowed.
+        setConsentUnavailable(true);
+        return;
+      }
+      setConsent(null);
+      setConsentError(
+        err instanceof Error && err.message
+          ? err.message
+          : t(locale, "consentError")
+      );
+    } finally {
+      setConsentPreparing(false);
+    }
+  }, [locale]);
+
+  useEffect(() => {
+    if (step === "review") void prepareConsent();
+  }, [step, prepareConsent]);
+
+  const consentSatisfied =
+    consentUnavailable || consent?.signed === true;
 
   const toggleLocale = () => {
     setLocale(locale === "en" ? "fr" : "en");
@@ -2372,15 +2431,34 @@ export default function ApplyForm() {
             )}
           </dl>
 
+          <CreditConsentSection
+            locale={locale}
+            consent={consent}
+            preparing={consentPreparing}
+            error={consentError}
+            unavailable={consentUnavailable}
+            signerEmail={form.email}
+            signerName={`${form.given_name} ${form.family_name}`.trim()}
+            onSigned={() =>
+              setConsent((current) => ({ slug: current?.slug ?? null, signed: true }))
+            }
+            onRetry={() => void prepareConsent()}
+          />
+
           <StepAlert />
           <form onSubmit={handleSubmit}>
             <button
               type="submit"
-              disabled={submitting}
+              disabled={submitting || !consentSatisfied}
               className="w-full rounded bg-[#3d5a45] py-3.5 text-sm font-medium text-[#f4f1ec] transition hover:bg-[#334d3a] disabled:opacity-60"
             >
               {submitting ? t(locale, "loading") : t(locale, "submit")}
             </button>
+            {!consentSatisfied && !consentError ? (
+              <p className="mt-2 text-center text-xs text-[#78716c]">
+                {t(locale, "consentRequiredToSubmit")}
+              </p>
+            ) : null}
           </form>
         </section>
       )}

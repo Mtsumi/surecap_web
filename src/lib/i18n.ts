@@ -160,6 +160,17 @@ export const messages = {
     loading: "Loading…",
     error: "Something went wrong. Please try again.",
     langToggle: "Français",
+    consentTitle: "Sign your application",
+    consentNote:
+      "Review and sign the declaration and the credit history search form below. Both are signed in one step and are required to submit your application.",
+    consentSigned: "Documents signed — you can now submit your application.",
+    consentPreparing: "Preparing your documents to sign…",
+    consentError:
+      "We could not prepare the signing form. Please try again.",
+    consentRetry: "Try again",
+    consentEmbedFailed:
+      "The signing form could not be loaded. Please refresh the page and try again.",
+    consentRequiredToSubmit: "Sign the documents above to enable submission.",
     addressManualHint: "Enter your address outside Canada.",
     addressPickHint: "Start typing, then pick an address from the list.",
     addressSuggestionsUnavailable:
@@ -393,6 +404,17 @@ export const messages = {
     loading: "Chargement…",
     error: "Une erreur s'est produite. Veuillez réessayer.",
     langToggle: "English",
+    consentTitle: "Signez votre demande",
+    consentNote:
+      "Lisez et signez ci-dessous la déclaration et le formulaire de recherche d'antécédents de crédit. Les deux se signent en une seule étape et sont requis pour soumettre votre demande.",
+    consentSigned: "Documents signés — vous pouvez maintenant soumettre votre demande.",
+    consentPreparing: "Préparation de vos documents à signer…",
+    consentError:
+      "Impossible de préparer le formulaire de signature. Veuillez réessayer.",
+    consentRetry: "Réessayer",
+    consentEmbedFailed:
+      "Le formulaire de signature n'a pas pu être chargé. Actualisez la page et réessayez.",
+    consentRequiredToSubmit: "Signez les documents ci-dessus pour activer la soumission.",
     addressManualHint: "Entrez votre adresse hors Canada.",
     addressPickHint: "Commencez à taper, puis choisissez une adresse dans la liste.",
     addressSuggestionsUnavailable:
