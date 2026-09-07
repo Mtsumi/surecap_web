@@ -2,15 +2,20 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { assessImageClarity } from "@/lib/imageClarity";
-import { Locale, t } from "@/lib/i18n";
-
-/** CR80 / ID-1 card aspect (width / height). */
-const CARD_ASPECT = 85.6 / 53.98;
+import {
+  GuidedCaptureFrame,
+  guidedCaptureAspect,
+} from "@/lib/guidedCapture";
+import { Locale, MessageKey, t } from "@/lib/i18n";
 
 type Phase = "starting" | "live" | "preview" | "denied";
 
 type Props = {
   locale: Locale;
+  /** ID card crop by default. Payslips use portrait A4. */
+  frame?: GuidedCaptureFrame;
+  titleKey?: MessageKey;
+  alignHintKey?: MessageKey;
   onCapture: (file: File) => void;
   onCancel: () => void;
   /** When getUserMedia fails — parent opens native file/camera picker. */
@@ -23,10 +28,15 @@ function stopStream(stream: MediaStream | null) {
 
 export default function IdCameraCapture({
   locale,
+  frame = "id",
+  titleKey = "idCameraTitle",
+  alignHintKey = "idCameraAlignHint",
   onCapture,
   onCancel,
   onUseDeviceCamera,
 }: Props) {
+  const aspect = guidedCaptureAspect(frame);
+  const filePrefix = frame === "a4" ? "payslip-capture" : "id-capture";
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -148,7 +158,7 @@ export default function IdCameraCapture({
       });
       if (!blob) throw new Error("blob");
 
-      const file = new File([blob], `id-capture-${Date.now()}.jpg`, {
+      const file = new File([blob], `${filePrefix}-${Date.now()}.jpg`, {
         type: "image/jpeg",
         lastModified: Date.now(),
       });
@@ -206,7 +216,7 @@ export default function IdCameraCapture({
           {t(locale, "idCameraCancel")}
         </button>
         <p className="text-sm font-medium tracking-wide">
-          {t(locale, "idCameraTitle")}
+          {t(locale, titleKey)}
         </p>
         <span className="w-12" aria-hidden />
       </div>
@@ -226,15 +236,19 @@ export default function IdCameraCapture({
 
         {phase === "live" && (
           <>
-            <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-6">
+            <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-5">
               <div
                 ref={frameRef}
-                className="relative w-full max-w-md rounded-xl border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]"
-                style={{ aspectRatio: `${CARD_ASPECT}` }}
+                className={
+                  frame === "a4"
+                    ? "relative h-[72%] max-h-[36rem] rounded-sm border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]"
+                    : "relative w-full max-w-md rounded-xl border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]"
+                }
+                style={{ aspectRatio: `${aspect}` }}
               />
             </div>
-            <p className="pointer-events-none absolute inset-x-0 top-[12%] px-6 text-center text-sm text-white/95 drop-shadow">
-              {t(locale, "idCameraAlignHint")}
+            <p className="pointer-events-none absolute inset-x-0 top-[8%] px-6 text-center text-sm text-white/95 drop-shadow">
+              {t(locale, alignHintKey)}
             </p>
           </>
         )}

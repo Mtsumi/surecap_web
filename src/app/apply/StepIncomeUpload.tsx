@@ -1,15 +1,20 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ACCEPTED_UPLOAD_TYPES } from "@/lib/documentUpload";
+import {
+  ACCEPTED_ID_UPLOAD_TYPES,
+  ACCEPTED_UPLOAD_TYPES,
+} from "@/lib/documentUpload";
 import {
   EmploymentType,
   employmentRequiresIncome,
+  incomeSlotSupportsPhotoCapture,
   incomeSlotsForType,
   incomeUploadComplete,
   isOptionalIncomeSlot,
   staleIncomeDocumentTypes,
 } from "@/lib/incomeUpload";
+import IdCameraCapture from "./IdCameraCapture";
 import { compressImageForUpload, uploadFileTooLargeMessage } from "@/lib/compressImage";
 import {
   MemberDocument,
@@ -93,7 +98,9 @@ export default function StepIncomeUpload(props: Props) {
   const [loadingList, setLoadingList] = useState(true);
   const [busySlot, setBusySlot] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [cameraSlot, setCameraSlot] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
+  const cameraInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const uploadErrorMessage = (e: unknown) =>
     e instanceof Error ? formatUploadErrorMessage(e.message) : t(locale, "uploadFailed");
@@ -207,6 +214,15 @@ export default function StepIncomeUpload(props: Props) {
     } finally {
       setBusySlot(null);
     }
+  };
+
+  const openDeviceCamera = (documentType: string) => {
+    cameraInputRefs.current[documentType]?.click();
+  };
+
+  const openGuidedCamera = (documentType: string) => {
+    setError(null);
+    setCameraSlot(documentType);
   };
 
   const handleEmploymentTypeChange = async (nextType: EmploymentType) => {
@@ -323,6 +339,23 @@ export default function StepIncomeUpload(props: Props) {
                 </p>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-3">
+                {incomeSlotSupportsPhotoCapture(slot) ? (
+                  <input
+                    ref={(element) => {
+                      cameraInputRefs.current[slot] = element;
+                    }}
+                    type="file"
+                    accept={ACCEPTED_ID_UPLOAD_TYPES}
+                    capture="environment"
+                    disabled={busy}
+                    className="sr-only"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      void handleFile(slot, file);
+                      e.target.value = "";
+                    }}
+                  />
+                ) : null}
                 <input
                   ref={(element) => {
                     fileInputRefs.current[slot] = element;
@@ -337,25 +370,26 @@ export default function StepIncomeUpload(props: Props) {
                     e.target.value = "";
                   }}
                 />
-                {uploaded ? (
+                {incomeSlotSupportsPhotoCapture(slot) ? (
                   <button
                     type="button"
                     disabled={busy}
-                    onClick={() => fileInputRefs.current[slot]?.click()}
-                    className="rounded border border-[#d4e4d6] bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] hover:bg-[#d4e4d6] disabled:opacity-60"
+                    onClick={() => openGuidedCamera(slot)}
+                    className="rounded border-0 bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] transition hover:bg-[#d4e4d6] disabled:opacity-60"
                   >
-                    {t(locale, "uploadReplaceFile")}
+                    {uploaded ? t(locale, "idRetakePhoto") : t(locale, "idTakePhoto")}
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => fileInputRefs.current[slot]?.click()}
-                    className="rounded border border-[#d4e4d6] bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] hover:bg-[#d4e4d6] disabled:opacity-60"
-                  >
-                    {t(locale, "uploadChooseFile")}
-                  </button>
-                )}
+                ) : null}
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => fileInputRefs.current[slot]?.click()}
+                  className="rounded border border-[#c8bfb0] bg-white px-3 py-2 text-sm font-medium text-[#3d3229] transition hover:bg-[#f5f0eb] disabled:opacity-60"
+                >
+                  {uploaded
+                    ? t(locale, incomeSlotSupportsPhotoCapture(slot) ? "idBrowseFile" : "uploadReplaceFile")
+                    : t(locale, incomeSlotSupportsPhotoCapture(slot) ? "idBrowseFile" : "uploadChooseFile")}
+                </button>
                 {uploaded && (
                   <button
                     type="button"
@@ -389,6 +423,26 @@ export default function StepIncomeUpload(props: Props) {
         incomeUploadComplete(employmentType, incomeDocTypes) && (
         <p className="mt-4 text-sm text-[#3d5a45]">{t(locale, "incomeUploadComplete")}</p>
       )}
+
+      {cameraSlot ? (
+        <IdCameraCapture
+          locale={locale}
+          frame="a4"
+          titleKey="incomeCameraTitle"
+          alignHintKey="incomeCameraAlignHint"
+          onCancel={() => setCameraSlot(null)}
+          onCapture={(file) => {
+            const documentType = cameraSlot;
+            setCameraSlot(null);
+            void handleFile(documentType, file);
+          }}
+          onUseDeviceCamera={() => {
+            const documentType = cameraSlot;
+            setCameraSlot(null);
+            requestAnimationFrame(() => openDeviceCamera(documentType));
+          }}
+        />
+      ) : null}
     </div>
   );
 }

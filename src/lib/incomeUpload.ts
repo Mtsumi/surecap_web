@@ -2,6 +2,17 @@
 
 import type { MessageKey } from "./i18n";
 
+const PHOTO_CAPTURE_SLOTS = new Set([
+  "pay_slip_1",
+  "pay_slip_2",
+  "pay_slip_3",
+  "proof_of_income",
+]);
+
+export function incomeSlotSupportsPhotoCapture(slot: string): boolean {
+  return PHOTO_CAPTURE_SLOTS.has(slot);
+}
+
 export type EmploymentType =
   | "employed"
   | "self_employed"
