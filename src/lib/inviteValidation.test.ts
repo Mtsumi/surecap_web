@@ -15,7 +15,7 @@ function roommateFields(overrides: Partial<InviteeFormFields> = {}): InviteeForm
     phone: "5145550100",
     current_address: "123 Rue Example, Montréal",
     current_apartment: "",
-    current_place_id: "",
+    current_place_id: "ChIJInviteTest",
     address_not_in_canada: false,
     previous_address: "",
     previous_apartment: "",
@@ -152,6 +152,30 @@ describe("inviteeFieldErrors", () => {
       "guarantor",
       guarantorFields({
         current_address: "Main St, Vancouver, BC, Canada",
+      }),
+      "guarantor@example.com"
+    );
+    expect(errors.current_address).toBeUndefined();
+  });
+
+  it("requires a Google pick for roommate Canadian addresses", () => {
+    const errors = inviteeFieldErrors(
+      "roommate",
+      roommateFields({
+        current_place_id: "",
+        current_address: "3400 avenue Linton",
+      }),
+      "roommate@example.com"
+    );
+    expect(errors.current_address).toBe("pick_google_address");
+  });
+
+  it("allows a guarantor to type an address without a Google pick", () => {
+    const errors = inviteeFieldErrors(
+      "guarantor",
+      guarantorFields({
+        current_place_id: "",
+        current_address: "12 Main St, Boston, MA",
       }),
       "guarantor@example.com"
     );

@@ -73,6 +73,7 @@ function inviteToValidationInput(
     ...toAddressValidationInput(form, {
       requireLeaseInName: role === "roommate" && form.housing_status !== "own_home",
       requireLandlord: role === "roommate" && form.housing_status !== "own_home",
+      requireGooglePick: role !== "guarantor",
     }),
   };
 }
@@ -316,6 +317,25 @@ export function mapServerSubmitError(
       step: "addresses",
       fieldErrors: { previous_address_lived_to: "address_dates_chain" },
       messageKey: "validationAddressDatesChain",
+    };
+  }
+
+  if (trimmed === "Select a Canadian address from the suggestions") {
+    const addressErrors = addressFieldErrors(input);
+    const fieldErrors: ApplyFieldErrors = {};
+    if (addressErrors.current_address === "pick_google_address") {
+      fieldErrors.current_address = "pick_google_address";
+    }
+    if (addressErrors.previous_address === "pick_google_address") {
+      fieldErrors.previous_address = "pick_google_address";
+    }
+    if (Object.keys(fieldErrors).length === 0) {
+      fieldErrors.current_address = "pick_google_address";
+    }
+    return {
+      step: "addresses",
+      fieldErrors,
+      messageKey: "validationPickGoogleAddress",
     };
   }
 

@@ -1,7 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import {
+  fetchAddressDetails,
+  suggestAddresses,
+  type AddressPrediction,
+} from "@/lib/api";
+import { formattedAddressWithPostal } from "@/lib/canadianPostal";
 import { Locale, t } from "@/lib/i18n";
+import { moveSuggestionIndex } from "./addressSuggestNav";
 
 type Props = {
   locale: Locale;
@@ -23,6 +30,8 @@ declare global {
 }
 
 const MAPS_LOAD_ERROR = new Error("Failed to load Google Maps");
+const SUGGEST_DEBOUNCE_MS = 300;
+const MIN_QUERY_LEN = 3;
 
 /** Shared readiness promise so concurrent callers await the callback, not script `load`. */
 let mapsLoadPromise: Promise<void> | null = null;
@@ -75,7 +84,6 @@ function loadGoogleMaps(apiKey: string): Promise<void> {
         settleErr(existingScript);
         return;
       }
-      // Script already inserted by another caller — wait for API callback, not load.
       const previous = window.__surecapMapsInit;
       window.__surecapMapsInit = () => {
         previous?.();
@@ -105,6 +113,20 @@ function newSessionToken(): google.maps.places.AutocompleteSessionToken {
   return new google.maps.places.AutocompleteSessionToken();
 }
 
+function newServerSessionToken(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+  return `sess-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function postalFromComponents(
+  components: Array<{ long_name?: string; types?: string[] }> | undefined
+): string | undefined {
+  return components?.find((component) => component.types?.includes("postal_code"))
+    ?.long_name;
+}
+
 function clearAutocompleteListeners(autocomplete: google.maps.places.Autocomplete) {
   const eventApi = (
     window.google?.maps as typeof google.maps & {
@@ -126,13 +148,22 @@ export default function AddressAutocomplete({
 }: Props) {
   const reactId = useId();
   const inputId = `${fieldKey}-${reactId.replace(/:/g, "")}`;
+  const listId = `${inputId}-list`;
   const inputRef = useRef<HTMLInputElement>(null);
   const onChangeRef = useRef(onChange);
   const autocompleteRef = useRef<google.maps.places.Autocomplete | null>(null);
-  /** Bumped on cleanup so stale focus/effect loads do not rebind. */
   const bindGenerationRef = useRef(0);
+  const debounceRef = useRef<number | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const sessionTokenRef = useRef(newServerSessionToken());
+  const skipSuggestRef = useRef(false);
   const [mapsFailed, setMapsFailed] = useState(false);
+  const [predictions, setPredictions] = useState<AddressPrediction[]>([]);
+  const [listOpen, setListOpen] = useState(false);
+  const [suggestError, setSuggestError] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(-1);
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const useServerSuggest = !manualOnly && (mapsFailed || !apiKey);
 
   useEffect(() => {
     onChangeRef.current = onChange;
@@ -155,7 +186,7 @@ export default function AddressAutocomplete({
 
     const sessionToken = newSessionToken();
     const autocomplete = new window.google.maps.places.Autocomplete(input, {
-      fields: ["formatted_address", "place_id"],
+      fields: ["formatted_address", "place_id", "address_components"],
       types: ["address"],
       componentRestrictions: { country: "ca" },
       sessionToken,
@@ -163,9 +194,13 @@ export default function AddressAutocomplete({
 
     autocomplete.addListener("place_changed", () => {
       const place = autocomplete.getPlace();
-      if (place?.formatted_address && inputRef.current) {
-        inputRef.current.value = place.formatted_address;
-        onChangeRef.current(place.formatted_address, place.place_id);
+      const formatted = formattedAddressWithPostal(
+        place?.formatted_address || "",
+        postalFromComponents(place?.address_components)
+      );
+      if (formatted && inputRef.current) {
+        inputRef.current.value = formatted;
+        onChangeRef.current(formatted, place.place_id);
       }
       autocomplete.setOptions({ sessionToken: newSessionToken() });
     });
@@ -200,11 +235,11 @@ export default function AddressAutocomplete({
 
   useEffect(() => {
     if (!apiKey || manualOnly) {
-      setMapsFailed(false);
       if (autocompleteRef.current) {
         clearAutocompleteListeners(autocompleteRef.current);
         autocompleteRef.current = null;
       }
+      if (manualOnly) setMapsFailed(false);
       return;
     }
 
@@ -220,29 +255,153 @@ export default function AddressAutocomplete({
     };
   }, [apiKey, manualOnly, fieldKey, loadAndBind]);
 
-  const showManualHint = manualOnly || !apiKey || mapsFailed;
+  useEffect(() => {
+    if (!useServerSuggest) {
+      setPredictions([]);
+      setListOpen(false);
+      return;
+    }
+    if (skipSuggestRef.current) {
+      skipSuggestRef.current = false;
+      return;
+    }
+    const query = value.trim();
+    if (query.length < MIN_QUERY_LEN) {
+      setPredictions([]);
+      setListOpen(false);
+      setSuggestError(false);
+      return;
+    }
+    if (debounceRef.current) window.clearTimeout(debounceRef.current);
+    debounceRef.current = window.setTimeout(() => {
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
+      void suggestAddresses(query, {
+        sessionToken: sessionTokenRef.current,
+        language: locale,
+      })
+        .then((data) => {
+          if (controller.signal.aborted) return;
+          setPredictions(data.predictions ?? []);
+          setListOpen((data.predictions ?? []).length > 0);
+          setActiveIndex(-1);
+          setSuggestError(false);
+        })
+        .catch(() => {
+          if (controller.signal.aborted) return;
+          setPredictions([]);
+          setListOpen(false);
+          setSuggestError(true);
+        });
+    }, SUGGEST_DEBOUNCE_MS);
+    return () => {
+      if (debounceRef.current) window.clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
+    };
+  }, [useServerSuggest, value, locale]);
+
+  const pickPrediction = async (prediction: AddressPrediction) => {
+    try {
+      const details = await fetchAddressDetails(prediction.place_id, {
+        sessionToken: sessionTokenRef.current,
+        language: locale,
+      });
+      sessionTokenRef.current = newServerSessionToken();
+      skipSuggestRef.current = true;
+      if (inputRef.current) inputRef.current.value = details.formatted_address;
+      onChange(details.formatted_address, details.place_id);
+      setPredictions([]);
+      setListOpen(false);
+      setSuggestError(false);
+    } catch {
+      setSuggestError(true);
+    }
+  };
+
+  const showManualHint = manualOnly;
 
   return (
-    <label className="block text-sm text-[#57534e]" htmlFor={inputId}>
+    <label className="relative block text-sm text-[#57534e]" htmlFor={inputId}>
       {label}
       <input
         id={inputId}
         ref={inputRef}
         type="text"
         required={required}
-        autoComplete={apiKey && !manualOnly && !mapsFailed ? "off" : "street-address"}
+        role="combobox"
+        aria-expanded={useServerSuggest && listOpen}
+        aria-controls={useServerSuggest ? listId : undefined}
+        aria-autocomplete={useServerSuggest ? "list" : undefined}
+        autoComplete={
+          apiKey && !manualOnly && !mapsFailed && !useServerSuggest
+            ? "off"
+            : "street-address"
+        }
         defaultValue={value}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={() => syncInputFromProp()}
+        onChange={(e) => {
+          onChange(e.target.value);
+          if (useServerSuggest) setListOpen(true);
+        }}
+        onBlur={() => {
+          window.setTimeout(() => {
+            setListOpen(false);
+            syncInputFromProp();
+          }, 150);
+        }}
         onFocus={() => {
           if (!manualOnly && apiKey && !mapsFailed && !autocompleteRef.current) {
             loadAndBind(bindGenerationRef.current);
           }
+          if (useServerSuggest && predictions.length) setListOpen(true);
+        }}
+        onKeyDown={(e) => {
+          if (!useServerSuggest || !listOpen || predictions.length === 0) return;
+          if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+            e.preventDefault();
+            const key = e.key;
+            setActiveIndex((index) =>
+              moveSuggestionIndex(index, key, predictions.length)
+            );
+          } else if (e.key === "Enter" && activeIndex >= 0) {
+            e.preventDefault();
+            void pickPrediction(predictions[activeIndex]);
+          } else if (e.key === "Escape") {
+            setListOpen(false);
+          }
         }}
         className={inputClass}
-        placeholder={showManualHint ? t(locale, "addressManualHint") : undefined}
+        placeholder={
+          showManualHint
+            ? t(locale, "addressManualHint")
+            : t(locale, "addressPickHint")
+        }
       />
-      {mapsFailed && !manualOnly && apiKey ? (
+      {useServerSuggest && listOpen && predictions.length > 0 ? (
+        <ul
+          id={listId}
+          role="listbox"
+          className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-md border border-[#e7e5e4] bg-white py-1 shadow-md"
+        >
+          {predictions.map((prediction, index) => (
+            <li key={prediction.place_id} role="option" aria-selected={index === activeIndex}>
+              <button
+                type="button"
+                className={`block w-full px-3 py-2 text-left text-sm ${
+                  index === activeIndex ? "bg-[#f5f5f4]" : "hover:bg-[#f5f5f4]"
+                }`}
+                onMouseDown={(event) => {
+                  event.preventDefault();
+                  void pickPrediction(prediction);
+                }}
+              >
+                {prediction.description}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+      {suggestError && useServerSuggest ? (
         <p className="mt-1 text-xs text-[#78716c]">{t(locale, "addressSuggestionsUnavailable")}</p>
       ) : null}
     </label>

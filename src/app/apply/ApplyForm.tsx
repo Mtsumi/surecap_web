@@ -78,6 +78,7 @@ const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   invalid_address_date_range: "validationInvalidAddressDateRange",
   address_date_in_future: "validationAddressDateInFuture",
   address_dates_chain: "validationAddressDatesChain",
+  pick_google_address: "validationPickGoogleAddress",
   date_of_birth_invalid: "validationDateOfBirthInvalid",
   date_of_birth_underage: "validationDateOfBirthUnderage",
   guarantor_required_abroad: "validationGuarantorRequiredAbroad",
@@ -1482,8 +1483,8 @@ export default function ApplyForm() {
                 onChange={(address, placeId) => {
                   setField("current_address", address);
                   clearFieldError("current_address");
-                  if (!form.address_not_in_canada && placeId) {
-                    setField("current_place_id", placeId);
+                  if (!form.address_not_in_canada) {
+                    setField("current_place_id", placeId ?? "");
                   }
                 }}
                 required
@@ -1649,6 +1650,7 @@ export default function ApplyForm() {
             </fieldset>
               </>
             ) : null}
+            <div id="apply-field-previous_address">
             <AddressAutocomplete
               fieldKey="previous-address"
               locale={locale}
@@ -1656,6 +1658,7 @@ export default function ApplyForm() {
               value={form.previous_address}
               onChange={(address, placeId) => {
                 setField("previous_address", address);
+                clearFieldError("previous_address");
                 if (!address.trim()) {
                   setForm((prev) => ({
                     ...prev,
@@ -1663,12 +1666,16 @@ export default function ApplyForm() {
                     previous_address_lived_to: "",
                     previous_landlord_name: "",
                     previous_landlord_phone: "",
+                    previous_place_id: "",
                   }));
+                } else {
+                  setField("previous_place_id", placeId ?? "");
                 }
-                if (placeId) setField("previous_place_id", placeId);
               }}
-              inputClass={inputClass}
+              inputClass={inputClassFor("previous_address")}
             />
+            {fieldHint("previous_address")}
+            </div>
             {form.previous_address.trim() ? (
               <label className="block text-sm text-[#57534e]">
                 {t(locale, "addressApartment")}
