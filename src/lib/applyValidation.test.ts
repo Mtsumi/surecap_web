@@ -290,6 +290,18 @@ describe("address date validation", () => {
       ).current_address
     ).toBeUndefined();
   });
+
+  it("skips the Google pick when require_google_pick is false", () => {
+    expect(
+      addressFieldErrors(
+        baseInput({
+          require_google_pick: false,
+          current_place_id: "",
+          current_address: "12 Main St, Boston, MA",
+        })
+      ).current_address
+    ).toBeUndefined();
+  });
 });
 
 describe("step validators", () => {

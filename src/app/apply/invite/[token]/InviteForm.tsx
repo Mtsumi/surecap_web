@@ -232,6 +232,7 @@ export default function InviteForm({ token }: Props) {
     toAddressValidationInput(form, {
       requireLeaseInName: role === "roommate" && form.housing_status !== "own_home",
       requireLandlord: role === "roommate" && form.housing_status !== "own_home",
+      requireGooglePick: role !== "guarantor",
     });
 
   const validateStep = (current: Step): boolean => {

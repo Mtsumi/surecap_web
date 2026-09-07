@@ -152,6 +152,7 @@ export function inviteeFieldErrors(
       toAddressValidationInput(fields, {
         requireLeaseInName: role === "roommate" && fields.housing_status !== "own_home",
         requireLandlord: role === "roommate" && fields.housing_status !== "own_home",
+        requireGooglePick: role !== "guarantor",
       })
     )
   );

@@ -158,6 +158,30 @@ describe("inviteeFieldErrors", () => {
     expect(errors.current_address).toBeUndefined();
   });
 
+  it("requires a Google pick for roommate Canadian addresses", () => {
+    const errors = inviteeFieldErrors(
+      "roommate",
+      roommateFields({
+        current_place_id: "",
+        current_address: "3400 avenue Linton",
+      }),
+      "roommate@example.com"
+    );
+    expect(errors.current_address).toBe("pick_google_address");
+  });
+
+  it("allows a guarantor to type an address without a Google pick", () => {
+    const errors = inviteeFieldErrors(
+      "guarantor",
+      guarantorFields({
+        current_place_id: "",
+        current_address: "12 Main St, Boston, MA",
+      }),
+      "guarantor@example.com"
+    );
+    expect(errors.current_address).toBeUndefined();
+  });
+
   it("firstInviteeErrorKey returns first key", () => {
     expect(firstInviteeErrorKey({ email: "required", phone: "invalid_phone" })).toBe("email");
     expect(firstInviteeErrorKey({})).toBeNull();

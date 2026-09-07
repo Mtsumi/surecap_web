@@ -73,6 +73,7 @@ function inviteToValidationInput(
     ...toAddressValidationInput(form, {
       requireLeaseInName: role === "roommate" && form.housing_status !== "own_home",
       requireLandlord: role === "roommate" && form.housing_status !== "own_home",
+      requireGooglePick: role !== "guarantor",
     }),
   };
 }

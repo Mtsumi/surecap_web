@@ -23,7 +23,11 @@ export type AddressDateFormFields = {
 
 export function toAddressValidationInput(
   fields: AddressDateFormFields,
-  options?: { requireLeaseInName?: boolean; requireLandlord?: boolean }
+  options?: {
+    requireLeaseInName?: boolean;
+    requireLandlord?: boolean;
+    requireGooglePick?: boolean;
+  }
 ): AddressDatesInput {
   const ownsHome = fields.housing_status === "own_home";
   return {
@@ -47,6 +51,7 @@ export function toAddressValidationInput(
       options?.requireLandlord !== undefined
         ? options.requireLandlord
         : !ownsHome,
+    require_google_pick: options?.requireGooglePick,
     current_place_id: fields.current_place_id,
     previous_place_id: fields.previous_place_id,
     address_not_in_canada: fields.address_not_in_canada,

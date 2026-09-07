@@ -45,6 +45,8 @@ export type AddressDatesInput = {
   previous_landlord_phone?: string;
   /** Primary + roommate collect landlords; guarantors pass false. Default true. */
   require_landlord?: boolean;
+  /** Primary + roommate must pick Google (or postal). Guarantors pass false. Default true. */
+  require_google_pick?: boolean;
   current_place_id?: string;
   previous_place_id?: string;
   address_not_in_canada?: boolean;
@@ -323,9 +325,12 @@ export function addressFieldErrors(fields: AddressDatesInput): ApplyFieldErrors 
   const today = localDateString();
   const requireLandlord = fields.require_landlord !== false;
 
+  const requireGooglePick = fields.require_google_pick !== false;
+
   if (!fields.current_address.trim()) {
     errors.current_address = "required";
   } else if (
+    requireGooglePick &&
     !fields.address_not_in_canada &&
     !isPickedCanadianAddress(fields.current_address, fields.current_place_id)
   ) {
@@ -375,6 +380,7 @@ export function addressFieldErrors(fields: AddressDatesInput): ApplyFieldErrors 
   const previousText = fields.previous_address.trim();
   if (previousText) {
     if (
+      requireGooglePick &&
       !fields.address_not_in_canada &&
       !isPickedCanadianAddress(previousText, fields.previous_place_id)
     ) {
