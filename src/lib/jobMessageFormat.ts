@@ -107,6 +107,7 @@ export type IncomeDocumentExtractPayload = {
   flags?: string[];
   qc_markers?: string[];
   slip_count?: number;
+  employers?: string[];
   slips?: Array<Record<string, unknown>>;
 };
 
@@ -180,6 +181,7 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
   const fr: Record<string, string> = {
     payslip_not_recognized: "Ne ressemble pas à un talon de paie",
     name_mismatch_payslip_form: "Nom du talon différent du formulaire",
+    name_partial_missing: "Correspondance partielle (nom manquant)",
     employer_mismatch_form: "Employeur du talon ≠ contact RH",
     net_vs_declared_income: "Net du talon ≠ revenu déclaré",
     pay_math_inconsistent: "Calcul heures × taux incohérent",
@@ -196,6 +198,7 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
   const en: Record<string, string> = {
     payslip_not_recognized: "Does not look like a payslip",
     name_mismatch_payslip_form: "Name on the payslip doesn't match the application",
+    name_partial_missing: "Partial match (missing name)",
     employer_mismatch_form: "Payslip employer ≠ HR contact",
     net_vs_declared_income: "Payslip net ≠ declared income",
     pay_math_inconsistent: "Hours × rate math inconsistent",

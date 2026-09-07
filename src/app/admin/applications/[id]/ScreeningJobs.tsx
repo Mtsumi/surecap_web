@@ -92,6 +92,7 @@ function copy(locale: Locale) {
       soquijMock: "Simulation mode",
       soquijQuery: "Query",
       soquijRelated: "Related — verify in decision (name may be inside text)",
+      soquijSecondary: "Secondary results",
       soquijOther: "Other SOQUIJ results",
       soquijStrong: "High confidence",
       soquijSurname: "Surname match",
@@ -143,6 +144,7 @@ function copy(locale: Locale) {
     soquijMock: "Mode simulation",
     soquijQuery: "Recherche",
     soquijRelated: "Connexe — vérifier dans la décision (nom possiblement dans le texte)",
+    soquijSecondary: "Résultats secondaires",
     soquijOther: "Autres résultats SOQUIJ",
       soquijStrong: "Haute confiance",
       soquijSurname: "Nom de famille",
@@ -590,44 +592,32 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
     allDecisions.every(
       (d) => d.match_level !== undefined || d.name_match !== undefined
     );
-  const personMatches = hasMatchData
-    ? allDecisions.filter(
-        (d) =>
-          d.match_level === "strong" ||
-          d.match_level === "surname" ||
-          (d.match_level !== "related" && d.name_match === true)
-      )
+  const strongMatches = hasMatchData
+    ? allDecisions.filter((d) => d.match_level === "strong")
     : [];
-  const relatedResults = hasMatchData
-    ? allDecisions.filter((d) => d.match_level === "related")
+  const secondaryResults = hasMatchData
+    ? allDecisions.filter(
+        (d) => d.match_level === "surname" || d.match_level === "related"
+      )
     : [];
   const otherResults = hasMatchData
     ? allDecisions.filter(
         (d) =>
           d.match_level !== "strong" &&
           d.match_level !== "surname" &&
-          d.match_level !== "related" &&
-          d.name_match !== true
+          d.match_level !== "related"
       )
     : [];
-  const directCount = hasMatchData
-    ? (payload.name_match_count ?? personMatches.length)
-    : null;
-  const relatedCount = hasMatchData
-    ? (payload.related_count ?? relatedResults.length)
-    : 0;
+  const directCount = hasMatchData ? strongMatches.length : null;
 
-  // Rental DD priority: TAL respondents expanded; related corporate/TAL visible; rest collapsed.
-  const talRespondents = personMatches.filter(
+  const talRespondents = strongMatches.filter(
     (d) => d.applicant_role === "respondent" && isTalTribunal(d.tribunal)
   );
-  const relatedTal = relatedResults.filter((d) => isTalTribunal(d.tribunal));
-  const relatedOther = relatedResults.filter((d) => !isTalTribunal(d.tribunal));
-  const otherRespondents = personMatches.filter(
+  const otherRespondents = strongMatches.filter(
     (d) => d.applicant_role === "respondent" && !isTalTribunal(d.tribunal)
   );
-  const plaintiffs = personMatches.filter((d) => d.applicant_role === "plaintiff");
-  const otherDirect = personMatches.filter(
+  const plaintiffs = strongMatches.filter((d) => d.applicant_role === "plaintiff");
+  const otherDirect = strongMatches.filter(
     (d) => d.applicant_role !== "respondent" && d.applicant_role !== "plaintiff"
   );
   const shownLegacy = allDecisions.slice(0, 25);
@@ -664,11 +654,11 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         <>
           {/* Direct name matches — shown prominently */}
           {hasMatchData ? (
-            directCount === 0 && relatedCount === 0 ? (
+            directCount === 0 ? (
               <p className="text-[var(--ml-steel)]">
                 {locale === "fr"
-                  ? `0 correspondance personne (${totalCount} autre(s) résultat(s) SOQUIJ)`
-                  : `0 person matches (${totalCount} other SOQUIJ result(s))`}
+                  ? `0 correspondance forte (${totalCount} autre(s) résultat(s) SOQUIJ)`
+                  : `0 strong matches (${totalCount} other SOQUIJ result(s))`}
               </p>
             ) : (
               <>
@@ -677,26 +667,11 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
                     {directCount
                       ? c.soquijFound(directCount)
                       : locale === "fr"
-                        ? `${relatedCount} décision(s) connexe(s) — vérifier`
-                        : `${relatedCount} related decision(s) — verify`}
+                        ? `${secondaryResults.length} résultat(s) secondaire(s)`
+                        : `${secondaryResults.length} secondary result(s)`}
                   </p>
                 ) : null}
                 <SoquijDecisionList decisions={talRespondents} locale={locale} />
-                {relatedResults.length > 0 ? (
-                  <div className="space-y-2">
-                    <p className="text-xs font-medium text-amber-800">{c.soquijRelated}</p>
-                    <SoquijDecisionList decisions={relatedTal} locale={locale} />
-                    <SoquijCollapsedGroup
-                      title={
-                        locale === "fr"
-                          ? "Autres décisions connexes (hors TAL)"
-                          : "Other related decisions (non-TAL)"
-                      }
-                      decisions={relatedOther}
-                      locale={locale}
-                    />
-                  </div>
-                ) : null}
                 <SoquijCollapsedGroup
                   title={
                     locale === "fr"
@@ -734,6 +709,15 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
               ) : null}
             </>
           )}
+
+          {hasMatchData && secondaryResults.length > 0 ? (
+            <SoquijCollapsedGroup
+              title={c.soquijSecondary}
+              decisions={secondaryResults}
+              locale={locale}
+              limit={40}
+            />
+          ) : null}
 
           {/* Broader SOQUIJ results — collapsed, labelled as unverified */}
           {hasMatchData && otherResults.length > 0 ? (

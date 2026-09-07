@@ -55,6 +55,22 @@ describe("screeningGlance", () => {
     expect(row.issues.some((issue) => /Ali Khounch/.test(issue))).toBe(true);
   });
 
+  it("labels a missing middle name as a partial match", () => {
+    const row = idScreeningGlance(
+      {
+        screening_context: "canadian",
+        ocr_name: "Mardochee Tshibangu",
+        name_mismatch: true,
+        flags: [],
+      },
+      "completed",
+      "en",
+      "Mardochee Mulumba Tshibangu"
+    );
+    expect(row.tone).toBe("warn");
+    expect(row.summary).toMatch(/partial match \(missing name\)/i);
+  });
+
   it("marks a mismatched ID name as bad", () => {
     const row = idScreeningGlance(
       {
@@ -90,6 +106,25 @@ describe("screeningGlance", () => {
     expect(row.summary).toMatch(/1,685\.80|1685\.80/);
     expect(row.issues.some((issue) => /older than 6 months/i.test(issue))).toBe(true);
     expect(row.issues.some((issue) => /Fewer than 3/i.test(issue))).toBe(true);
+  });
+
+  it("lists concurrent jobs as information, not a mismatch", () => {
+    const row = incomeScreeningGlance(
+      {
+        payslip_like: true,
+        employer_name: "SANTE QUEBEC - CHUM",
+        employers: ["SANTE QUEBEC - CHUM", "4437911 Canada Inc."],
+        net_pay: 1558.2,
+        flags: ["name_partial_missing"],
+      },
+      "completed",
+      "en"
+    );
+    expect(row.summary).toMatch(/2 jobs/);
+    expect(row.summary).toMatch(/4437911/);
+    expect(row.issues.some((issue) => /Partial match \(missing name\)/i.test(issue))).toBe(
+      true
+    );
   });
 
   it("marks an unread payslip as bad", () => {

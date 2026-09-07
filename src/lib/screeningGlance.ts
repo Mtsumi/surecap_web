@@ -49,6 +49,7 @@ const PAYSLIP_WARN_FLAGS = new Set([
   "payslip_date_in_future",
   "payslip_stale_or_future",
   "name_mismatch_payslip_form",
+  "name_partial_missing",
   "employer_mismatch_form",
   "net_vs_declared_income",
   "pay_math_inconsistent",
@@ -126,6 +127,22 @@ export function idScreeningGlance(
     };
   }
 
+  if (similarity === "partial") {
+    return {
+      key: "id",
+      tone: "warn",
+      checkLabel,
+      summary:
+        locale === "fr"
+          ? `${name} — correspondance partielle (nom manquant)`
+          : `${name} — partial match (missing name)`,
+      issues: [
+        ...issues,
+        locale === "fr" ? `Formulaire : ${form}` : `Form: ${form}`,
+      ],
+    };
+  }
+
   if (mismatched) {
     return {
       key: "id",
@@ -182,8 +199,21 @@ export function incomeScreeningGlance(
   }
 
   const flags = uniqueIncomeFlags(payload);
+  const employers = Array.isArray(payload.employers)
+    ? payload.employers.filter((name): name is string => typeof name === "string" && name.trim().length > 0)
+    : payload.employer_name
+      ? [payload.employer_name]
+      : [];
   const facts: string[] = [];
-  if (payload.employer_name) facts.push(payload.employer_name);
+  if (employers.length >= 2) {
+    facts.push(
+      locale === "fr"
+        ? `${employers.length} emplois : ${employers.join("; ")}`
+        : `${employers.length} jobs: ${employers.join("; ")}`
+    );
+  } else if (employers[0]) {
+    facts.push(employers[0]);
+  }
   if (payload.net_pay != null) {
     facts.push(
       locale === "fr" ? `net ${money(payload.net_pay, locale)}` : `net ${money(payload.net_pay, locale)}`

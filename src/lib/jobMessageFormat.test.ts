@@ -102,6 +102,10 @@ describe("jobMessageFormat", () => {
     expect(incomeExtractFlagLabel("name_mismatch_payslip_form", "en")).toMatch(
       /doesn't match the application/i
     );
+    expect(incomeExtractFlagLabel("name_partial_missing", "en")).toBe(
+      "Partial match (missing name)"
+    );
+    expect(incomeExtractFlagLabel("name_partial_missing", "fr")).toMatch(/partielle/i);
     expect(incomeExtractFlagLabel("payslip_stale", "fr")).toContain("6 mois");
     expect(incomeExtractFlagLabel("payslip_stale_or_future", "en")).toMatch(/future/i);
     expect(incomeExtractFlagLabel("payslip_stale_or_future", "fr")).toMatch(/futur/i);
