@@ -167,11 +167,18 @@ export type ApiValidationErrorItem = {
 
 export class ApiError extends Error {
   readonly validationErrors: ApiValidationErrorItem[];
+  /** HTTP status code, 0 when unknown. */
+  readonly status: number;
 
-  constructor(message: string, validationErrors: ApiValidationErrorItem[] = []) {
+  constructor(
+    message: string,
+    validationErrors: ApiValidationErrorItem[] = [],
+    status = 0
+  ) {
     super(message);
     this.name = "ApiError";
     this.validationErrors = validationErrors;
+    this.status = status;
   }
 }
 
@@ -250,7 +257,8 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok || body?.status === "error") {
     throw new ApiError(
       body?.message || res.statusText,
-      extractValidationErrors(body?.data)
+      extractValidationErrors(body?.data),
+      res.status
     );
   }
 
@@ -527,6 +535,37 @@ export function submitInvite(
 ): Promise<InviteeSubmitResult> {
   return apiFetch<InviteeSubmitResult>(
     `/applications/invites/${encodeURIComponent(token)}/submit`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
+export type CreditConsent = {
+  slug: string | null;
+  signed: boolean;
+};
+
+/** Create/reuse the primary applicant's DocuSeal signing submission (Review step). */
+export function createCreditConsent(
+  applicationId: number,
+  uploadToken: string
+): Promise<CreditConsent> {
+  const params = new URLSearchParams({ upload_token: uploadToken });
+  return apiFetch<CreditConsent>(
+    `/applications/${applicationId}/credit-consent?${params}`,
+    { method: "POST" }
+  );
+}
+
+/** Create/reuse an invitee's DocuSeal signing submission (Review step). */
+export function createInviteCreditConsent(
+  token: string,
+  payload: InviteeSubmitPayload
+): Promise<CreditConsent> {
+  return apiFetch<CreditConsent>(
+    `/applications/invites/${encodeURIComponent(token)}/credit-consent`,
     {
       method: "POST",
       body: JSON.stringify(payload),
