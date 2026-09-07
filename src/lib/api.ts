@@ -680,6 +680,7 @@ export type JanitorReviewMember = {
   employer_name?: string | null;
   facebook_url?: string | null;
   linkedin_url?: string | null;
+  credit_consent_document_id?: number | null;
 };
 
 export type JanitorReviewChecklist = {
@@ -707,6 +708,35 @@ export function fetchJanitorReview(token: string): Promise<JanitorReview> {
   return apiFetch<JanitorReview>(
     `/admin/janitor-review/${encodeURIComponent(token)}`
   );
+}
+
+export function reviewCreditConsentPath(token: string, documentId: number): string {
+  return `/admin/janitor-review/${encodeURIComponent(token)}/documents/${documentId}/file`;
+}
+
+export async function fetchReviewCreditConsentBlob(
+  token: string,
+  documentId: number,
+  disposition: "inline" | "attachment" = "inline"
+): Promise<Blob> {
+  const url = new URL(`${API_URL}${reviewCreditConsentPath(token, documentId)}`);
+  url.searchParams.set("disposition", disposition);
+  const headers: Record<string, string> = {};
+  if (API_URL.includes("ngrok")) headers["ngrok-skip-browser-warning"] = "1";
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), { headers });
+  } catch {
+    throw new Error("Impossible de joindre le serveur. Vérifiez la connexion, puis réessayez.");
+  }
+  if (!res.ok) {
+    throw new Error("Impossible d'ouvrir le formulaire de crédit.");
+  }
+  const buffer = await res.arrayBuffer();
+  if (buffer.byteLength === 0) {
+    throw new Error("Fichier vide ou introuvable");
+  }
+  return new Blob([buffer], { type: "application/pdf" });
 }
 
 export function submitJanitorReview(
