@@ -1,76 +1,86 @@
 "use client";
 
-import DocusealSign from "./DocusealSign";
-import type { CreditConsent } from "@/lib/api";
+import { useRef, useState } from "react";
+import SignaturePad, { SignaturePadHandle } from "./SignaturePad";
 import { Locale, t } from "@/lib/i18n";
 
 type Props = {
   locale: Locale;
-  consent: CreditConsent | null;
-  preparing: boolean;
+  signed: boolean;
+  signing: boolean;
   error: string | null;
-  /** True when the server has e-signing disabled — section hides entirely. */
-  unavailable: boolean;
-  signerEmail?: string;
-  signerName?: string;
-  onSigned: () => void;
-  onRetry: () => void;
+  onSign: (pngDataUrl: string) => void;
 };
 
-/**
- * Review-step signing block shared by the apply and invite forms: declaration
- * + credit history search form signed in one embedded DocuSeal session.
- */
 export default function CreditConsentSection({
   locale,
-  consent,
-  preparing,
+  signed,
+  signing,
   error,
-  unavailable,
-  signerEmail,
-  signerName,
-  onSigned,
-  onRetry,
+  onSign,
 }: Props) {
-  if (unavailable) return null;
+  const padRef = useRef<SignaturePadHandle | null>(null);
+  const [hasInk, setHasInk] = useState(false);
+  const [emptyError, setEmptyError] = useState(false);
+
+  const handleSign = () => {
+    const png = padRef.current?.toPng();
+    if (!png) {
+      setEmptyError(true);
+      return;
+    }
+    setEmptyError(false);
+    onSign(png);
+  };
+
+  if (signed) {
+    return (
+      <section className="mb-5 rounded border border-[#c9dcc9] bg-[#f6faf6] px-4 py-4">
+        <p className="text-sm text-[#1a3d22]" role="status">
+          {t(locale, "consentSigned")}
+        </p>
+      </section>
+    );
+  }
 
   return (
     <section className="mb-5 rounded border border-[#e7e0d5] bg-[#fffef9] px-4 py-4">
-      <h3 className="mb-1 text-sm font-medium text-[#292524]">
+      <h3 className="mb-2 text-sm font-medium text-[#292524]">
         {t(locale, "consentTitle")}
       </h3>
-      <p className="mb-3 text-sm leading-relaxed text-[#78716c]">
-        {t(locale, "consentNote")}
+      <p className="mb-4 text-sm leading-relaxed text-[#44403c]">
+        {t(locale, "consentBody")}
       </p>
-
-      {consent?.signed ? (
-        <p
-          className="rounded border border-[#c9dcc9] bg-[#f6faf6] px-3 py-2 text-sm text-[#1a3d22]"
-          role="status"
+      <p className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-[#a8a29e]">
+        {t(locale, "consentSignLabel")}
+      </p>
+      <SignaturePad padRef={padRef} disabled={signing} onInkChange={setHasInk} />
+      <div className="mt-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => {
+            padRef.current?.clear();
+            setHasInk(false);
+            setEmptyError(false);
+          }}
+          disabled={signing}
+          className="rounded border border-[#d6d3d1] px-3 py-1.5 text-sm text-[#44403c] hover:bg-[#f5f5f4] disabled:opacity-60"
         >
-          {t(locale, "consentSigned")}
+          {t(locale, "consentClear")}
+        </button>
+        <button
+          type="button"
+          onClick={handleSign}
+          disabled={signing || !hasInk}
+          className="rounded bg-[#3d5a45] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-60"
+        >
+          {signing ? t(locale, "loading") : t(locale, "consentSign")}
+        </button>
+      </div>
+      {(emptyError || error) && (
+        <p className="mt-2 text-sm text-[#b91c1c]" role="alert">
+          {error || t(locale, "consentEmpty")}
         </p>
-      ) : error ? (
-        <div role="alert">
-          <p className="mb-2 text-sm text-[#b91c1c]">{error}</p>
-          <button
-            type="button"
-            onClick={onRetry}
-            className="rounded border border-[#d6d3d1] px-3 py-1.5 text-sm text-[#44403c] hover:bg-[#f5f5f4]"
-          >
-            {t(locale, "consentRetry")}
-          </button>
-        </div>
-      ) : preparing || !consent?.slug ? (
-        <p className="text-sm text-[#78716c]">{t(locale, "consentPreparing")}</p>
-      ) : (
-        <DocusealSign
-          locale={locale}
-          slug={consent.slug}
-          email={signerEmail}
-          name={signerName}
-          onCompleted={onSigned}
-        />
       )}
     </section>
   );

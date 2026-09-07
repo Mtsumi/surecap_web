@@ -543,32 +543,53 @@ export function submitInvite(
 }
 
 export type CreditConsent = {
-  slug: string | null;
   signed: boolean;
 };
 
-/** Create/reuse the primary applicant's DocuSeal signing submission (Review step). */
-export function createCreditConsent(
+export function fetchCreditConsent(
   applicationId: number,
   uploadToken: string
 ): Promise<CreditConsent> {
   const params = new URLSearchParams({ upload_token: uploadToken });
   return apiFetch<CreditConsent>(
-    `/applications/${applicationId}/credit-consent?${params}`,
-    { method: "POST" }
+    `/applications/${applicationId}/credit-consent?${params}`
   );
 }
 
-/** Create/reuse an invitee's DocuSeal signing submission (Review step). */
-export function createInviteCreditConsent(
+export function signCreditConsent(
+  applicationId: number,
+  uploadToken: string,
+  signaturePngBase64: string
+): Promise<CreditConsent> {
+  const params = new URLSearchParams({ upload_token: uploadToken });
+  return apiFetch<CreditConsent>(
+    `/applications/${applicationId}/credit-consent?${params}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ signature_png_base64: signaturePngBase64 }),
+    }
+  );
+}
+
+export function fetchInviteCreditConsent(token: string): Promise<CreditConsent> {
+  return apiFetch<CreditConsent>(
+    `/applications/invites/${encodeURIComponent(token)}/credit-consent`
+  );
+}
+
+export function signInviteCreditConsent(
   token: string,
-  payload: InviteeSubmitPayload
+  payload: InviteeSubmitPayload,
+  signaturePngBase64: string
 ): Promise<CreditConsent> {
   return apiFetch<CreditConsent>(
     `/applications/invites/${encodeURIComponent(token)}/credit-consent`,
     {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        ...payload,
+        signature_png_base64: signaturePngBase64,
+      }),
     }
   );
 }

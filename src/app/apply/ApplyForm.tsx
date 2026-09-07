@@ -9,7 +9,6 @@ import PhoneField from "./PhoneField";
 import StepDocumentUpload from "./StepDocumentUpload";
 import StepIncomeUpload from "./StepIncomeUpload";
 import {
-  ApiError,
   ApplicationSubmit,
   Building,
   type CreditConsent,
@@ -18,9 +17,10 @@ import {
   RoommateContact,
   Unit,
   createApplicationDraft,
-  createCreditConsent,
   fetchBuildings,
+  fetchCreditConsent,
   fetchUnits,
+  signCreditConsent,
   submitApplicationById,
   updateApplication,
 } from "@/lib/api";
@@ -323,9 +323,8 @@ export default function ApplyForm() {
   >({});
   const [showDraftBanner, setShowDraftBanner] = useState(false);
   const [consent, setConsent] = useState<CreditConsent | null>(null);
-  const [consentPreparing, setConsentPreparing] = useState(false);
+  const [consentSigning, setConsentSigning] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
-  const [consentUnavailable, setConsentUnavailable] = useState(false);
 
   // Keep latest values for flush on app-switch (Android often freezes before debounced save).
   const formRef = useRef(form);
@@ -997,6 +996,12 @@ export default function ApplyForm() {
       setDraftSession(null);
       setStep("done");
     } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      if (message.includes("sign the consent")) {
+        setConsent({ signed: false });
+        setConsentError(t(locale, "consentRequiredToSubmit"));
+        return;
+      }
       const mapped = mapSubmitError(err, input);
       if (mapped) {
         applyFieldErrors(mapped.fieldErrors);
@@ -1007,22 +1012,17 @@ export default function ApplyForm() {
         const key = firstFieldErrorKey(mapped.fieldErrors);
         if (key) scrollToField(key);
       } else {
-        const message = err instanceof Error ? err.message : t(locale, "error");
-        setError(message);
+        setError(message || t(locale, "error"));
       }
     } finally {
       setSubmitting(false);
     }
   };
 
-  /** Sync the draft and create/reuse the DocuSeal signing submission (Review step). */
-  const consentBusyRef = useRef(false);
-  const prepareConsent = useCallback(async () => {
+  /** Sync the draft, then load whether this member already signed. */
+  const loadConsentStatus = useCallback(async () => {
     const session = draftSessionRef.current;
-    if (!session || consentBusyRef.current) return;
-    consentBusyRef.current = true;
-    setConsentPreparing(true);
-    setConsentError(null);
+    if (!session) return;
     try {
       await updateApplication(
         session.applicationId,
@@ -1033,41 +1033,58 @@ export default function ApplyForm() {
           includeGuarantorRef.current ? guarantorRef.current : null
         )
       );
-      const result = await createCreditConsent(
+      const result = await fetchCreditConsent(
         session.applicationId,
         session.uploadToken
       );
-      // Keep the locally observed "signed" only for the same submission — a new
-      // slug means the data changed and the applicant must sign again.
-      setConsent((current) =>
-        current?.signed && current.slug === result.slug
-          ? { ...result, signed: true }
-          : result
-      );
+      setConsent(result);
+      setConsentError(null);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 503) {
-        // E-signing not configured server-side — submit stays allowed.
-        setConsentUnavailable(true);
-        return;
-      }
-      setConsent(null);
       setConsentError(
-        err instanceof Error && err.message
-          ? err.message
-          : t(locale, "consentError")
+        err instanceof Error && err.message ? err.message : t(locale, "consentError")
       );
-    } finally {
-      consentBusyRef.current = false;
-      setConsentPreparing(false);
     }
   }, [locale]);
 
-  useEffect(() => {
-    if (step === "review") void prepareConsent();
-  }, [step, prepareConsent]);
+  const handleConsentSign = useCallback(
+    async (pngDataUrl: string) => {
+      const session = draftSessionRef.current;
+      if (!session) return;
+      setConsentSigning(true);
+      setConsentError(null);
+      try {
+        await updateApplication(
+          session.applicationId,
+          session.uploadToken,
+          formPayload(
+            formRef.current,
+            roommatesRef.current,
+            includeGuarantorRef.current ? guarantorRef.current : null
+          )
+        );
+        const result = await signCreditConsent(
+          session.applicationId,
+          session.uploadToken,
+          pngDataUrl
+        );
+        setConsent(result);
+        setConsentError(null);
+      } catch (err) {
+        setConsentError(
+          err instanceof Error && err.message ? err.message : t(locale, "consentError")
+        );
+      } finally {
+        setConsentSigning(false);
+      }
+    },
+    [locale]
+  );
 
-  const consentSatisfied =
-    consentUnavailable || consent?.signed === true;
+  useEffect(() => {
+    if (step === "review") void loadConsentStatus();
+  }, [step, loadConsentStatus]);
+
+  const consentSatisfied = consent?.signed === true;
 
   const toggleLocale = () => {
     setLocale(locale === "en" ? "fr" : "en");
@@ -2436,16 +2453,10 @@ export default function ApplyForm() {
 
           <CreditConsentSection
             locale={locale}
-            consent={consent}
-            preparing={consentPreparing}
+            signed={consent?.signed === true}
+            signing={consentSigning}
             error={consentError}
-            unavailable={consentUnavailable}
-            signerEmail={form.email}
-            signerName={`${form.given_name} ${form.family_name}`.trim()}
-            onSigned={() =>
-              setConsent((current) => ({ slug: current?.slug ?? null, signed: true }))
-            }
-            onRetry={() => void prepareConsent()}
+            onSign={(png) => void handleConsentSign(png)}
           />
 
           <StepAlert />

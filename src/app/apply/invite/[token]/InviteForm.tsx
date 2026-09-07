@@ -8,13 +8,13 @@ import PhoneField from "../../PhoneField";
 import StepDocumentUpload from "../../StepDocumentUpload";
 import StepIncomeUpload from "../../StepIncomeUpload";
 import {
-  ApiError,
   type CreditConsent,
   InviteContext,
   InviteeSubmitPayload,
   MemberDocument,
-  createInviteCreditConsent,
   fetchInvite,
+  fetchInviteCreditConsent,
+  signInviteCreditConsent,
   submitInvite,
 } from "@/lib/api";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
@@ -209,9 +209,10 @@ export default function InviteForm({ token }: Props) {
   const [idDocuments, setIdDocuments] = useState<MemberDocument[]>([]);
   const [incomeDocuments, setIncomeDocuments] = useState<MemberDocument[]>([]);
   const [consent, setConsent] = useState<CreditConsent | null>(null);
-  const [consentPreparing, setConsentPreparing] = useState(false);
+  const [consentSigning, setConsentSigning] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
-  const [consentUnavailable, setConsentUnavailable] = useState(false);
+  const signedIdentityRef = useRef<string | null>(null);
+  const identityVoidedRef = useRef(false);
 
   const inputClass =
     "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-base text-[#292524] outline-none transition focus:border-[#3d5a45]";
@@ -454,6 +455,13 @@ export default function InviteForm({ token }: Props) {
       await submitInvite(token, payload);
       setStep("done");
     } catch (e) {
+      const message = e instanceof Error ? e.message : "";
+      if (message.includes("sign the consent")) {
+        identityVoidedRef.current = true;
+        setConsent({ signed: false });
+        setConsentError(t(locale, "consentRequiredToSubmit"));
+        return;
+      }
       const mapped = mapInviteServerSubmitError(e, role, form);
       if (mapped) {
         setFieldErrors(mapped.fieldErrors);
@@ -468,49 +476,79 @@ export default function InviteForm({ token }: Props) {
     }
   };
 
-  /** Persist review data server-side and create/reuse the DocuSeal submission. */
-  const consentBusyRef = useRef(false);
-  const prepareConsent = useCallback(async () => {
-    if (!role || consentBusyRef.current) return;
-    consentBusyRef.current = true;
-    setConsentPreparing(true);
-    setConsentError(null);
+  const loadConsentStatus = useCallback(async () => {
     try {
-      const result = await createInviteCreditConsent(
-        token,
-        buildInviteePayload(role, form, locale)
-      );
-      // Keep the locally observed "signed" only for the same submission — a new
-      // slug means the data changed and the applicant must sign again.
-      setConsent((current) =>
-        current?.signed && current.slug === result.slug
-          ? { ...result, signed: true }
-          : result
-      );
+      const result = await fetchInviteCreditConsent(token);
+      setConsent(identityVoidedRef.current ? { signed: false } : result);
+      setConsentError(null);
     } catch (err) {
-      if (err instanceof ApiError && err.status === 503) {
-        // E-signing not configured server-side — submit stays allowed.
-        setConsentUnavailable(true);
-        return;
-      }
-      setConsent(null);
       setConsentError(
         err instanceof Error && err.message ? err.message : t(locale, "consentError")
       );
-    } finally {
-      consentBusyRef.current = false;
-      setConsentPreparing(false);
     }
-  }, [role, form, locale, token]);
+  }, [locale, token]);
+
+  const handleConsentSign = useCallback(
+    async (pngDataUrl: string) => {
+      if (!role) return;
+      setConsentSigning(true);
+      setConsentError(null);
+      try {
+        const result = await signInviteCreditConsent(
+          token,
+          buildInviteePayload(role, form, locale),
+          pngDataUrl
+        );
+        identityVoidedRef.current = false;
+        setConsent(result);
+        setConsentError(null);
+      } catch (err) {
+        setConsentError(
+          err instanceof Error && err.message ? err.message : t(locale, "consentError")
+        );
+      } finally {
+        setConsentSigning(false);
+      }
+    },
+    [role, form, locale, token]
+  );
 
   useEffect(() => {
-    if (step === "review") void prepareConsent();
-    // Re-running on prepareConsent identity would loop while signing; the
-    // review data cannot change while this step is displayed.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [step]);
+    if (step === "review") void loadConsentStatus();
+  }, [step, loadConsentStatus]);
 
-  const consentSatisfied = consentUnavailable || consent?.signed === true;
+  const consentIdentityKey = [
+    form.given_name,
+    form.family_name,
+    form.date_of_birth,
+    form.email,
+    form.phone,
+    form.current_address,
+    form.current_apartment,
+    form.previous_address,
+    form.previous_apartment,
+    form.current_address_lived_from,
+    form.current_address_lived_to,
+    form.previous_address_lived_from,
+    form.previous_address_lived_to,
+  ].join("\x1f");
+
+  useEffect(() => {
+    if (!consent?.signed) {
+      signedIdentityRef.current = null;
+      return;
+    }
+    if (signedIdentityRef.current === null) {
+      signedIdentityRef.current = consentIdentityKey;
+      return;
+    }
+    if (signedIdentityRef.current !== consentIdentityKey) {
+      identityVoidedRef.current = true;
+      setConsent({ signed: false });
+    }
+  }, [consent?.signed, consentIdentityKey]);
+
+  const consentSatisfied = consent?.signed === true;
 
   if (loading) {
     return <p className="text-sm text-[#78716c]">{t(locale, "loading")}</p>;
@@ -1207,16 +1245,10 @@ export default function InviteForm({ token }: Props) {
           </dl>
           <CreditConsentSection
             locale={locale}
-            consent={consent}
-            preparing={consentPreparing}
+            signed={consent?.signed === true}
+            signing={consentSigning}
             error={consentError}
-            unavailable={consentUnavailable}
-            signerEmail={form.email}
-            signerName={`${form.given_name} ${form.family_name}`.trim()}
-            onSigned={() =>
-              setConsent((current) => ({ slug: current?.slug ?? null, signed: true }))
-            }
-            onRetry={() => void prepareConsent()}
+            onSign={(png) => void handleConsentSign(png)}
           />
           {error && (
             <p

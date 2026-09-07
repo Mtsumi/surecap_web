@@ -160,17 +160,16 @@ export const messages = {
     loading: "Loading…",
     error: "Something went wrong. Please try again.",
     langToggle: "Français",
-    consentTitle: "Sign your application",
-    consentNote:
-      "Review and sign the declaration and the credit history search form below. Both are signed in one step and are required to submit your application.",
-    consentSigned: "Documents signed — you can now submit your application.",
-    consentPreparing: "Preparing your documents to sign…",
-    consentError:
-      "We could not prepare the signing form. Please try again.",
-    consentRetry: "Try again",
-    consentEmbedFailed:
-      "The signing form could not be loaded. Please refresh the page and try again.",
-    consentRequiredToSubmit: "Sign the documents above to enable submission.",
+    consentTitle: "Consent and signature",
+    consentBody:
+      "By signing, I confirm that the information on this application is true and complete. I authorize Montreal Living to collect and use it to assess my application, to contact my landlords, employer and references, and to run a credit history search about me.",
+    consentSignLabel: "Your signature",
+    consentSign: "Sign",
+    consentClear: "Clear",
+    consentSigned: "Signed. You can submit your application.",
+    consentEmpty: "Please draw your signature before continuing.",
+    consentError: "Could not save your signature. Please try again.",
+    consentRequiredToSubmit: "Sign above to enable submission.",
     addressManualHint: "Enter your address outside Canada.",
     addressPickHint: "Start typing, then pick an address from the list.",
     addressSuggestionsUnavailable:
@@ -404,17 +403,16 @@ export const messages = {
     loading: "Chargement…",
     error: "Une erreur s'est produite. Veuillez réessayer.",
     langToggle: "English",
-    consentTitle: "Signez votre demande",
-    consentNote:
-      "Lisez et signez ci-dessous la déclaration et le formulaire de recherche d'antécédents de crédit. Les deux se signent en une seule étape et sont requis pour soumettre votre demande.",
-    consentSigned: "Documents signés — vous pouvez maintenant soumettre votre demande.",
-    consentPreparing: "Préparation de vos documents à signer…",
-    consentError:
-      "Impossible de préparer le formulaire de signature. Veuillez réessayer.",
-    consentRetry: "Réessayer",
-    consentEmbedFailed:
-      "Le formulaire de signature n'a pas pu être chargé. Actualisez la page et réessayez.",
-    consentRequiredToSubmit: "Signez les documents ci-dessus pour activer la soumission.",
+    consentTitle: "Consentement et signature",
+    consentBody:
+      "En signant, je confirme que les renseignements de cette demande sont véridiques et complets. J'autorise Montreal Living à les utiliser pour évaluer ma demande, à communiquer avec mes propriétaires, mon employeur et mes références, et à effectuer une recherche d'antécédents de crédit.",
+    consentSignLabel: "Votre signature",
+    consentSign: "Signer",
+    consentClear: "Effacer",
+    consentSigned: "Signé. Vous pouvez soumettre votre demande.",
+    consentEmpty: "Veuillez dessiner votre signature avant de continuer.",
+    consentError: "Impossible d'enregistrer la signature. Veuillez réessayer.",
+    consentRequiredToSubmit: "Signez ci-dessus pour activer la soumission.",
     addressManualHint: "Entrez votre adresse hors Canada.",
     addressPickHint: "Commencez à taper, puis choisissez une adresse dans la liste.",
     addressSuggestionsUnavailable:
