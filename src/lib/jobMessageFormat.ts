@@ -289,7 +289,20 @@ export function formatIncomeExtractPreview(
       locale === "fr" ? `${payload.slip_count} talons` : `${payload.slip_count} slips`
     );
   }
-  if (payload.employer_name) bits.push(payload.employer_name);
+  const employers = Array.isArray(payload.employers)
+    ? payload.employers.filter((name) => typeof name === "string" && name.trim())
+    : payload.employer_name
+      ? [payload.employer_name]
+      : [];
+  if (employers.length >= 2) {
+    bits.push(
+      locale === "fr"
+        ? `${employers.length} emplois : ${employers.join("; ")}`
+        : `${employers.length} jobs: ${employers.join("; ")}`
+    );
+  } else if (employers[0]) {
+    bits.push(employers[0]);
+  }
   if (payload.net_pay != null) {
     bits.push(
       locale === "fr" ? `net ${payload.net_pay}` : `net ${payload.net_pay}`

@@ -595,9 +595,14 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
   const strongMatches = hasMatchData
     ? allDecisions.filter((d) => d.match_level === "strong")
     : [];
+  const isTalRespondent = (d: (typeof allDecisions)[number]) =>
+    d.applicant_role === "respondent" && isTalTribunal(d.tribunal);
+  const talRespondents = hasMatchData ? allDecisions.filter(isTalRespondent) : [];
   const secondaryResults = hasMatchData
     ? allDecisions.filter(
-        (d) => d.match_level === "surname" || d.match_level === "related"
+        (d) =>
+          (d.match_level === "surname" || d.match_level === "related") &&
+          !isTalRespondent(d)
       )
     : [];
   const otherResults = hasMatchData
@@ -610,9 +615,6 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
     : [];
   const directCount = hasMatchData ? strongMatches.length : null;
 
-  const talRespondents = strongMatches.filter(
-    (d) => d.applicant_role === "respondent" && isTalTribunal(d.tribunal)
-  );
   const otherRespondents = strongMatches.filter(
     (d) => d.applicant_role === "respondent" && !isTalTribunal(d.tribunal)
   );
@@ -654,24 +656,23 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         <>
           {/* Direct name matches — shown prominently */}
           {hasMatchData ? (
-            directCount === 0 ? (
+            <>
+              {talRespondents.length > 0 ? (
+                <SoquijDecisionList decisions={talRespondents} locale={locale} />
+              ) : null}
+              {directCount === 0 && talRespondents.length === 0 ? (
               <p className="text-[var(--ml-steel)]">
                 {locale === "fr"
                   ? `0 correspondance forte (${totalCount} autre(s) résultat(s) SOQUIJ)`
                   : `0 strong matches (${totalCount} other SOQUIJ result(s))`}
               </p>
-            ) : (
+            ) : directCount && directCount > 0 ? (
               <>
                 {talRespondents.length === 0 && (payload.respondent_count ?? 0) === 0 ? (
                   <p className="font-medium text-amber-700">
-                    {directCount
-                      ? c.soquijFound(directCount)
-                      : locale === "fr"
-                        ? `${secondaryResults.length} résultat(s) secondaire(s)`
-                        : `${secondaryResults.length} secondary result(s)`}
+                    {c.soquijFound(directCount)}
                   </p>
                 ) : null}
-                <SoquijDecisionList decisions={talRespondents} locale={locale} />
                 <SoquijCollapsedGroup
                   title={
                     locale === "fr"
@@ -696,7 +697,8 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
                   locale={locale}
                 />
               </>
-            )
+            ) : null}
+            </>
           ) : (
             /* Legacy record — no name_match data, show all */
             <>

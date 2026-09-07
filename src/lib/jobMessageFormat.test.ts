@@ -128,6 +128,21 @@ describe("jobMessageFormat", () => {
     expect(incomeExtractFlagLabel("payslip_not_recognized", "en")).toContain("payslip");
   });
 
+  it("lists both employers on a two-job income preview", () => {
+    const message = JSON.stringify({
+      document_type: "pay_slip_1",
+      read_path: "pdf_text",
+      employer_name: "SANTE QUEBEC - CHUM",
+      employers: ["SANTE QUEBEC - CHUM", "4437911 Canada Inc."],
+      net_pay: 1558.2,
+      payslip_like: true,
+      flags: [],
+    });
+    expect(formatJobMessagePreview("income_document_extract", message, "en")).toContain(
+      "2 jobs: SANTE QUEBEC - CHUM; 4437911 Canada Inc."
+    );
+  });
+
   it("labels address sources in French and English", () => {
     expect(sourceLabel("current_address", "fr")).toBe("Formulaire — adresse actuelle");
     expect(sourceLabel("id_pdf417_address", "fr")).toBe("Pièce d'identité (code-barres)");
