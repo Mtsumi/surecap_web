@@ -40,6 +40,38 @@ describe("api client", () => {
     );
   });
 
+  it("fetches public listings", async () => {
+    const fetchMock = mockFetch({
+      status: "success",
+      message: "ok",
+      data: [
+        {
+          id: 10,
+          unit_number: "096",
+          civic_number: "3270",
+          rent: 1450,
+          available_date: "immédiatement",
+          earliest_move_in_date: "2026-09-09",
+          amenities: { size: 3.5 },
+          building: { id: 1, name: "Goyer", address: "3270 Rue Goyer", latitude: null, longitude: null },
+        },
+      ],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { fetchListings } = await import("./api");
+    const listings = await fetchListings();
+
+    expect(listings).toHaveLength(1);
+    expect(listings[0].building.name).toBe("Goyer");
+    expect(fetchMock).toHaveBeenCalledWith(
+      "http://localhost:8000/listings",
+      expect.objectContaining({
+        headers: expect.objectContaining({ "Content-Type": "application/json" }),
+      })
+    );
+  });
+
   it("throws on API error envelopes", async () => {
     vi.stubGlobal(
       "fetch",

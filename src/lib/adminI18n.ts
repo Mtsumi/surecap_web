@@ -73,6 +73,7 @@ export const adminMessages = {
       "Inclus dans le courriel au demandeur s'il faut ajouter un garant. Sans numéro, on envoie le courriel du concierge.",
     buildingsJanitorPhoneEmpty: "Aucun numéro",
     buildingsInvalidJanitorPhone: "Numéro de téléphone invalide.",
+    buildingsAmenities: "Commodités",
     guarantorOutsideQuebecReview:
       "Garant hors Québec — vérification manuelle recommandée (actions juridiques limitées).",
   },
@@ -145,10 +146,69 @@ export const adminMessages = {
       "Included in the applicant email when they can add a guarantor. If empty, the janitor email is used.",
     buildingsJanitorPhoneEmpty: "No phone number",
     buildingsInvalidJanitorPhone: "Invalid phone number.",
+    buildingsAmenities: "Amenities",
     guarantorOutsideQuebecReview:
       "Guarantor outside Quebec — manual review recommended (limited legal action).",
   },
 } as const;
+
+const amenityLabels: Record<Locale, Record<string, string>> = {
+  fr: {
+    size: "Grandeur",
+    lease_period: "Période de location",
+    bedrooms: "Chambres",
+    bathrooms: "Salles de bain",
+    living_area_sqft: "Superficie habitable",
+    floor: "Étage",
+    washer_dryer_hookup: "Entrée laveuse-sécheuse",
+    building_laundry: "Buanderie dans l'édifice",
+    fridge_stove: "Frigo et cuisinière",
+    dishwasher: "Lave-vaisselle",
+    renovated: "Rénové",
+    heating_included: "Chauffage inclus",
+    hot_water_included: "Eau chaude incluse",
+    electricity_included: "Électricité incluse",
+    air_conditioning: "Air climatisé",
+    backyard: "Cour arrière",
+    balcony: "Balcon",
+    internet: "Internet",
+    security_cameras: "Caméras de sécurité",
+  },
+  en: {
+    size: "Size",
+    lease_period: "Lease period",
+    bedrooms: "Bedrooms",
+    bathrooms: "Bathrooms",
+    living_area_sqft: "Living area (sq ft)",
+    floor: "Floor",
+    washer_dryer_hookup: "Washer/dryer hookup",
+    building_laundry: "Building laundry",
+    fridge_stove: "Fridge and stove",
+    dishwasher: "Dishwasher",
+    renovated: "Renovated",
+    heating_included: "Heating included",
+    hot_water_included: "Hot water included",
+    electricity_included: "Electricity included",
+    air_conditioning: "Air conditioning",
+    backyard: "Backyard",
+    balcony: "Balcony",
+    internet: "Internet",
+    security_cameras: "Security cameras",
+  },
+};
+
+export function amenityLabel(locale: Locale, key: string): string {
+  return amenityLabels[locale][key] ?? key.replaceAll("_", " ");
+}
+
+export function formatAmenityValue(
+  locale: Locale,
+  value: boolean | number | string,
+): string {
+  if (value === true) return locale === "fr" ? "Oui" : "Yes";
+  if (value === false) return locale === "fr" ? "Non" : "No";
+  return String(value);
+}
 
 export type AdminMessageKey = keyof (typeof adminMessages)["en"];
 

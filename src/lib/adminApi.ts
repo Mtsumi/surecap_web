@@ -137,6 +137,7 @@ export type ApplicationDetail = {
   summary_pdf_available?: boolean;
   dropbox_dossier_ready?: boolean;
   unit_rent?: number | null;
+  unit_amenities?: Record<string, boolean | number | string> | null;
   household_affordability?: HouseholdAffordability | null;
   guarantor_offer_sent_at?: string | null;
 };
@@ -179,6 +180,7 @@ export type UnitAdmin = {
   rent: number | null;
   available_date: string | null;
   active: boolean;
+  amenities?: Record<string, boolean | number | string> | null;
 };
 
 function headers(): Record<string, string> {
