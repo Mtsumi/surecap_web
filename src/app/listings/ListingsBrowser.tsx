@@ -12,11 +12,17 @@ import {
   listingChips,
   listingFacts,
   listingImageSrcs,
+  listingAmenityIsPresent,
+  listingAmenityLabel,
   listingsForBuilding,
   listingShareUrl,
   orderListingsWithFeatured,
   parseListingUnitId,
   uniqueListingBuildings,
+  filterAndSortListings,
+  LISTING_FILTER_AMENITY_KEYS,
+  type BedroomFilter,
+  type ListingSort,
 } from "@/lib/listingDisplay";
 import ListingPhotoCarousel from "./ListingPhotoCarousel";
 
@@ -26,6 +32,9 @@ export default function ListingsBrowser() {
   const [locale, setLocale] = useState<Locale>("fr");
   const [listings, setListings] = useState<Listing[]>([]);
   const [buildingId, setBuildingId] = useState<number | null>(null);
+  const [bedrooms, setBedrooms] = useState<BedroomFilter>("any");
+  const [amenityFilters, setAmenityFilters] = useState<string[]>([]);
+  const [sort, setSort] = useState<ListingSort>("default");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -58,10 +67,22 @@ export default function ListingsBrowser() {
   }, []);
 
   const buildings = useMemo(() => uniqueListingBuildings(listings), [listings]);
+  const amenityOptions = useMemo(() => {
+    return LISTING_FILTER_AMENITY_KEYS.filter((key) =>
+      listings.some((listing) => listingAmenityIsPresent(listing.amenities?.[key]))
+    );
+  }, [listings]);
+  const filtersActive =
+    bedrooms !== "any" || amenityFilters.length > 0 || sort !== "default";
   const visible = useMemo(() => {
     const filtered = listingsForBuilding(listings, buildingId);
-    return orderListingsWithFeatured(filtered, featuredUnitId);
-  }, [listings, buildingId, featuredUnitId]);
+    const queried = filterAndSortListings(filtered, {
+      bedrooms,
+      amenities: amenityFilters,
+      sort,
+    });
+    return orderListingsWithFeatured(queried, featuredUnitId);
+  }, [listings, buildingId, featuredUnitId, bedrooms, amenityFilters, sort]);
   const featuredMissing =
     featuredUnitId != null &&
     !loading &&
@@ -129,7 +150,7 @@ export default function ListingsBrowser() {
       )}
 
       {buildings.length > 1 && (
-        <div className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+        <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           <button
             type="button"
             onClick={() => setBuildingId(null)}
@@ -158,13 +179,106 @@ export default function ListingsBrowser() {
         </div>
       )}
 
+      {!loading && listings.length > 0 && (
+        <div className="mb-6 space-y-3">
+          <div>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#78716c]">
+              {t(locale, "listingsBedrooms")}
+            </p>
+            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+              {(
+                [
+                  ["any", t(locale, "listingsBedroomsAny")],
+                  ["studio", t(locale, "listingsStudio")],
+                  [1, "1"],
+                  [2, "2"],
+                  ["3+", t(locale, "listingsBedrooms3Plus")],
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={String(value)}
+                  type="button"
+                  onClick={() => setBedrooms(value)}
+                  className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${
+                    bedrooms === value
+                      ? "border-[#3d5a45] bg-[#3d5a45] font-medium text-white"
+                      : "border-[#e7e0d5] bg-[#fffef9] text-[#44403c] hover:border-[#3d5a45]"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {amenityOptions.length > 0 && (
+            <div>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#78716c]">
+                {t(locale, "listingsAmenities")}
+              </p>
+              <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+                {amenityOptions.map((key) => {
+                  const active = amenityFilters.includes(key);
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      onClick={() =>
+                        setAmenityFilters((current) =>
+                          current.includes(key)
+                            ? current.filter((item) => item !== key)
+                            : [...current, key]
+                        )
+                      }
+                      className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${
+                        active
+                          ? "border-[#3d5a45] bg-[#3d5a45] font-medium text-white"
+                          : "border-[#e7e0d5] bg-[#fffef9] text-[#44403c] hover:border-[#3d5a45]"
+                      }`}
+                    >
+                      {listingAmenityLabel(locale, key)}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#78716c]">
+              {t(locale, "listingsSort")}
+              <select
+                value={sort}
+                onChange={(e) => setSort(e.target.value as ListingSort)}
+                className="ml-2 rounded-full border border-[#e7e0d5] bg-[#fffef9] px-3 py-2 text-sm font-normal normal-case tracking-normal text-[#44403c]"
+              >
+                <option value="default">{t(locale, "listingsSortDefault")}</option>
+                <option value="rent_asc">{t(locale, "listingsSortRentAsc")}</option>
+                <option value="rent_desc">{t(locale, "listingsSortRentDesc")}</option>
+              </select>
+            </label>
+            {filtersActive ? (
+              <button
+                type="button"
+                onClick={() => {
+                  setBedrooms("any");
+                  setAmenityFilters([]);
+                  setSort("default");
+                }}
+                className="text-sm text-[#3d5a45] underline-offset-2 hover:underline"
+              >
+                {t(locale, "listingsClearFilters")}
+              </button>
+            ) : null}
+          </div>
+        </div>
+      )}
+
       {loading && (
         <p className="py-12 text-center text-sm text-[#78716c]">{t(locale, "loading")}</p>
       )}
 
       {!loading && visible.length === 0 && (
         <p className="rounded border border-[#e7e0d5] bg-[#fffef9] px-4 py-6 text-sm leading-relaxed text-[#57534e]">
-          {t(locale, "listingsEmpty")}
+          {t(locale, filtersActive ? "listingsEmptyFiltered" : "listingsEmpty")}
         </p>
       )}
 

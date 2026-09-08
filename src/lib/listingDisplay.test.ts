@@ -13,6 +13,7 @@ import {
   orderListingsWithFeatured,
   parseListingUnitId,
   uniqueListingBuildings,
+  filterAndSortListings,
 } from "./listingDisplay";
 import type { Listing } from "./api";
 
@@ -46,6 +47,9 @@ describe("listingDisplay", () => {
     expect(listingAddress(listing())).toBe("3270 Rue Goyer");
     expect(listingImageSrcs(listing({ photos: ["https://cdn.example/real.jpg"] }))).toEqual([
       "https://cdn.example/real.jpg",
+    ]);
+    expect(listingImageSrcs(listing({ photos: ["/listings/10/photos/abc"] }))).toEqual([
+      "http://localhost:8000/listings/10/photos/abc",
     ]);
     expect(listingImageSrcs(listing()).length).toBeGreaterThan(0);
   });
@@ -95,5 +99,35 @@ describe("listingDisplay", () => {
     expect(orderListingsWithFeatured(all, 11).map((row) => row.id)).toEqual([11, 10]);
     expect(parseListingUnitId("11")).toBe(11);
     expect(parseListingUnitId("nope")).toBeNull();
+  });
+
+  it("filters by bedrooms and amenities and sorts by rent", () => {
+    const studio = listing({
+      id: 1,
+      rent: 1100,
+      amenities: { bedrooms: 0, fridge_stove: false },
+    });
+    const cheap = listing({
+      id: 2,
+      rent: 1300,
+      amenities: { bedrooms: 1, fridge_stove: true },
+    });
+    const pricey = listing({
+      id: 3,
+      rent: 1600,
+      amenities: { bedrooms: 1, fridge_stove: true, balcony: true },
+    });
+    const all = [studio, cheap, pricey];
+    expect(filterAndSortListings(all, { bedrooms: "studio" }).map((row) => row.id)).toEqual([1]);
+    expect(
+      filterAndSortListings(all, { bedrooms: 1, amenities: ["fridge_stove"] }).map((row) => row.id)
+    ).toEqual([2, 3]);
+    expect(
+      filterAndSortListings(all, {
+        bedrooms: 1,
+        amenities: ["fridge_stove"],
+        sort: "rent_desc",
+      }).map((row) => row.id)
+    ).toEqual([3, 2]);
   });
 });
