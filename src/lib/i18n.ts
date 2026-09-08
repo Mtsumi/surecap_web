@@ -276,6 +276,7 @@ export const messages = {
     listingsSortRentDesc: "Price: high to low",
     listingsClearFilters: "Clear filters",
     listingsAmenities: "Amenities",
+    listingsFilters: "Filters",
   },
   fr: {
     title: "Demande de location",
@@ -564,6 +565,7 @@ export const messages = {
     listingsSortRentDesc: "Prix décroissant",
     listingsClearFilters: "Effacer les filtres",
     listingsAmenities: "Commodités",
+    listingsFilters: "Filtres",
   },
 } as const;
 
