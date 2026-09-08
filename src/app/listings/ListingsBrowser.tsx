@@ -26,6 +26,14 @@ import {
 } from "@/lib/listingDisplay";
 import ListingPhotoCarousel from "./ListingPhotoCarousel";
 
+function chipClass(active: boolean): string {
+  return `shrink-0 rounded-full border px-3 py-2 text-sm transition ${
+    active
+      ? "border-[#3d5a45] bg-[#3d5a45] font-medium text-white"
+      : "border-[#e7e0d5] bg-[#fffef9] text-[#44403c] hover:border-[#3d5a45]"
+  }`;
+}
+
 export default function ListingsBrowser() {
   const searchParams = useSearchParams();
   const featuredUnitId = parseListingUnitId(searchParams.get("unit"));
@@ -35,6 +43,7 @@ export default function ListingsBrowser() {
   const [bedrooms, setBedrooms] = useState<BedroomFilter>("any");
   const [amenityFilters, setAmenityFilters] = useState<string[]>([]);
   const [sort, setSort] = useState<ListingSort>("default");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
@@ -72,8 +81,8 @@ export default function ListingsBrowser() {
       listings.some((listing) => listingAmenityIsPresent(listing.amenities?.[key]))
     );
   }, [listings]);
-  const filtersActive =
-    bedrooms !== "any" || amenityFilters.length > 0 || sort !== "default";
+  const extraFilterCount = (bedrooms !== "any" ? 1 : 0) + amenityFilters.length;
+  const filtersActive = extraFilterCount > 0;
   const visible = useMemo(() => {
     const filtered = listingsForBuilding(listings, buildingId);
     const queried = filterAndSortListings(filtered, {
@@ -150,15 +159,11 @@ export default function ListingsBrowser() {
       )}
 
       {buildings.length > 1 && (
-        <div className="-mx-4 mb-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
+        <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           <button
             type="button"
             onClick={() => setBuildingId(null)}
-            className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${
-              buildingId == null
-                ? "border-[#3d5a45] bg-[#3d5a45] font-medium text-white"
-                : "border-[#e7e0d5] bg-[#fffef9] text-[#44403c] hover:border-[#3d5a45]"
-            }`}
+            className={chipClass(buildingId == null)}
           >
             {t(locale, "listingsAllBuildings")}
           </button>
@@ -167,11 +172,7 @@ export default function ListingsBrowser() {
               key={building.id}
               type="button"
               onClick={() => setBuildingId(building.id)}
-              className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${
-                buildingId === building.id
-                  ? "border-[#3d5a45] bg-[#3d5a45] font-medium text-white"
-                  : "border-[#e7e0d5] bg-[#fffef9] text-[#44403c] hover:border-[#3d5a45]"
-              }`}
+              className={chipClass(buildingId === building.id)}
             >
               {building.name}
             </button>
@@ -180,75 +181,24 @@ export default function ListingsBrowser() {
       )}
 
       {!loading && listings.length > 0 && (
-        <div className="mb-6 space-y-3">
-          <div>
-            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#78716c]">
-              {t(locale, "listingsBedrooms")}
-            </p>
-            <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-              {(
-                [
-                  ["any", t(locale, "listingsBedroomsAny")],
-                  ["studio", t(locale, "listingsStudio")],
-                  [1, "1"],
-                  [2, "2"],
-                  ["3+", t(locale, "listingsBedrooms3Plus")],
-                ] as const
-              ).map(([value, label]) => (
-                <button
-                  key={String(value)}
-                  type="button"
-                  onClick={() => setBedrooms(value)}
-                  className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${
-                    bedrooms === value
-                      ? "border-[#3d5a45] bg-[#3d5a45] font-medium text-white"
-                      : "border-[#e7e0d5] bg-[#fffef9] text-[#44403c] hover:border-[#3d5a45]"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {amenityOptions.length > 0 && (
-            <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#78716c]">
-                {t(locale, "listingsAmenities")}
-              </p>
-              <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
-                {amenityOptions.map((key) => {
-                  const active = amenityFilters.includes(key);
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() =>
-                        setAmenityFilters((current) =>
-                          current.includes(key)
-                            ? current.filter((item) => item !== key)
-                            : [...current, key]
-                        )
-                      }
-                      className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${
-                        active
-                          ? "border-[#3d5a45] bg-[#3d5a45] font-medium text-white"
-                          : "border-[#e7e0d5] bg-[#fffef9] text-[#44403c] hover:border-[#3d5a45]"
-                      }`}
-                    >
-                      {listingAmenityLabel(locale, key)}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+        <div className="mb-5">
           <div className="flex flex-wrap items-center gap-2">
-            <label className="text-xs font-semibold uppercase tracking-[0.12em] text-[#78716c]">
-              {t(locale, "listingsSort")}
+            <button
+              type="button"
+              aria-expanded={filtersOpen}
+              aria-controls="listing-filters"
+              onClick={() => setFiltersOpen((open) => !open)}
+              className={chipClass(filtersOpen || extraFilterCount > 0)}
+            >
+              {t(locale, "listingsFilters")}
+              {extraFilterCount > 0 ? ` (${extraFilterCount})` : ""}
+            </button>
+            <label className="inline-flex items-center gap-2 text-sm text-[#44403c]">
+              <span className="sr-only">{t(locale, "listingsSort")}</span>
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value as ListingSort)}
-                className="ml-2 rounded-full border border-[#e7e0d5] bg-[#fffef9] px-3 py-2 text-sm font-normal normal-case tracking-normal text-[#44403c]"
+                className="rounded-full border border-[#e7e0d5] bg-[#fffef9] px-3 py-2 text-sm text-[#44403c]"
               >
                 <option value="default">{t(locale, "listingsSortDefault")}</option>
                 <option value="rent_asc">{t(locale, "listingsSortRentAsc")}</option>
@@ -261,7 +211,6 @@ export default function ListingsBrowser() {
                 onClick={() => {
                   setBedrooms("any");
                   setAmenityFilters([]);
-                  setSort("default");
                 }}
                 className="text-sm text-[#3d5a45] underline-offset-2 hover:underline"
               >
@@ -269,6 +218,67 @@ export default function ListingsBrowser() {
               </button>
             ) : null}
           </div>
+
+          {filtersOpen ? (
+            <div
+              id="listing-filters"
+              className="mt-3 rounded-xl border border-[#e7e0d5] bg-[#fffef9] px-3 py-3 sm:px-4"
+            >
+              <div>
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#78716c]">
+                  {t(locale, "listingsBedrooms")}
+                </p>
+                <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
+                  {(
+                    [
+                      ["any", t(locale, "listingsBedroomsAny")],
+                      ["studio", t(locale, "listingsStudio")],
+                      [1, "1"],
+                      [2, "2"],
+                      ["3+", t(locale, "listingsBedrooms3Plus")],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={String(value)}
+                      type="button"
+                      onClick={() => setBedrooms(value)}
+                      className={chipClass(bedrooms === value)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {amenityOptions.length > 0 && (
+                <div className="mt-3">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.12em] text-[#78716c]">
+                    {t(locale, "listingsAmenities")}
+                  </p>
+                  <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 sm:flex-wrap sm:overflow-visible">
+                    {amenityOptions.map((key) => {
+                      const active = amenityFilters.includes(key);
+                      return (
+                        <button
+                          key={key}
+                          type="button"
+                          onClick={() =>
+                            setAmenityFilters((current) =>
+                              current.includes(key)
+                                ? current.filter((item) => item !== key)
+                                : [...current, key]
+                            )
+                          }
+                          className={chipClass(active)}
+                        >
+                          {listingAmenityLabel(locale, key)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : null}
         </div>
       )}
 
