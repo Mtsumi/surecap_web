@@ -6,6 +6,7 @@ import {
   listingApplyHref,
   listingChips,
   listingFacts,
+  listingImageSrcs,
   listingSharePath,
   listingShareUrl,
   listingsForBuilding,
@@ -43,6 +44,10 @@ describe("listingDisplay", () => {
       "https://montrealliving.info/listings?unit=10"
     );
     expect(listingAddress(listing())).toBe("3270 Rue Goyer");
+    expect(listingImageSrcs(listing({ photos: ["https://cdn.example/real.jpg"] }))).toEqual([
+      "https://cdn.example/real.jpg",
+    ]);
+    expect(listingImageSrcs(listing()).length).toBeGreaterThan(0);
   });
 
   it("formats Quebec ½ sizes and rent", () => {

@@ -1,5 +1,6 @@
 import type { Building, Listing, UnitAmenityValue } from "./api";
 import type { Locale } from "./i18n";
+import { listingPhotosFor } from "./listingPhotos";
 
 const BOOLEAN_CHIP_KEYS = [
   "fridge_stove",
@@ -69,6 +70,12 @@ export function listingApplyHref(buildingId: number, unitId: number): string {
 
 export function listingShareUrl(unitId: number, origin: string): string {
   return `${origin.replace(/\/$/, "")}${listingSharePath(unitId)}`;
+}
+
+export function listingImageSrcs(listing: Listing): string[] {
+  const fromApi = listing.photos?.filter((src) => typeof src === "string" && src.length > 0);
+  if (fromApi && fromApi.length > 0) return fromApi;
+  return listingPhotosFor(listing.id).map((photo) => photo.src);
 }
 
 export function formatListingRent(rent: number | null, locale: Locale): string | null {

@@ -255,17 +255,15 @@ export const messages = {
     listingsTitle: "Apartments for rent",
     listingsSubtitle:
       "Browse available Montreal Living units and start an application.",
-    listingsSamplePhotos:
-      "Sample photos from Unsplash — not the actual apartments. For Steve’s review until real photos are added.",
     listingsApply: "Apply",
     listingsShare: "Share",
     listingsShared: "Link copied",
     listingsShareFailed: "Copy this link",
+    listingsPrevPhoto: "Previous photo",
+    listingsNextPhoto: "Next photo",
     listingsAllBuildings: "All buildings",
     listingsEmpty: "No apartments are available right now. Please check back soon.",
     listingsFeaturedMissing: "That listing is no longer available.",
-    listingsPhotoCredit: "Photo",
-    listingsSampleBadge: "Sample photo",
   },
   fr: {
     title: "Demande de location",
@@ -533,17 +531,15 @@ export const messages = {
     listingsTitle: "Logements à louer",
     listingsSubtitle:
       "Parcourez les appartements disponibles chez Montreal Living et commencez une demande.",
-    listingsSamplePhotos:
-      "Photos d’exemple (Unsplash) — pas les vrais logements. Pour revue interne, jusqu’à ce que Steve ajoute les vraies photos.",
     listingsApply: "Postuler",
     listingsShare: "Partager",
     listingsShared: "Lien copié",
     listingsShareFailed: "Copiez ce lien",
+    listingsPrevPhoto: "Photo précédente",
+    listingsNextPhoto: "Photo suivante",
     listingsAllBuildings: "Tous les immeubles",
     listingsEmpty: "Aucun logement disponible pour le moment. Revenez un peu plus tard.",
     listingsFeaturedMissing: "Cette annonce n’est plus disponible.",
-    listingsPhotoCredit: "Photo",
-    listingsSampleBadge: "Photo d’exemple",
   },
 } as const;
 
