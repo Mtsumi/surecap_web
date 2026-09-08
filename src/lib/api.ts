@@ -520,6 +520,37 @@ export function fetchInvite(token: string): Promise<InviteContext> {
   return apiFetch<InviteContext>(`/applications/invites/${encodeURIComponent(token)}`);
 }
 
+export type AddGuarantorContext = {
+  application_id: number;
+  status: string;
+  building_name: string;
+  building_address: string;
+  unit_number: string;
+  primary_name: string;
+  has_guarantor: boolean;
+  janitor_email?: string | null;
+  janitor_phone?: string | null;
+};
+
+export function fetchAddGuarantor(token: string): Promise<AddGuarantorContext> {
+  return apiFetch<AddGuarantorContext>(
+    `/applications/add-guarantor/${encodeURIComponent(token)}`
+  );
+}
+
+export function submitAddGuarantor(
+  token: string,
+  payload: GuarantorContact
+): Promise<{ application_id: number; has_guarantor: boolean }> {
+  return apiFetch<{ application_id: number; has_guarantor: boolean }>(
+    `/applications/add-guarantor/${encodeURIComponent(token)}`,
+    {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }
+  );
+}
+
 export function reissueInviteUploadToken(
   token: string
 ): Promise<{ upload_token: string }> {
@@ -699,10 +730,16 @@ export type JanitorReview = {
   members: JanitorReviewMember[];
   checklist: JanitorReviewChecklist | null;
   rejection_reason?: string | null;
+  has_guarantor?: boolean;
+  guarantor_offer_sent_at?: string | null;
   token_expired: boolean;
 };
 
-export type JanitorReviewAction = "request_credit_check" | "accept" | "reject";
+export type JanitorReviewAction =
+  | "request_credit_check"
+  | "accept"
+  | "reject"
+  | "offer_guarantor";
 
 export function fetchJanitorReview(token: string): Promise<JanitorReview> {
   return apiFetch<JanitorReview>(

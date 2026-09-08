@@ -13,6 +13,7 @@ import {
 import { applicationStatusLabel } from "@/lib/adminStatus";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
 import { facebookLink } from "@/lib/facebookSearch";
+import SteveCreditDecision from "@/app/admin/components/SteveCreditDecision";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   called_landlord: false,
@@ -211,7 +212,7 @@ export default function ReviewForm({ token }: { token: string }) {
   );
 
   async function runAction(
-    action: "request_credit_check" | "accept" | "reject"
+    action: "request_credit_check" | "accept" | "reject" | "offer_guarantor"
   ): Promise<void> {
     setSubmitting(true);
     setError(null);
@@ -352,71 +353,27 @@ export default function ReviewForm({ token }: { token: string }) {
       ) : null}
 
       {review.stage === "steve" ? (
-        <section className={`${adminUi.card} mt-6`}>
-          <div className={adminUi.cardHeader}>
-            <h2 className={adminUi.sectionTitle}>Décision après crédit</h2>
-            <p className={adminUi.pageSubtitle}>
-              Si le crédit est acceptable, approuvez pour la signature du bail. Sinon,
-              refusez. Approuver enregistre la décision et lance la préparation du bail.
-            </p>
-          </div>
-          <div className={`${adminUi.cardPad} space-y-4`}>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <button
-                type="button"
-                disabled={submitting}
-                className={`${adminUi.btnPrimary} disabled:opacity-50`}
-                onClick={() => void runAction("accept")}
-              >
-                Approuver pour la signature du bail
-              </button>
-              <button
-                type="button"
-                disabled={submitting}
-                className={`${adminUi.btnDanger} disabled:opacity-50`}
-                onClick={() => setShowRefuse(true)}
-              >
-                Refuser la demande
-              </button>
-            </div>
-            {showRefuse ? (
-              <form onSubmit={onReject} className="space-y-3 border-t border-[var(--ml-line)] pt-4">
-                <label className="block text-sm text-[var(--ml-steel)]">
-                  Note interne (pourquoi refuser)
-                  <textarea
-                    value={reason}
-                    onChange={(event) => setReason(event.target.value)}
-                    className={`${adminUi.textarea} mt-1`}
-                    rows={3}
-                    required
-                    placeholder="Ex. crédit insuffisant"
-                  />
-                </label>
-                <p className="text-xs text-[var(--ml-steel)]">
-                  Enregistrée au dossier. Le courriel au demandeur n’est pas encore
-                  envoyé; on le rédigera ensuite.
-                </p>
-                <div className="flex flex-col gap-3 sm:flex-row">
-                  <button
-                    type="submit"
-                    disabled={submitting || !reason.trim()}
-                    className={`${adminUi.btnDanger} disabled:opacity-50`}
-                  >
-                    Confirmer le refus
-                  </button>
-                  <button
-                    type="button"
-                    disabled={submitting}
-                    className={adminUi.btnGhost}
-                    onClick={() => setShowRefuse(false)}
-                  >
-                    Annuler
-                  </button>
-                </div>
-              </form>
-            ) : null}
-          </div>
-        </section>
+        <SteveCreditDecision
+          hasGuarantor={Boolean(review.has_guarantor)}
+          offerSentAt={review.guarantor_offer_sent_at}
+          submitting={submitting}
+          reason={reason}
+          showRefuse={showRefuse}
+          onApprove={() => void runAction("accept")}
+          onOfferGuarantor={() => {
+            const resend = Boolean(review.guarantor_offer_sent_at);
+            const ok = window.confirm(
+              resend
+                ? "Renvoyer le courriel au demandeur pour proposer d'ajouter un garant?"
+                : "Envoyer un courriel au demandeur pour proposer d'ajouter un garant?"
+            );
+            if (ok) void runAction("offer_guarantor");
+          }}
+          onShowRefuse={() => setShowRefuse(true)}
+          onCancelRefuse={() => setShowRefuse(false)}
+          onReasonChange={setReason}
+          onConfirmRefuse={onReject}
+        />
       ) : null}
 
       {review.stage === "janitor" ? (

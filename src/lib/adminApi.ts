@@ -138,6 +138,7 @@ export type ApplicationDetail = {
   dropbox_dossier_ready?: boolean;
   unit_rent?: number | null;
   household_affordability?: HouseholdAffordability | null;
+  guarantor_offer_sent_at?: string | null;
 };
 
 export type ApplicationList = {
@@ -166,6 +167,7 @@ export type BuildingAdmin = {
   longitude: number | null;
   active: boolean;
   janitor_email: string | null;
+  janitor_phone: string | null;
 };
 
 export type UnitAdmin = {
@@ -317,6 +319,13 @@ export function rejectApplication(id: number, reason: string) {
   });
 }
 
+export function offerGuarantor(id: number) {
+  return adminFetch<ApplicationDetail>(
+    `/admin/applications/${id}/offer-guarantor`,
+    { method: "POST" }
+  );
+}
+
 export function listBuildingsAdmin() {
   return adminFetch<BuildingAdmin[]>("/admin/buildings");
 }
@@ -325,10 +334,10 @@ export function listUnitsAdmin(buildingId: number) {
   return adminFetch<UnitAdmin[]>(`/admin/buildings/${buildingId}/units`);
 }
 
-/** PATCH building settings; blank janitor_email clears the override (API uses ADMIN_EMAILS). */
+/** PATCH building settings; blank janitor_email/phone clears that field. */
 export function updateBuildingAdmin(
   buildingId: number,
-  data: Partial<Pick<BuildingAdmin, "janitor_email">>
+  data: Partial<Pick<BuildingAdmin, "janitor_email" | "janitor_phone">>
 ) {
   return adminFetch<BuildingAdmin>(`/admin/buildings/${buildingId}`, {
     method: "PATCH",

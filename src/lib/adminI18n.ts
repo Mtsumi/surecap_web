@@ -67,6 +67,12 @@ export const adminMessages = {
     buildingsJanitorEmailHint:
       "Les avis de candidature pour cet immeuble sont envoyés ici. Laissez vide pour utiliser ADMIN_EMAILS.",
     buildingsJanitorFallback: "Utilise ADMIN_EMAILS (non défini ici)",
+    buildingsJanitorSection: "Concierge",
+    buildingsJanitorPhone: "Téléphone du concierge",
+    buildingsJanitorPhoneHint:
+      "Inclus dans le courriel au demandeur s'il faut ajouter un garant. Sans numéro, on envoie le courriel du concierge.",
+    buildingsJanitorPhoneEmpty: "Aucun numéro",
+    buildingsInvalidJanitorPhone: "Numéro de téléphone invalide.",
     guarantorOutsideQuebecReview:
       "Garant hors Québec — vérification manuelle recommandée (actions juridiques limitées).",
   },
@@ -133,6 +139,12 @@ export const adminMessages = {
     buildingsJanitorEmailHint:
       "Application notifications for this building go here. Leave blank to use ADMIN_EMAILS.",
     buildingsJanitorFallback: "Uses ADMIN_EMAILS (not set for this building)",
+    buildingsJanitorSection: "Janitor",
+    buildingsJanitorPhone: "Janitor phone",
+    buildingsJanitorPhoneHint:
+      "Included in the applicant email when they can add a guarantor. If empty, the janitor email is used.",
+    buildingsJanitorPhoneEmpty: "No phone number",
+    buildingsInvalidJanitorPhone: "Invalid phone number.",
     guarantorOutsideQuebecReview:
       "Guarantor outside Quebec — manual review recommended (limited legal action).",
   },
