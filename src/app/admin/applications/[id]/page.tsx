@@ -359,7 +359,9 @@ export default function ApplicationDetailPage() {
                 onClick={onAccept}
                 className={adminUi.btnPrimary}
               >
-                Accepter
+                {app.status === "awaiting_credit_check"
+                  ? "Approuver pour la signature du bail"
+                  : "Accepter"}
               </button>
             </div>
           ) : null}

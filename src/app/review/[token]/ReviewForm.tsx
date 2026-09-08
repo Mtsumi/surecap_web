@@ -179,6 +179,7 @@ export default function ReviewForm({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [reason, setReason] = useState("");
+  const [showRefuse, setShowRefuse] = useState(false);
   const [checklist, setChecklist] = useState<JanitorReviewChecklist>(EMPTY_CHECKLIST);
 
   useEffect(() => {
@@ -282,7 +283,11 @@ export default function ReviewForm({ token }: { token: string }) {
           <p className="text-sm text-[var(--ml-ink)]">
             {review.token_expired
               ? "Ce lien a expiré. La décision ne peut plus être modifiée ici."
-              : "Merci. La décision a déjà été enregistrée."}
+              : review.status === "accepted"
+                ? "Demande approuvée pour la signature du bail."
+                : review.status === "rejected"
+                  ? "Demande refusée."
+                  : "Merci. La décision a déjà été enregistrée."}
           </p>
           {review.rejection_reason ? (
             <p className={`${adminUi.pageSubtitle} mt-2`}>
@@ -305,7 +310,7 @@ export default function ReviewForm({ token }: { token: string }) {
             <p className={adminUi.pageSubtitle}>
               {review.stage === "janitor"
                 ? "Cochez les trois points avant d’envoyer le dossier ou de refuser."
-                : "Vérifications déjà confirmées. Acceptez ou refusez après la vérification de crédit."}
+                : "Appels déjà faits par le concierge. Après le crédit, choisissez ci-dessous."}
             </p>
           </div>
           <div className={`${adminUi.cardPad} space-y-3`}>
@@ -347,19 +352,74 @@ export default function ReviewForm({ token }: { token: string }) {
       ) : null}
 
       {review.stage === "steve" ? (
-        <div className="mt-6">
-          <button
-            type="button"
-            disabled={submitting}
-            className={adminUi.btnPrimary}
-            onClick={() => void runAction("accept")}
-          >
-            Accepter
-          </button>
-        </div>
+        <section className={`${adminUi.card} mt-6`}>
+          <div className={adminUi.cardHeader}>
+            <h2 className={adminUi.sectionTitle}>Décision après crédit</h2>
+            <p className={adminUi.pageSubtitle}>
+              Si le crédit est acceptable, approuvez pour la signature du bail. Sinon,
+              refusez. Approuver enregistre la décision et lance la préparation du bail.
+            </p>
+          </div>
+          <div className={`${adminUi.cardPad} space-y-4`}>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <button
+                type="button"
+                disabled={submitting}
+                className={`${adminUi.btnPrimary} disabled:opacity-50`}
+                onClick={() => void runAction("accept")}
+              >
+                Approuver pour la signature du bail
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                className={`${adminUi.btnDanger} disabled:opacity-50`}
+                onClick={() => setShowRefuse(true)}
+              >
+                Refuser la demande
+              </button>
+            </div>
+            {showRefuse ? (
+              <form onSubmit={onReject} className="space-y-3 border-t border-[var(--ml-line)] pt-4">
+                <label className="block text-sm text-[var(--ml-steel)]">
+                  Note interne (pourquoi refuser)
+                  <textarea
+                    value={reason}
+                    onChange={(event) => setReason(event.target.value)}
+                    className={`${adminUi.textarea} mt-1`}
+                    rows={3}
+                    required
+                    placeholder="Ex. crédit insuffisant"
+                  />
+                </label>
+                <p className="text-xs text-[var(--ml-steel)]">
+                  Enregistrée au dossier. Le courriel au demandeur n’est pas encore
+                  envoyé; on le rédigera ensuite.
+                </p>
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <button
+                    type="submit"
+                    disabled={submitting || !reason.trim()}
+                    className={`${adminUi.btnDanger} disabled:opacity-50`}
+                  >
+                    Confirmer le refus
+                  </button>
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    className={adminUi.btnGhost}
+                    onClick={() => setShowRefuse(false)}
+                  >
+                    Annuler
+                  </button>
+                </div>
+              </form>
+            ) : null}
+          </div>
+        </section>
       ) : null}
 
-      {review.stage === "janitor" || review.stage === "steve" ? (
+      {review.stage === "janitor" ? (
         <form onSubmit={onReject} className={`${adminUi.cardPad} ${adminUi.card} mt-6 space-y-3`}>
           <label className="block text-sm text-[var(--ml-steel)]">
             Raison du refus
@@ -373,9 +433,7 @@ export default function ReviewForm({ token }: { token: string }) {
           </label>
           <button
             type="submit"
-            disabled={
-              submitting || (review.stage === "janitor" && !allChecked) || !reason.trim()
-            }
+            disabled={submitting || !allChecked || !reason.trim()}
             className={`${adminUi.btnDanger} disabled:opacity-50`}
           >
             Refuser
