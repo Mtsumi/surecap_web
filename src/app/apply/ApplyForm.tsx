@@ -336,6 +336,8 @@ export default function ApplyForm() {
   const stepRef = useRef(step);
   const selectedUnitRef = useRef(selectedUnit);
   const selectedBuildingRef = useRef(selectedBuilding);
+  const handleSelectUnitRef = useRef<(u: Unit) => Promise<void>>(async () => {});
+  const didPreselectUnitRef = useRef(false);
   formRef.current = form;
   roommatesRef.current = roommates;
   guarantorRef.current = guarantor;
@@ -420,6 +422,7 @@ export default function ApplyForm() {
     ) : null;
 
   const preselectBuildingId = searchParams.get("building");
+  const preselectUnitId = searchParams.get("unit");
 
   useEffect(() => {
     setLocale(detectLocale());
@@ -452,6 +455,7 @@ export default function ApplyForm() {
   useEffect(() => {
     if (!selectedBuilding) return;
     setLoading(true);
+    setUnits([]);
     fetchUnits(selectedBuilding.id)
       .then(setUnits)
       .catch((e) =>
@@ -459,6 +463,18 @@ export default function ApplyForm() {
       )
       .finally(() => setLoading(false));
   }, [selectedBuilding, locale]);
+
+  useEffect(() => {
+    if (didPreselectUnitRef.current) return;
+    if (!preselectUnitId || !selectedBuilding) return;
+    if (loading) return;
+    const unitId = Number(preselectUnitId);
+    if (!Number.isInteger(unitId) || unitId <= 0) return;
+    const unit = units.find((item) => item.id === unitId);
+    if (!unit) return;
+    didPreselectUnitRef.current = true;
+    void handleSelectUnitRef.current(unit);
+  }, [preselectUnitId, selectedBuilding, units, loading]);
 
   const persistProgress = useCallback(
     (nextStep: Step) => {
@@ -667,6 +683,10 @@ export default function ApplyForm() {
   useEffect(() => {
     if (loading || didAttemptDraftResume) return;
     if (step !== "building" || selectedUnit) return;
+    if (preselectBuildingId || preselectUnitId) {
+      didAttemptDraftResume = true;
+      return;
+    }
     if (buildings.length === 0) return;
 
     const saved = loadLatestApplyProgress();
@@ -679,7 +699,15 @@ export default function ApplyForm() {
     void tryResumeLatestDraft().finally(() => {
       didAttemptDraftResume = true;
     });
-  }, [loading, step, selectedUnit, buildings, tryResumeLatestDraft]);
+  }, [
+    loading,
+    step,
+    selectedUnit,
+    buildings,
+    tryResumeLatestDraft,
+    preselectBuildingId,
+    preselectUnitId,
+  ]);
 
   // BFCache soft-reload only — visibility-change resume hijacked intentional building re-picks.
   useEffect(() => {
@@ -689,6 +717,7 @@ export default function ApplyForm() {
       if (document.visibilityState === "hidden") return;
       if (selectedUnitRef.current) return;
       if (stepRef.current !== "building") return;
+      if (preselectBuildingId || preselectUnitId) return;
       if (buildings.length === 0) return;
       if (!loadLatestApplyProgress()) return;
       if (resumeInFlightRef.current) return;
@@ -700,7 +729,7 @@ export default function ApplyForm() {
     return () => {
       window.removeEventListener("pageshow", onPageShow);
     };
-  }, [buildings, tryResumeLatestDraft]);
+  }, [buildings, tryResumeLatestDraft, preselectBuildingId, preselectUnitId]);
 
   const handleStartOver = () => {
     if (selectedUnit) clearApplyProgress(selectedUnit.id);
@@ -879,6 +908,7 @@ export default function ApplyForm() {
       setLoading(false);
     }
   };
+  handleSelectUnitRef.current = handleSelectUnit;
 
   const addressValidationFields = () => {
     const ownsHome = form.housing_status === "own_home";

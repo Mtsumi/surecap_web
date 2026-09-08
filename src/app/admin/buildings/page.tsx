@@ -11,6 +11,7 @@ import {
   updateUnitAdmin,
 } from "@/lib/adminApi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
+import { amenityLabel, formatAmenityValue } from "@/lib/adminI18n";
 import type { Locale } from "@/lib/i18n";
 import { validatePhoneFormat } from "@/lib/applyValidation";
 import PhoneField from "@/app/apply/PhoneField";
@@ -249,6 +250,7 @@ function UnitRow({
   onError,
   t,
 }: UnitRowProps) {
+  const { locale } = useAdminLocaleContext();
   const [rentDraft, setRentDraft] = useState(unit.rent != null ? String(unit.rent) : "");
   const [dateDraft, setDateDraft] = useState(unit.available_date ?? "");
   const [forRentDraft, setForRentDraft] = useState(unit.for_rent);
@@ -331,6 +333,21 @@ function UnitRow({
                 </dd>
               </div>
             </dl>
+            {unit.amenities && Object.keys(unit.amenities).length > 0 ? (
+              <div className="mt-3">
+                <p className="admin-field-label">{t("buildingsAmenities")}</p>
+                <dl className="mt-1 grid grid-cols-1 gap-x-3 gap-y-1 text-sm sm:grid-cols-2">
+                  {Object.entries(unit.amenities).map(([key, value]) => (
+                    <div key={key} className="flex justify-between gap-2">
+                      <dt className="text-[var(--ml-steel)]">{amenityLabel(locale, key)}</dt>
+                      <dd className="admin-field-value text-right">
+                        {formatAmenityValue(locale, value)}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </div>
+            ) : null}
           </div>
           <button
             type="button"

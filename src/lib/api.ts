@@ -16,6 +16,8 @@ export type Building = {
   longitude: number | null;
 };
 
+export type UnitAmenityValue = boolean | number | string;
+
 export type Unit = {
   id: number;
   building_id: number;
@@ -24,6 +26,18 @@ export type Unit = {
   rent: number | null;
   available_date: string | null;
   earliest_move_in_date: string;
+    amenities?: Record<string, UnitAmenityValue> | null;
+};
+
+export type Listing = {
+  id: number;
+  unit_number: string;
+  civic_number: string | null;
+  rent: number | null;
+  available_date: string | null;
+  earliest_move_in_date: string;
+  amenities?: Record<string, UnitAmenityValue> | null;
+  building: Building;
 };
 
 export type LocaleCode = "fr" | "en";
@@ -409,6 +423,10 @@ export function fetchBuildings(): Promise<Building[]> {
 
 export function fetchUnits(buildingId: number): Promise<Unit[]> {
   return apiFetch<Unit[]>(`/buildings/${buildingId}/units`);
+}
+
+export function fetchListings(): Promise<Listing[]> {
+  return apiFetch<Listing[]>("/listings");
 }
 
 export type ApplicationSubmit = ApplicationUpdate & {
