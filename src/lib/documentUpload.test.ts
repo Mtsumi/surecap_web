@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  ACCEPTED_ID_UPLOAD_TYPES,
   ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF,
   ACCEPTED_UPLOAD_TYPES,
 } from "./documentUpload";
@@ -17,6 +18,13 @@ describe("file-browser accept types", () => {
       expect(accept).toMatch(/\.jpg/);
       expect(accept).toMatch(/\.png/);
       expect(accept).toMatch(/\.pdf/);
+      expect(accept).toMatch(/\.heic/);
     }
   );
+
+  it("lets the Take photo picker accept HEIC gallery stills", () => {
+    expect(ACCEPTED_ID_UPLOAD_TYPES).toMatch(/image\/heic/);
+    expect(ACCEPTED_ID_UPLOAD_TYPES).toMatch(/\.heic/);
+    expect(ACCEPTED_ID_UPLOAD_TYPES.includes("application/pdf")).toBe(false);
+  });
 });

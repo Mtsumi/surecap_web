@@ -1,5 +1,48 @@
 /** Normalize files from mobile pickers before FormData upload. */
 
+const HEIC_MIME_TYPES = new Set(["image/heic", "image/heif"]);
+const HEIC_BRANDS = new Set(["heic", "heix", "hevc", "hevx", "heim", "heis", "hevm", "hevs"]);
+const HEIF_GENERIC_BRANDS = new Set(["mif1", "msf1"]);
+const AVIF_BRANDS = new Set(["avif", "avis", "avio", "av01"]);
+
+export function isHeicMime(mime: string): boolean {
+  return HEIC_MIME_TYPES.has(mime.split(";", 1)[0].trim().toLowerCase());
+}
+
+function ftypBrands(bytes: Uint8Array): string[] {
+  if (
+    bytes.length < 16 ||
+    bytes[4] !== 0x66 ||
+    bytes[5] !== 0x74 ||
+    bytes[6] !== 0x79 ||
+    bytes[7] !== 0x70
+  ) {
+    return [];
+  }
+  const boxSize =
+    ((bytes[0] << 24) >>> 0) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+  const end = boxSize === 0 ? bytes.length : Math.min(bytes.length, Math.max(boxSize, 16));
+  const brands: string[] = [];
+  const pushBrand = (offset: number) => {
+    if (offset + 4 > end) return;
+    brands.push(
+      String.fromCharCode(bytes[offset], bytes[offset + 1], bytes[offset + 2], bytes[offset + 3]).toLowerCase()
+    );
+  };
+  pushBrand(8);
+  for (let offset = 16; offset + 4 <= end; offset += 4) {
+    pushBrand(offset);
+  }
+  return brands;
+}
+
+function looksLikeHeic(bytes: Uint8Array): boolean {
+  const brands = ftypBrands(bytes);
+  if (brands.length === 0) return false;
+  if (brands.some((brand) => AVIF_BRANDS.has(brand))) return false;
+  return brands.some((brand) => HEIC_BRANDS.has(brand) || HEIF_GENERIC_BRANDS.has(brand));
+}
+
 export function detectMimeFromBytes(bytes: Uint8Array): string | null {
   if (bytes.length >= 4 && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) {
     return "application/pdf";
@@ -29,18 +72,8 @@ export function detectMimeFromBytes(bytes: Uint8Array): string | null {
   ) {
     return "image/webp";
   }
-  // HEIC/HEIF: ISO BMFF with ftyp brand (bytes 4–7 = "ftyp", 8–11 = major brand)
-  if (
-    bytes.length >= 12 &&
-    bytes[4] === 0x66 &&
-    bytes[5] === 0x74 &&
-    bytes[6] === 0x79 &&
-    bytes[7] === 0x70
-  ) {
-    const brand = String.fromCharCode(bytes[8], bytes[9], bytes[10], bytes[11]).toLowerCase();
-    if (["heic", "heix", "hevc", "hevx", "mif1", "msf1"].includes(brand)) {
-      return "image/heic";
-    }
+  if (looksLikeHeic(bytes)) {
+    return "image/heic";
   }
   return null;
 }
@@ -55,6 +88,9 @@ function extensionForMime(mime: string): string {
       return ".png";
     case "image/webp":
       return ".webp";
+    case "image/heic":
+    case "image/heif":
+      return ".heic";
     default:
       return "";
   }
@@ -84,18 +120,7 @@ export async function normalizeUploadFile(file: File): Promise<File> {
 
   const bytes = new Uint8Array(buffer);
   const detected = detectMimeFromBytes(bytes);
-  if (detected === "image/heic") {
-    throw new Error(
-      "HEIC photos are not supported. Save as JPEG or take a new photo, or use a PDF."
-    );
-  }
-
   const declared = (file.type || "").split(";", 1)[0].trim().toLowerCase();
-  if (!detected && (declared === "image/heic" || declared === "image/heif")) {
-    throw new Error(
-      "HEIC photos are not supported. Save as JPEG or take a new photo, or use a PDF."
-    );
-  }
 
   const mime =
     detected ||
@@ -104,7 +129,7 @@ export async function normalizeUploadFile(file: File): Promise<File> {
 
   if (!detected && mime === "application/octet-stream") {
     throw new Error(
-      "Unsupported file. Use a PDF, JPEG, PNG, or WebP payslip/photo."
+      "Unsupported file. Use a PDF, JPEG, PNG, WebP, or HEIC payslip/photo."
     );
   }
 
@@ -114,17 +139,19 @@ export async function normalizeUploadFile(file: File): Promise<File> {
     "image/jpeg",
     "image/png",
     "image/webp",
+    "image/heic",
+    "image/heif",
   ]);
   if (!allowed.has(mime)) {
     throw new Error(
-      "Unsupported file. Use a PDF, JPEG, PNG, or WebP payslip/photo."
+      "Unsupported file. Use a PDF, JPEG, PNG, WebP, or HEIC payslip/photo."
     );
   }
 
   let name = (file.name || "upload").trim();
   if (!name || name === "image" || name === "blob") {
     name = `upload${extensionForMime(mime) || ""}`;
-  } else if (detected && !/\.(pdf|jpe?g|png|webp)$/i.test(name)) {
+  } else if (detected && !/\.(pdf|jpe?g|png|webp|heic|heif)$/i.test(name)) {
     name = `${name.replace(/\.[^.]+$/, "")}${extensionForMime(detected)}`;
   }
 
