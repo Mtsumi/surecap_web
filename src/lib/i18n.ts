@@ -235,6 +235,20 @@ export const messages = {
     inviteSuccessTitle: "Section submitted",
     inviteSuccessBody:
       "Thank you. A confirmation email has been sent to you.",
+    addGuarantorTitle: "Add a guarantor",
+    addGuarantorSubtitle:
+      "This is still application #{id} for {building}, unit {unit}.",
+    addGuarantorIntro:
+      "Credit could not be approved as-is. If you have a guarantor, add them below. They will receive an email to complete their section.",
+    addGuarantorSubmit: "Send the guarantor invite",
+    addGuarantorSubmitting: "Sending…",
+    addGuarantorSuccessTitle: "Guarantor invite sent",
+    addGuarantorSuccessBody:
+      "We emailed your guarantor a link to complete their section on this same application.",
+    addGuarantorAlready: "A guarantor is already on this application.",
+    addGuarantorExpired: "This link is invalid or has expired.",
+    addGuarantorNoGuarantor:
+      "If you do not have a guarantor, contact the janitor to explore other possibilities.",
     validationInviteEmailMismatch:
       "Email must match the address that received the invitation.",
     fieldRequired: "This field is required.",
@@ -485,6 +499,20 @@ export const messages = {
     inviteSuccessTitle: "Section soumise",
     inviteSuccessBody:
       "Merci. Un courriel de confirmation vous a été envoyé.",
+    addGuarantorTitle: "Ajouter un garant",
+    addGuarantorSubtitle:
+      "Il s'agit toujours de la demande #{id} pour {building}, logement {unit}.",
+    addGuarantorIntro:
+      "Le crédit n'a pas pu être approuvé en l'état. Si vous avez un garant, ajoutez-le ci-dessous. Il recevra un courriel pour compléter sa section.",
+    addGuarantorSubmit: "Envoyer l'invitation au garant",
+    addGuarantorSubmitting: "Envoi…",
+    addGuarantorSuccessTitle: "Invitation envoyée au garant",
+    addGuarantorSuccessBody:
+      "Nous avons envoyé à votre garant un lien pour compléter sa section sur cette même demande.",
+    addGuarantorAlready: "Un garant est déjà sur cette demande.",
+    addGuarantorExpired: "Ce lien est invalide ou expiré.",
+    addGuarantorNoGuarantor:
+      "Si vous n'avez pas de garant, communiquez avec le concierge pour voir les autres options.",
     validationInviteEmailMismatch:
       "Le courriel doit correspondre à celui qui a reçu l'invitation.",
     fieldRequired: "Ce champ est obligatoire.",

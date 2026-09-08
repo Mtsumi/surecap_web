@@ -12,6 +12,7 @@ import {
   acceptApplication,
   getApplication,
   getApplicationJobs,
+  offerGuarantor,
   rejectApplication,
 } from "@/lib/adminApi";
 import { formatAddressDateRange } from "@/lib/addressFormUtils";
@@ -26,6 +27,7 @@ import {
 } from "@/lib/adminDocuments";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import { facebookLink } from "@/lib/facebookSearch";
+import SteveCreditDecision from "../../components/SteveCreditDecision";
 
 function formatLivedDates(
   from: string | null | undefined,
@@ -247,6 +249,7 @@ export default function ApplicationDetailPage() {
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [jobs, setJobs] = useState<ApplicationJob[]>([]);
   const [reason, setReason] = useState("");
+  const [showRefuse, setShowRefuse] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reviewRequest, setReviewRequest] = useState<DocumentReviewRequest | null>(null);
@@ -304,6 +307,27 @@ export default function ApplicationDetailPage() {
     try {
       const updated = await rejectApplication(id, reason.trim());
       setApp(updated);
+      setShowRefuse(false);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onOfferGuarantor = async () => {
+    const resend = Boolean(app?.guarantor_offer_sent_at);
+    const ok = window.confirm(
+      resend
+        ? "Renvoyer le courriel au demandeur pour proposer d'ajouter un garant?"
+        : "Envoyer un courriel au demandeur pour proposer d'ajouter un garant?"
+    );
+    if (!ok) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await offerGuarantor(id);
+      setApp(updated);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -351,46 +375,80 @@ export default function ApplicationDetailPage() {
 
           {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
 
-          {app.status !== "accepted" && app.status !== "rejected" ? (
-            <div className="mt-5 flex flex-wrap gap-3 border-t border-[var(--ml-line)] pt-5">
-              <button
-                type="button"
-                disabled={busy}
-                onClick={onAccept}
-                className={adminUi.btnPrimary}
-              >
-                {app.status === "awaiting_credit_check"
-                  ? "Approuver pour la signature du bail"
-                  : "Accepter"}
-              </button>
-            </div>
+          {app.status === "awaiting_credit_check" ? (
+            <SteveCreditDecision
+              embedded
+              hasGuarantor={Boolean(app.has_guarantor)}
+              offerSentAt={app.guarantor_offer_sent_at}
+              submitting={busy}
+              reason={reason}
+              showRefuse={showRefuse}
+              onApprove={() => void onAccept()}
+              onOfferGuarantor={() => void onOfferGuarantor()}
+              onShowRefuse={() => setShowRefuse(true)}
+              onCancelRefuse={() => setShowRefuse(false)}
+              onReasonChange={setReason}
+              onConfirmRefuse={(event) => {
+                event.preventDefault();
+                void onReject();
+              }}
+            />
           ) : null}
 
-          {app.status !== "rejected" && app.status !== "accepted" ? (
-            <details className="mt-4 rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)]">
-              <summary className="cursor-pointer px-4 py-3 text-sm font-medium text-[var(--ml-ink)]">
-                Refuser la demande
-              </summary>
-              <div className="border-t border-[var(--ml-line)] px-4 py-4">
-                <label className="block text-sm text-[var(--ml-steel)]">
-                  Raison du refus
-                  <textarea
-                    value={reason}
-                    onChange={(e) => setReason(e.target.value)}
-                    rows={2}
-                    className={adminUi.textarea}
-                  />
-                </label>
+          {app.status !== "accepted" &&
+          app.status !== "rejected" &&
+          app.status !== "awaiting_credit_check" ? (
+            <div className="mt-5 space-y-4 border-t border-[var(--ml-line)] pt-5">
+              <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
                   disabled={busy}
-                  onClick={onReject}
-                  className={`${adminUi.btnDanger} mt-3`}
+                  onClick={onAccept}
+                  className={adminUi.btnPrimary}
                 >
-                  Rejeter
+                  Accepter
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setShowRefuse(true)}
+                  className={adminUi.btnDanger}
+                >
+                  Refuser la demande
                 </button>
               </div>
-            </details>
+              {showRefuse ? (
+                <div className="space-y-3">
+                  <label className="block text-sm text-[var(--ml-steel)]">
+                    Raison du refus
+                    <textarea
+                      value={reason}
+                      onChange={(e) => setReason(e.target.value)}
+                      rows={2}
+                      className={adminUi.textarea}
+                    />
+                  </label>
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={onReject}
+                      className={adminUi.btnDanger}
+                    >
+                      Confirmer le refus
+                    </button>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => setShowRefuse(false)}
+                      className={adminUi.btnGhost}
+                    >
+                      Annuler
+                    </button>
+                  </div>
+                </div>
+              ) : null}
+            </div>
           ) : null}
 
           {app.status === "rejected" ? (

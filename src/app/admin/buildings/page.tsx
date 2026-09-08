@@ -11,6 +11,9 @@ import {
   updateUnitAdmin,
 } from "@/lib/adminApi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
+import type { Locale } from "@/lib/i18n";
+import { validatePhoneFormat } from "@/lib/applyValidation";
+import PhoneField from "@/app/apply/PhoneField";
 
 import { adminUi } from "@/lib/adminUi";
 
@@ -69,6 +72,7 @@ type BuildingJanitorSectionProps = {
   onUpdated: (building: BuildingAdmin) => void;
   onError: (message: string) => void;
   t: (key: AdminMessageKey) => string;
+  locale: Locale;
 };
 
 function BuildingJanitorSection({
@@ -76,22 +80,39 @@ function BuildingJanitorSection({
   onUpdated,
   onError,
   t,
+  locale,
 }: BuildingJanitorSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [emailDraft, setEmailDraft] = useState(building.janitor_email ?? "");
+  const [phoneDraft, setPhoneDraft] = useState(building.janitor_phone ?? "");
   const [saving, setSaving] = useState(false);
   const emailInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!isEditing) {
       setEmailDraft(building.janitor_email ?? "");
+      setPhoneDraft(building.janitor_phone ?? "");
     }
-  }, [building.id, building.janitor_email, isEditing]);
+  }, [building.id, building.janitor_email, building.janitor_phone, isEditing]);
 
-  const saveJanitorEmail = async () => {
+  const startEdit = () => {
+    setEmailDraft(building.janitor_email ?? "");
+    setPhoneDraft(building.janitor_phone ?? "");
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setEmailDraft(building.janitor_email ?? "");
+    setPhoneDraft(building.janitor_phone ?? "");
+    setIsEditing(false);
+  };
+
+  const saveJanitorContact = async () => {
     const nextEmail = emailDraft.trim();
+    const nextPhone = phoneDraft.trim();
     const currentEmail = (building.janitor_email ?? "").trim();
-    if (nextEmail === currentEmail) {
+    const currentPhone = (building.janitor_phone ?? "").trim();
+    if (nextEmail === currentEmail && nextPhone === currentPhone) {
       setIsEditing(false);
       return;
     }
@@ -100,11 +121,16 @@ function BuildingJanitorSection({
       onError(t("buildingsInvalidJanitorEmail"));
       return;
     }
+    if (nextPhone && validatePhoneFormat(nextPhone)) {
+      onError(t("buildingsInvalidJanitorPhone"));
+      return;
+    }
 
     setSaving(true);
     try {
       const updated = await updateBuildingAdmin(building.id, {
         janitor_email: nextEmail || null,
+        janitor_phone: nextPhone || null,
       });
       onUpdated(updated);
       setIsEditing(false);
@@ -120,7 +146,7 @@ function BuildingJanitorSection({
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <h2 className="text-sm font-semibold text-[var(--ml-ink)]">
-            {t("buildingsJanitorEmail")}
+            {t("buildingsJanitorSection")}
           </h2>
           <p className="mt-1 text-xs text-[var(--ml-steel)]">
             {t("buildingsJanitorEmailHint")}
@@ -129,10 +155,7 @@ function BuildingJanitorSection({
         {!isEditing ? (
           <button
             type="button"
-            onClick={() => {
-              setEmailDraft(building.janitor_email ?? "");
-              setIsEditing(true);
-            }}
+            onClick={startEdit}
             aria-label={t("buildingsEdit")}
             className={adminUi.btnSecondary + " !p-2"}
           >
@@ -142,11 +165,22 @@ function BuildingJanitorSection({
       </div>
 
       {!isEditing ? (
-        <p className="mt-3 break-all text-sm text-[var(--ml-ink)]">
-          {building.janitor_email?.trim() || t("buildingsJanitorFallback")}
-        </p>
+        <dl className="mt-3 space-y-2 text-sm text-[var(--ml-ink)]">
+          <div>
+            <dt className="admin-field-label">{t("buildingsJanitorEmail")}</dt>
+            <dd className="break-all">
+              {building.janitor_email?.trim() || t("buildingsJanitorFallback")}
+            </dd>
+          </div>
+          <div>
+            <dt className="admin-field-label">{t("buildingsJanitorPhone")}</dt>
+            <dd>
+              {building.janitor_phone?.trim() || t("buildingsJanitorPhoneEmpty")}
+            </dd>
+          </div>
+        </dl>
       ) : (
-        <div className="mt-3">
+        <div className="mt-3 space-y-4">
           <label className="block admin-field-label">
             {t("buildingsJanitorEmail")}
             <input
@@ -159,13 +193,23 @@ function BuildingJanitorSection({
               autoComplete="email"
             />
           </label>
-          <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <div>
+            <span className="admin-field-label">{t("buildingsJanitorPhone")}</span>
+            <p className="mt-1 text-xs text-[var(--ml-steel)]">
+              {t("buildingsJanitorPhoneHint")}
+            </p>
+            <div className="mt-1">
+              <PhoneField
+                locale={locale}
+                value={phoneDraft}
+                onChange={setPhoneDraft}
+              />
+            </div>
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
-              onClick={() => {
-                setEmailDraft(building.janitor_email ?? "");
-                setIsEditing(false);
-              }}
+              onClick={cancelEdit}
               disabled={saving}
               className={adminUi.btnSecondary + " w-full sm:w-auto"}
             >
@@ -173,7 +217,7 @@ function BuildingJanitorSection({
             </button>
             <button
               type="button"
-              onClick={saveJanitorEmail}
+              onClick={() => void saveJanitorContact()}
               disabled={saving}
               className={adminUi.btnPrimary + " w-full sm:w-auto"}
             >
@@ -366,7 +410,7 @@ function UnitRow({
 }
 
 export default function BuildingsAdminPage() {
-  const { t } = useAdminLocaleContext();
+  const { t, locale } = useAdminLocaleContext();
   const [buildings, setBuildings] = useState<BuildingAdmin[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [units, setUnits] = useState<UnitAdmin[]>([]);
@@ -441,6 +485,7 @@ export default function BuildingsAdminPage() {
           onUpdated={handleBuildingUpdated}
           onError={setError}
           t={t}
+          locale={locale}
         />
       ) : null}
 
