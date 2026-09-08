@@ -11,13 +11,14 @@ import {
   listingApplyHref,
   listingChips,
   listingFacts,
+  listingImageSrcs,
   listingsForBuilding,
   listingShareUrl,
   orderListingsWithFeatured,
   parseListingUnitId,
   uniqueListingBuildings,
 } from "@/lib/listingDisplay";
-import { listingPhotoFor } from "@/lib/listingPhotos";
+import ListingPhotoCarousel from "./ListingPhotoCarousel";
 
 export default function ListingsBrowser() {
   const searchParams = useSearchParams();
@@ -87,17 +88,17 @@ export default function ListingsBrowser() {
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-5 py-10">
-      <header className="mb-8 border-b border-[#e7e0d5] pb-8">
-        <div className="flex items-start justify-between gap-4">
-          <div>
+    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-5 sm:py-10">
+      <header className="mb-6 border-b border-[#e7e0d5] pb-6 sm:mb-8 sm:pb-8">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#78716c]">
               Montreal Living
             </p>
-            <h1 className="mt-2 text-[1.65rem] font-semibold leading-tight text-[#292524]">
+            <h1 className="mt-2 text-2xl font-semibold leading-tight text-[#292524] sm:text-[1.65rem]">
               {t(locale, "listingsTitle")}
             </h1>
-            <p className="mt-2 max-w-2xl text-[0.95rem] leading-relaxed text-[#57534e]">
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#57534e] sm:text-[0.95rem]">
               {t(locale, "listingsSubtitle")}
             </p>
           </div>
@@ -109,9 +110,6 @@ export default function ListingsBrowser() {
             {t(locale, "langToggle")}
           </button>
         </div>
-        <p className="mt-5 rounded border border-[#ecd9b8] bg-[#fbf3e3] px-4 py-3 text-sm leading-relaxed text-[#7c5a16]">
-          {t(locale, "listingsSamplePhotos")}
-        </p>
       </header>
 
       {error && (
@@ -131,11 +129,11 @@ export default function ListingsBrowser() {
       )}
 
       {buildings.length > 1 && (
-        <div className="mb-6 flex flex-wrap gap-2">
+        <div className="-mx-4 mb-6 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           <button
             type="button"
             onClick={() => setBuildingId(null)}
-            className={`rounded-full border px-3 py-1.5 text-sm transition ${
+            className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${
               buildingId == null
                 ? "border-[#3d5a45] bg-[#3d5a45] font-medium text-white"
                 : "border-[#e7e0d5] bg-[#fffef9] text-[#44403c] hover:border-[#3d5a45]"
@@ -148,7 +146,7 @@ export default function ListingsBrowser() {
               key={building.id}
               type="button"
               onClick={() => setBuildingId(building.id)}
-              className={`rounded-full border px-3 py-1.5 text-sm transition ${
+              className={`shrink-0 rounded-full border px-3 py-2 text-sm transition ${
                 buildingId === building.id
                   ? "border-[#3d5a45] bg-[#3d5a45] font-medium text-white"
                   : "border-[#e7e0d5] bg-[#fffef9] text-[#44403c] hover:border-[#3d5a45]"
@@ -170,13 +168,14 @@ export default function ListingsBrowser() {
         </p>
       )}
 
-      <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         {visible.map((listing) => {
-          const photo = listingPhotoFor(listing.id);
+          const photos = listingImageSrcs(listing);
           const rentLabel = formatListingRent(listing.rent, locale);
           const facts = listingFacts(listing, locale);
           const chips = listingChips(listing.amenities, locale).slice(0, 6);
           const featured = listing.id === featuredUnitId;
+          const copied = copiedId === listing.id;
           return (
             <li key={listing.id}>
               <article
@@ -185,23 +184,12 @@ export default function ListingsBrowser() {
                   featured ? "border-[#3d5a45] ring-2 ring-[#3d5a45]/25" : "border-[#e7e0d5]"
                 }`}
               >
-                <div className="relative aspect-[4/3] bg-[#ebe6dc]">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={photo.src}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    loading="lazy"
-                  />
-                  <span className="absolute left-3 top-3 rounded-full bg-[#1c1917]/70 px-2.5 py-1 text-[0.65rem] font-medium uppercase tracking-wide text-white">
-                    {t(locale, "listingsSampleBadge")}
-                  </span>
-                  {rentLabel && (
-                    <span className="absolute bottom-3 right-3 rounded-full bg-[#fffef9]/95 px-3 py-1 text-sm font-semibold text-[#1c1917]">
-                      {rentLabel}
-                    </span>
-                  )}
-                </div>
+                <ListingPhotoCarousel
+                  photos={photos}
+                  rentLabel={rentLabel}
+                  prevLabel={t(locale, "listingsPrevPhoto")}
+                  nextLabel={t(locale, "listingsNextPhoto")}
+                />
                 <div className="space-y-3 px-4 py-4">
                   <div>
                     <h2 className="text-base font-semibold text-[#292524]">
@@ -239,31 +227,20 @@ export default function ListingsBrowser() {
                   <div className="flex gap-2 pt-1">
                     <Link
                       href={listingApplyHref(listing.building.id, listing.id)}
-                      className="inline-flex flex-1 items-center justify-center rounded-lg bg-[#3d5a45] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#324a39]"
+                      className="inline-flex min-h-11 flex-1 items-center justify-center rounded-lg bg-[#3d5a45] px-3 py-2.5 text-sm font-semibold text-white transition hover:bg-[#324a39]"
                     >
                       {t(locale, "listingsApply")}
                     </Link>
                     <button
                       type="button"
                       onClick={() => void shareListing(listing.id)}
-                      className="inline-flex items-center justify-center rounded-lg border border-[#d6d0c4] bg-white px-3 py-2.5 text-sm font-medium text-[#44403c] transition hover:border-[#a8a29e]"
+                      aria-label={copied ? t(locale, "listingsShared") : t(locale, "listingsShare")}
+                      title={copied ? t(locale, "listingsShared") : t(locale, "listingsShare")}
+                      className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-[#d6d0c4] bg-white text-[#44403c] transition hover:border-[#a8a29e]"
                     >
-                      {copiedId === listing.id
-                        ? t(locale, "listingsShared")
-                        : t(locale, "listingsShare")}
+                      {copied ? <CheckIcon /> : <ShareIcon />}
                     </button>
                   </div>
-                  <p className="text-[0.7rem] text-[#a8a29e]">
-                    {t(locale, "listingsPhotoCredit")}:{" "}
-                    <a
-                      href={photo.unsplashUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="underline-offset-2 hover:underline"
-                    >
-                      {photo.photographer}
-                    </a>
-                  </p>
                 </div>
               </article>
             </li>
@@ -271,5 +248,35 @@ export default function ListingsBrowser() {
         })}
       </ul>
     </main>
+  );
+}
+
+function ShareIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <circle cx="18" cy="5" r="2.4" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="6" cy="12" r="2.4" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="18" cy="19" r="2.4" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M8.2 10.8 15.7 6.6M8.2 13.2l7.5 4.2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function CheckIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" aria-hidden="true">
+      <path
+        d="m5 12 5 5 9-10"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }

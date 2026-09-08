@@ -37,6 +37,8 @@ export type Listing = {
   available_date: string | null;
   earliest_move_in_date: string;
   amenities?: Record<string, UnitAmenityValue> | null;
+  /** Real unit photos when present; otherwise the UI uses placeholders. */
+  photos?: string[] | null;
   building: Building;
 };
 
