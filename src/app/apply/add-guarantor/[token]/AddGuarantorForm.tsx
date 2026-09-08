@@ -41,6 +41,10 @@ export default function AddGuarantorForm({ token }: { token: string }) {
     fetchAddGuarantor(token)
       .then((data) => {
         if (cancelled) return;
+        if (data.status !== "awaiting_credit_check") {
+          setError(t(locale, "addGuarantorExpired"));
+          return;
+        }
         setContext(data);
       })
       .catch(() => {
@@ -56,7 +60,7 @@ export default function AddGuarantorForm({ token }: { token: string }) {
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!context || context.has_guarantor) return;
+    if (!context || context.has_guarantor || context.status !== "awaiting_credit_check") return;
     const trimmedName = name.trim();
     if (!trimmedName) {
       setError(t(locale, "fieldRequired"));
@@ -90,7 +94,7 @@ export default function AddGuarantorForm({ token }: { token: string }) {
     return <p className="text-sm text-[#78716c]">{t(locale, "loading")}</p>;
   }
 
-  if (!context) {
+  if (!context || context.status !== "awaiting_credit_check") {
     return (
       <p className="rounded border border-[#e7c4c4] bg-[#fdf5f5] px-4 py-3 text-sm text-[#7f1d1d]">
         {error || t(locale, "addGuarantorExpired")}
