@@ -181,7 +181,7 @@ export const messages = {
       "Image resolution looks low. Move closer or use better lighting.",
     uploadQualityUnlikelyAspect:
       "This photo may not show a full ID card. Try fitting the whole card in frame.",
-    uploadQualityNotImage: "ID uploads must be a photo (JPEG, PNG, or WebP).",
+    uploadQualityNotImage: "ID uploads must be a photo (JPEG, PNG, WebP, or HEIC).",
     uploadQualityNotPayslip:
       "This file does not look like a payslip yet. You can continue, but check the file.",
     uploadQualityNoTextLayer:
@@ -425,7 +425,7 @@ export const messages = {
     uploadQualityUnlikelyAspect:
       "Cette photo ne montre peut-être pas toute la pièce d'identité. Cadrez la carte au complet.",
     uploadQualityNotImage:
-      "Les pièces d'identité doivent être une photo (JPEG, PNG ou WebP).",
+      "Les pièces d'identité doivent être une photo (JPEG, PNG, WebP ou HEIC).",
     uploadQualityNotPayslip:
       "Ce fichier ne ressemble pas encore à une fiche de paie. Vérifiez le fichier avant de continuer.",
     uploadQualityNoTextLayer:

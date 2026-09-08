@@ -1,10 +1,17 @@
-/** Client-side image compression before uploads (phone camera JPEGs). */
+/** Client-side image compression before uploads (phone camera JPEGs / HEIC). */
 
 /** Stay under common reverse-proxy defaults (nginx client_max_body_size 1m). */
 const MAX_EDGE_PX = 1600;
 const JPEG_QUALITY = 0.78;
 const MAX_OUTPUT_BYTES = 900 * 1024;
 const SKIP_IF_ALREADY_UNDER = 850 * 1024;
+
+type DecodedImage = {
+  width: number;
+  height: number;
+  draw: (ctx: CanvasRenderingContext2D, width: number, height: number) => void;
+  close: () => void;
+};
 
 function loadImageFromBlob(blob: Blob): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -32,26 +39,62 @@ function canvasToBlob(
   });
 }
 
+function decodedBitmap(bitmap: ImageBitmap): DecodedImage {
+  return {
+    width: bitmap.width,
+    height: bitmap.height,
+    draw: (ctx, width, height) => ctx.drawImage(bitmap, 0, 0, width, height),
+    close: () => bitmap.close(),
+  };
+}
+
+async function decodeImage(blob: Blob): Promise<DecodedImage> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      // from-image keeps camera JPEG EXIF rotation. Do not fall back to
+      // createImageBitmap without this option: default "none" stores
+      // portrait IDs sideways compared with HTMLImageElement.
+      return decodedBitmap(
+        await createImageBitmap(blob, { imageOrientation: "from-image" })
+      );
+    } catch {
+      // Unsupported option, or a type this browser cannot bitmap-decode (HEIC on Chrome).
+    }
+  }
+  const img = await loadImageFromBlob(blob);
+  return {
+    width: img.width,
+    height: img.height,
+    draw: (ctx, width, height) => ctx.drawImage(img, 0, 0, width, height),
+    close: () => undefined,
+  };
+}
+
 /**
  * Resize/compress a camera or gallery image for upload.
- * Non-images are returned unchanged. Falls back to the original file on failure.
+ * Converts HEIC to JPEG when the browser can decode it (Safari/iOS).
+ * Non-images are returned unchanged. Falls back to the original file on failure
+ * so the API can convert HEIC that this browser cannot read.
  */
 export async function compressImageForUpload(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) {
     return file;
   }
-  // Already small enough for typical nginx 1m limits.
+  // Already small enough for typical nginx 1m limits. HEIC is never image/jpeg,
+  // so it always goes through decode (Safari) or falls back for the API.
   if (file.size <= SKIP_IF_ALREADY_UNDER && file.type === "image/jpeg") {
     return file;
   }
 
+  let decoded: DecodedImage | null = null;
+  let canvas: HTMLCanvasElement | null = null;
   try {
-    const img = await loadImageFromBlob(file);
-    let scale = Math.min(1, MAX_EDGE_PX / Math.max(img.width, img.height));
-    let width = Math.max(1, Math.round(img.width * scale));
-    let height = Math.max(1, Math.round(img.height * scale));
+    decoded = await decodeImage(file);
+    let scale = Math.min(1, MAX_EDGE_PX / Math.max(decoded.width, decoded.height));
+    let width = Math.max(1, Math.round(decoded.width * scale));
+    let height = Math.max(1, Math.round(decoded.height * scale));
 
-    const canvas = document.createElement("canvas");
+    canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
     if (!ctx) return file;
 
@@ -61,7 +104,7 @@ export async function compressImageForUpload(file: File): Promise<File> {
     for (let attempt = 0; attempt < 4; attempt++) {
       canvas.width = width;
       canvas.height = height;
-      ctx.drawImage(img, 0, 0, width, height);
+      decoded.draw(ctx, width, height);
       quality = JPEG_QUALITY;
       blob = await canvasToBlob(canvas, "image/jpeg", quality);
       while (blob && blob.size > MAX_OUTPUT_BYTES && quality > 0.4) {
@@ -69,7 +112,6 @@ export async function compressImageForUpload(file: File): Promise<File> {
         blob = await canvasToBlob(canvas, "image/jpeg", quality);
       }
       if (blob && blob.size <= MAX_OUTPUT_BYTES) break;
-      // Still too large — shrink dimensions and retry.
       width = Math.max(1, Math.round(width * 0.75));
       height = Math.max(1, Math.round(height * 0.75));
     }
@@ -83,6 +125,12 @@ export async function compressImageForUpload(file: File): Promise<File> {
     });
   } catch {
     return file;
+  } finally {
+    decoded?.close();
+    if (canvas) {
+      canvas.width = 0;
+      canvas.height = 0;
+    }
   }
 }
 

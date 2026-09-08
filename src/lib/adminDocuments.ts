@@ -84,7 +84,9 @@ export function isImageDocument(doc: {
     lower.endsWith(".jpg") ||
     lower.endsWith(".jpeg") ||
     lower.endsWith(".png") ||
-    lower.endsWith(".webp")
+    lower.endsWith(".webp") ||
+    lower.endsWith(".heic") ||
+    lower.endsWith(".heif")
   );
 }
 

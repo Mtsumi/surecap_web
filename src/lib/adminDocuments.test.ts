@@ -30,5 +30,8 @@ describe("adminDocuments", () => {
     expect(
       isImageDocument({ content_type: "application/octet-stream", original_filename: "id.jpg" })
     ).toBe(true);
+    expect(
+      isImageDocument({ content_type: "application/octet-stream", original_filename: "id.heic" })
+    ).toBe(true);
   });
 });
