@@ -5,14 +5,18 @@ import { useAdminLocaleContext } from "../AdminLocaleContext";
 import {
   BuildingAdmin,
   UnitAdmin,
+  deleteUnitPhoto,
   listBuildingsAdmin,
   listUnitsAdmin,
+  reorderUnitPhotos,
   updateBuildingAdmin,
   updateUnitAdmin,
+  uploadUnitPhoto,
 } from "@/lib/adminApi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 import { amenityLabel, formatAmenityValue } from "@/lib/adminI18n";
 import type { Locale } from "@/lib/i18n";
+import { listingPhotoUrl } from "@/lib/listingDisplay";
 import { validatePhoneFormat } from "@/lib/applyValidation";
 import PhoneField from "@/app/apply/PhoneField";
 
@@ -237,9 +241,163 @@ type UnitRowProps = {
   onStartEdit: () => void;
   onCancelEdit: () => void;
   onUpdated: (unit: UnitAdmin) => void;
+  onPhotosUpdated: (unit: UnitAdmin) => void;
   onError: (message: string) => void;
   t: (key: AdminMessageKey) => string;
 };
+
+const MAX_UNIT_PHOTOS = 12;
+
+function UnitPhotoStrip({
+  unit,
+  onUpdated,
+  onError,
+  t,
+}: {
+  unit: UnitAdmin;
+  onUpdated: (unit: UnitAdmin) => void;
+  onError: (message: string) => void;
+  t: (key: AdminMessageKey) => string;
+}) {
+  const [busy, setBusy] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const photos = unit.photos ?? [];
+  const atMax = photos.length >= MAX_UNIT_PHOTOS;
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const remaining = MAX_UNIT_PHOTOS - photos.length;
+    const selected = Array.from(files).slice(0, Math.max(remaining, 0));
+    if (selected.length === 0) {
+      onError(t("buildingsPhotosMax"));
+      if (inputRef.current) inputRef.current.value = "";
+      return;
+    }
+    setBusy(true);
+    try {
+      let current = unit;
+      for (const file of selected) {
+        current = await uploadUnitPhoto(current.id, file);
+      }
+      onUpdated(current);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : t("buildingsGenericError"));
+    } finally {
+      setBusy(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  const move = async (index: number, delta: number) => {
+    const nextIndex = index + delta;
+    if (nextIndex < 0 || nextIndex >= photos.length) return;
+    const ids = photos.map((photo) => photo.id);
+    const [moved] = ids.splice(index, 1);
+    ids.splice(nextIndex, 0, moved);
+    setBusy(true);
+    try {
+      onUpdated(await reorderUnitPhotos(unit.id, ids));
+    } catch (e) {
+      onError(e instanceof Error ? e.message : t("buildingsGenericError"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (photoId: string) => {
+    if (!window.confirm(t("buildingsPhotoConfirmDelete"))) return;
+    setBusy(true);
+    try {
+      onUpdated(await deleteUnitPhoto(unit.id, photoId));
+    } catch (e) {
+      onError(e instanceof Error ? e.message : t("buildingsGenericError"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="mt-3">
+      <p className="admin-field-label">{t("buildingsPhotos")}</p>
+      <p className="mt-0.5 text-xs text-[var(--ml-steel)]">{t("buildingsPhotosHint")}</p>
+      <ul className="mt-2 flex flex-wrap gap-3">
+        {photos.map((photo, index) => (
+          <li
+            key={photo.id}
+            className="w-[7.5rem] overflow-hidden rounded border border-[var(--ml-line)] bg-white"
+          >
+            <div className="relative aspect-[4/3] bg-[var(--ml-paper)]">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={listingPhotoUrl(photo.url)}
+                alt={photo.filename}
+                className="h-full w-full object-cover"
+              />
+              {index === 0 ? (
+                <span className="absolute left-1 top-1 rounded bg-[var(--ml-pine)] px-1.5 py-0.5 text-[10px] font-medium text-white">
+                  {t("buildingsPhotoCover")}
+                </span>
+              ) : null}
+            </div>
+            <div className="flex items-center justify-between gap-1 px-1 py-1">
+              <div className="flex gap-0.5">
+                <button
+                  type="button"
+                  disabled={busy || index === 0}
+                  onClick={() => void move(index, -1)}
+                  aria-label={t("buildingsPhotoMoveUp")}
+                  className={adminUi.btnGhost + " !px-1.5 !py-0.5 text-xs"}
+                >
+                  ↑
+                </button>
+                <button
+                  type="button"
+                  disabled={busy || index === photos.length - 1}
+                  onClick={() => void move(index, 1)}
+                  aria-label={t("buildingsPhotoMoveDown")}
+                  className={adminUi.btnGhost + " !px-1.5 !py-0.5 text-xs"}
+                >
+                  ↓
+                </button>
+              </div>
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => void remove(photo.id)}
+                aria-label={`${t("buildingsPhotoDelete")} ${photo.filename}`}
+                className={adminUi.btnDanger + " !px-1.5 !py-0.5 text-xs"}
+              >
+                {t("buildingsPhotoDelete")}
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <div className="mt-2">
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+          multiple
+          disabled={busy || atMax}
+          className="sr-only"
+          onChange={(e) => void handleFiles(e.target.files)}
+        />
+        <button
+          type="button"
+          disabled={busy || atMax}
+          onClick={() => inputRef.current?.click()}
+          className={adminUi.btnSecondary + " text-sm"}
+        >
+          {busy ? t("buildingsPhotoUploading") : t("buildingsPhotoAdd")}
+        </button>
+        {atMax ? (
+          <p className="mt-1 text-xs text-[var(--ml-steel)]">{t("buildingsPhotosMax")}</p>
+        ) : null}
+      </div>
+    </div>
+  );
+}
 
 function UnitRow({
   unit,
@@ -247,6 +405,7 @@ function UnitRow({
   onStartEdit,
   onCancelEdit,
   onUpdated,
+  onPhotosUpdated,
   onError,
   t,
 }: UnitRowProps) {
@@ -348,6 +507,12 @@ function UnitRow({
                 </dl>
               </div>
             ) : null}
+            <UnitPhotoStrip
+              unit={unit}
+              onUpdated={onPhotosUpdated}
+              onError={onError}
+              t={t}
+            />
           </div>
           <button
             type="button"
@@ -403,6 +568,13 @@ function UnitRow({
         />
         {t("buildingsForRent")}
       </label>
+
+      <UnitPhotoStrip
+        unit={unit}
+        onUpdated={onPhotosUpdated}
+        onError={onError}
+        t={t}
+      />
 
       <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:justify-end">
         <button
@@ -471,6 +643,10 @@ export default function BuildingsAdminPage() {
     setEditingUnitId(null);
   };
 
+  const handleUnitPhotosUpdated = (updated: UnitAdmin) => {
+    setUnits((prev) => prev.map((u) => (u.id === updated.id ? updated : u)));
+  };
+
   return (
     <>
       <h1 className={adminUi.pageTitle}>{t("buildingsTitle")}</h1>
@@ -525,6 +701,7 @@ export default function BuildingsAdminPage() {
               }}
               onCancelEdit={() => setEditingUnitId(null)}
               onUpdated={handleUnitUpdated}
+              onPhotosUpdated={handleUnitPhotosUpdated}
               onError={setError}
               t={t}
             />

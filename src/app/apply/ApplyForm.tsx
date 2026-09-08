@@ -1159,7 +1159,9 @@ export default function ApplyForm() {
               {t(locale, "title")}
             </h1>
             <p className="mt-2 text-[0.95rem] leading-relaxed text-[#57534e]">
-              {t(locale, "subtitle")}
+              {preselectBuildingId && preselectUnitId
+                ? t(locale, "subtitleFromListing")
+                : t(locale, "subtitle")}
             </p>
           </div>
           <button

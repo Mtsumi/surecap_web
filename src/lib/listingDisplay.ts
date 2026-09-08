@@ -2,6 +2,8 @@ import type { Building, Listing, UnitAmenityValue } from "./api";
 import type { Locale } from "./i18n";
 import { listingPhotosFor } from "./listingPhotos";
 
+const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+
 const BOOLEAN_CHIP_KEYS = [
   "fridge_stove",
   "dishwasher",
@@ -72,9 +74,14 @@ export function listingShareUrl(unitId: number, origin: string): string {
   return `${origin.replace(/\/$/, "")}${listingSharePath(unitId)}`;
 }
 
+export function listingPhotoUrl(src: string): string {
+  if (/^https?:\/\//i.test(src)) return src;
+  return `${API_URL}${src.startsWith("/") ? src : `/${src}`}`;
+}
+
 export function listingImageSrcs(listing: Listing): string[] {
   const fromApi = listing.photos?.filter((src) => typeof src === "string" && src.length > 0);
-  if (fromApi && fromApi.length > 0) return fromApi;
+  if (fromApi && fromApi.length > 0) return fromApi.map(listingPhotoUrl);
   return listingPhotosFor(listing.id).map((photo) => photo.src);
 }
 
@@ -146,11 +153,71 @@ export function listingFacts(
   return facts;
 }
 
-function amenityIsPresent(value: UnitAmenityValue | undefined): boolean {
+export type BedroomFilter = "any" | "studio" | 1 | 2 | "3+";
+export type ListingSort = "default" | "rent_asc" | "rent_desc";
+
+export const LISTING_FILTER_AMENITY_KEYS = BOOLEAN_CHIP_KEYS;
+
+export function listingAmenityLabel(
+  locale: Locale,
+  key: (typeof BOOLEAN_CHIP_KEYS)[number],
+): string {
+  return CHIP_LABELS[locale][key];
+}
+
+export function listingAmenityIsPresent(value: UnitAmenityValue | undefined): boolean {
   if (value === true) return true;
   if (typeof value !== "string") return false;
   const normalized = value.trim().toLowerCase();
   return normalized === "disponible" || normalized.startsWith("oui");
+}
+
+function listingBedrooms(listing: Pick<Listing, "amenities">): number | null {
+  const raw = listing.amenities?.bedrooms;
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw;
+  if (typeof raw === "string" && /^\d+$/.test(raw.trim())) return Number(raw.trim());
+  return null;
+}
+
+export function filterAndSortListings(
+  listings: Listing[],
+  filters: {
+    bedrooms?: BedroomFilter;
+    amenities?: string[];
+    sort?: ListingSort;
+  },
+): Listing[] {
+  const bedrooms = filters.bedrooms ?? "any";
+  const amenities = filters.amenities ?? [];
+  const sort = filters.sort ?? "default";
+  const matched = listings.filter((listing) => {
+    const actual = listingBedrooms(listing);
+    if (bedrooms === "studio" && actual !== 0) return false;
+    if (bedrooms === 1 && actual !== 1) return false;
+    if (bedrooms === 2 && actual !== 2) return false;
+    if (bedrooms === "3+" && (actual == null || actual < 3)) return false;
+    for (const key of amenities) {
+      if (!listingAmenityIsPresent(listing.amenities?.[key])) return false;
+    }
+    return true;
+  });
+  if (sort === "rent_asc") {
+    return [...matched].sort((a, b) => {
+      if (a.rent == null && b.rent == null) return 0;
+      if (a.rent == null) return 1;
+      if (b.rent == null) return -1;
+      return a.rent - b.rent;
+    });
+  }
+  if (sort === "rent_desc") {
+    return [...matched].sort((a, b) => {
+      if (a.rent == null && b.rent == null) return 0;
+      if (a.rent == null) return 1;
+      if (b.rent == null) return -1;
+      return b.rent - a.rent;
+    });
+  }
+  return matched;
 }
 
 export function listingChips(
@@ -158,7 +225,7 @@ export function listingChips(
   locale: Locale,
 ): ListingChip[] {
   if (!amenities) return [];
-  return BOOLEAN_CHIP_KEYS.filter((key) => amenityIsPresent(amenities[key])).map((key) => ({
+  return BOOLEAN_CHIP_KEYS.filter((key) => listingAmenityIsPresent(amenities[key])).map((key) => ({
     key,
     label: CHIP_LABELS[locale][key],
   }));

@@ -171,6 +171,12 @@ export type BuildingAdmin = {
   janitor_phone: string | null;
 };
 
+export type UnitPhotoAdmin = {
+  id: string;
+  filename: string;
+  url: string;
+};
+
 export type UnitAdmin = {
   id: number;
   building_id: number;
@@ -181,10 +187,12 @@ export type UnitAdmin = {
   available_date: string | null;
   active: boolean;
   amenities?: Record<string, boolean | number | string> | null;
+  photos?: UnitPhotoAdmin[];
 };
 
-function headers(): Record<string, string> {
-  const h: Record<string, string> = { "Content-Type": "application/json" };
+function headers(init?: RequestInit): Record<string, string> {
+  const isForm = typeof FormData !== "undefined" && init?.body instanceof FormData;
+  const h: Record<string, string> = isForm ? {} : { "Content-Type": "application/json" };
   const token = getAdminToken();
   if (token) h.Authorization = `Bearer ${token}`;
   if (API_URL.includes("ngrok")) h["ngrok-skip-browser-warning"] = "1";
@@ -194,7 +202,7 @@ function headers(): Record<string, string> {
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
     ...init,
-    headers: { ...headers(), ...(init?.headers as Record<string, string>) },
+    headers: { ...headers(init), ...(init?.headers as Record<string, string>) },
   });
 
   let body: ApiEnvelope<T> | null = null;
@@ -354,6 +362,28 @@ export function updateUnitAdmin(
   return adminFetch<UnitAdmin>(`/admin/units/${unitId}`, {
     method: "PATCH",
     body: JSON.stringify(data),
+  });
+}
+
+export function uploadUnitPhoto(unitId: number, file: File) {
+  const form = new FormData();
+  form.append("file", file);
+  return adminFetch<UnitAdmin>(`/admin/units/${unitId}/photos`, {
+    method: "POST",
+    body: form,
+  });
+}
+
+export function deleteUnitPhoto(unitId: number, photoId: string) {
+  return adminFetch<UnitAdmin>(`/admin/units/${unitId}/photos/${photoId}`, {
+    method: "DELETE",
+  });
+}
+
+export function reorderUnitPhotos(unitId: number, photoIds: string[]) {
+  return adminFetch<UnitAdmin>(`/admin/units/${unitId}/photos`, {
+    method: "PATCH",
+    body: JSON.stringify({ photo_ids: photoIds }),
   });
 }
 
