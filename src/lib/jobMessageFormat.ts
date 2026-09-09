@@ -194,6 +194,8 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
     payslip_net_inconsistent_across_slips: "Nets incohérents entre talons",
     employer_mismatch_across_slips: "Employeurs différents entre talons",
     payslip_partial_not_recognized: "Au moins un talon non reconnu",
+    pay_period_assumed_weekly: "Période absente — mensuel estimé en hebdomadaire",
+    pay_period_assumed_biweekly: "Période absente — mensuel estimé en bihebdomadaire",
   };
   const en: Record<string, string> = {
     payslip_not_recognized: "Does not look like a payslip",
@@ -211,6 +213,8 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
     payslip_net_inconsistent_across_slips: "Nets inconsistent across slips",
     employer_mismatch_across_slips: "Employers differ across slips",
     payslip_partial_not_recognized: "At least one slip not recognized",
+    pay_period_assumed_weekly: "Pay period missing — monthly estimated as weekly",
+    pay_period_assumed_biweekly: "Pay period missing — monthly estimated as biweekly",
   };
   const map = locale === "en" ? en : fr;
   return map[flag] || flag.replaceAll("_", " ");
@@ -603,7 +607,7 @@ export type SoquijDecision = {
   dossier?: string;
   /** strong = given+family in parties; surname = family only; related = verify in decision */
   match_level?: "strong" | "surname" | "related" | null;
-  /** True when match_level is strong or surname. */
+  /** True when match_level is strong (given + family in parties). */
   name_match?: boolean;
   /** 'respondent' = applicant was sued (red flag); 'plaintiff' = applicant sued someone */
   applicant_role?: "respondent" | "plaintiff";
@@ -612,6 +616,7 @@ export type SoquijDecision = {
 
 export type SoquijScreeningPayload = {
   query?: string;
+  queries?: string[];
   status?: string;
   decision_count?: number;
   /** Decisions with given + family name in parties. */

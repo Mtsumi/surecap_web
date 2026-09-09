@@ -64,6 +64,39 @@ function permutations(items: string[]): string[][] {
   return out;
 }
 
+function foldOcrPrefix(token: string): string {
+  return token.replace(/^(tz|ts|cz)/, "z");
+}
+
+function lettersAreSubsequence(short: string, long: string): boolean {
+  if (!short || !long) return false;
+  let index = 0;
+  for (const char of short) {
+    const found = long.indexOf(char, index);
+    if (found === -1) return false;
+    index = found + 1;
+  }
+  return true;
+}
+
+function ocrConfusedTokens(left: string, right: string): boolean {
+  if (left === right) return true;
+  if (tokenDistance(left, right) <= 2) return true;
+  const foldedLeft = foldOcrPrefix(left);
+  const foldedRight = foldOcrPrefix(right);
+  const [shorter, longer] =
+    foldedLeft.length <= foldedRight.length
+      ? [foldedLeft, foldedRight]
+      : [foldedRight, foldedLeft];
+  if (shorter.length < 3 || longer.length < 4) return false;
+  if (longer.startsWith(shorter)) return true;
+  return lettersAreSubsequence(shorter, longer) && shorter.length / longer.length >= 0.45;
+}
+
+function tokensAreFuzzy(formToken: string, ocrToken: string): boolean {
+  return tokenDistance(formToken, ocrToken) <= 2 || ocrConfusedTokens(formToken, ocrToken);
+}
+
 function tokenAlignment(
   formTokens: string[],
   ocrTokens: string[]
@@ -75,9 +108,8 @@ function tokenAlignment(
     const formSorted = [...formTokens].sort();
     const ocrSorted = [...ocrTokens].sort();
     for (let i = 0; i < formSorted.length; i += 1) {
-      const distance = tokenDistance(formSorted[i], ocrSorted[i]);
-      if (distance === 0) exact += 1;
-      else if (distance <= 2) fuzzy += 1;
+      if (formSorted[i] === ocrSorted[i]) exact += 1;
+      else if (tokensAreFuzzy(formSorted[i], ocrSorted[i])) fuzzy += 1;
       else return null;
     }
     return fuzzy <= 1 ? { exact, fuzzy } : null;
@@ -89,9 +121,8 @@ function tokenAlignment(
     let exact = 0;
     let aligned = true;
     for (let i = 0; i < formTokens.length; i += 1) {
-      const distance = tokenDistance(formTokens[i], perm[i]);
-      if (distance === 0) exact += 1;
-      else if (distance <= 2) fuzzy += 1;
+      if (formTokens[i] === perm[i]) exact += 1;
+      else if (tokensAreFuzzy(formTokens[i], perm[i])) fuzzy += 1;
       else {
         aligned = false;
         break;

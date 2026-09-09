@@ -585,23 +585,28 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
     );
   }
 
-  const allDecisions = payload.decisions ?? [];
-  const totalCount = payload.decision_count ?? allDecisions.length;
+  const scoredDecisions = payload.decisions ?? [];
   const hasMatchData =
-    allDecisions.length > 0 &&
-    allDecisions.every(
+    scoredDecisions.length > 0 &&
+    scoredDecisions.every(
       (d) => d.match_level !== undefined || d.name_match !== undefined
     );
+  const allDecisions = hasMatchData
+    ? scoredDecisions.filter((d) => d.match_level === "strong")
+    : scoredDecisions;
+  const totalCount = allDecisions.length;
   const strongMatches = hasMatchData
     ? allDecisions.filter((d) => d.match_level === "strong")
     : [];
   const isTalRespondent = (d: (typeof allDecisions)[number]) =>
-    d.applicant_role === "respondent" && isTalTribunal(d.tribunal);
+    d.match_level === "strong" &&
+    d.applicant_role === "respondent" &&
+    isTalTribunal(d.tribunal);
   const talRespondents = hasMatchData ? allDecisions.filter(isTalRespondent) : [];
   const secondaryResults = hasMatchData
     ? allDecisions.filter(
         (d) =>
-          (d.match_level === "surname" || d.match_level === "related") &&
+          (d.match_level === "related") &&
           !isTalRespondent(d)
       )
     : [];
@@ -626,7 +631,12 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
 
   return (
     <div className="space-y-3 text-sm">
-      {payload.query ? (
+      {payload.queries?.length ? (
+        <p className="text-[var(--ml-ink)]">
+          {c.soquijQuery}:{" "}
+          <span className="font-medium">{payload.queries.join(" · ")}</span>
+        </p>
+      ) : payload.query ? (
         <p className="text-[var(--ml-ink)]">
           {c.soquijQuery}: <span className="font-medium">{payload.query}</span>
         </p>
@@ -638,11 +648,11 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
             ? `⚠ ${talRespondents.length} décision(s) TAL comme défendeur — révision requise`
             : `⚠ ${talRespondents.length} TAL decision(s) as respondent — review required`}
         </p>
-      ) : (payload.respondent_count ?? 0) > 0 ? (
+      ) : otherRespondents.length > 0 ? (
         <p className="font-semibold text-red-700">
           {locale === "fr"
-            ? `⚠ ${payload.respondent_count} décision(s) comme défendeur — révision requise`
-            : `⚠ ${payload.respondent_count} decision(s) as respondent — review required`}
+            ? `⚠ ${otherRespondents.length} décision(s) comme défendeur — révision requise`
+            : `⚠ ${otherRespondents.length} decision(s) as respondent — review required`}
         </p>
       ) : null}
 
@@ -663,12 +673,12 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
               {directCount === 0 && talRespondents.length === 0 ? (
               <p className="text-[var(--ml-steel)]">
                 {locale === "fr"
-                  ? `0 correspondance forte (${totalCount} autre(s) résultat(s) SOQUIJ)`
-                  : `0 strong matches (${totalCount} other SOQUIJ result(s))`}
+                  ? "0 correspondance forte"
+                  : "0 strong matches"}
               </p>
             ) : directCount && directCount > 0 ? (
               <>
-                {talRespondents.length === 0 && (payload.respondent_count ?? 0) === 0 ? (
+                {talRespondents.length === 0 && otherRespondents.length === 0 ? (
                   <p className="font-medium text-amber-700">
                     {c.soquijFound(directCount)}
                   </p>
