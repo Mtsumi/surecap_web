@@ -25,7 +25,15 @@ describe("nameSimilarity", () => {
     ).toBe("near");
   });
 
-  it("marks unrelated names as a mismatch", () => {
-    expect(nameSimilarity("Jane Doe", "Wrong Name")).toBe("mismatch");
+  it("treats Tzemach vs Zach OCR as near when the rest matches", () => {
+    expect(nameSimilarity("Tzemach Mendel Steinberg", "Zach Mendel Steinberg")).toBe(
+      "near"
+    );
+  });
+
+  it("marks an unrelated first name as a mismatch", () => {
+    expect(nameSimilarity("John Mendel Steinberg", "Zach Mendel Steinberg")).toBe(
+      "mismatch"
+    );
   });
 });
