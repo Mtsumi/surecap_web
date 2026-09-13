@@ -419,6 +419,34 @@ export function formatJobMessagePreview(
     const income = parseIncomeDocumentExtractMessage(message);
     if (income) return formatIncomeExtractPreview(income, locale);
   }
+  if (jobType === "corpiq_screening") {
+    try {
+      const parsed = JSON.parse(message) as {
+        summary?: string;
+        stage_label?: string;
+        score?: number | null;
+        risk_band?: string | null;
+        paid?: boolean;
+        mode?: string;
+      };
+      const bits: string[] = [];
+      if (parsed.stage_label) bits.push(parsed.stage_label);
+      if (parsed.summary) bits.push(parsed.summary);
+      else if (parsed.score != null) {
+        bits.push(
+          locale === "fr"
+            ? `Score ${parsed.score}${parsed.risk_band ? ` (${parsed.risk_band})` : ""}`
+            : `Score ${parsed.score}${parsed.risk_band ? ` (${parsed.risk_band})` : ""}`
+        );
+      }
+      if (parsed.mode === "dry_run" || parsed.paid === false) {
+        bits.push(locale === "fr" ? "sans paiement" : "no payment");
+      }
+      if (bits.length) return bits.join(" · ");
+    } catch {
+      /* fall through */
+    }
+  }
   if (message.trim().startsWith("{")) {
     try {
       const parsed = JSON.parse(message) as { summary?: string };
@@ -538,6 +566,8 @@ export function jobTypeLabel(jobType: string, locale: Locale = "fr"): string {
       return locale === "fr" ? "Talon de paie" : "Payslip";
     case "soquij_screening":
       return "SOQUIJ";
+    case "corpiq_screening":
+      return locale === "fr" ? "ProprioEnquête" : "ProprioEnquête";
     case "admin_notify":
       return locale === "fr" ? "Notification admin" : "Admin notification";
     case "applicant_confirmation":

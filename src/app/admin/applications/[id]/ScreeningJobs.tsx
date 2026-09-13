@@ -29,9 +29,11 @@ import {
   type ScreeningGlanceRow,
 } from "@/lib/screeningGlance";
 import type { ApplicationJob, ApplicationMember } from "@/lib/adminApi";
+import { startCorpiqScreening } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
 import type { Locale } from "@/lib/i18n";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
+import { useState } from "react";
 
 function jobStatusClass(status: string): string {
   switch (status) {
@@ -825,6 +827,121 @@ function JobRow({
   );
 }
 
+function parseCorpiqStage(message: string | null): string | null {
+  if (!message) return null;
+  try {
+    const parsed = JSON.parse(message) as { stage_label?: string };
+    return parsed.stage_label || null;
+  } catch {
+    return null;
+  }
+}
+
+function CorpiqMemberControls({
+  applicationId,
+  memberId,
+  job,
+  locale,
+  onStarted,
+}: {
+  applicationId: number;
+  memberId: number;
+  job: ApplicationJob | undefined;
+  locale: Locale;
+  onStarted?: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inFlight = job?.status === "pending" || job?.status === "running";
+  const completed = job?.status === "completed";
+  const failed = job?.status === "failed";
+  const needsForce = completed || failed;
+  const stage = parseCorpiqStage(job?.message ?? null);
+
+  const run = async (force: boolean) => {
+    if (force && !window.confirm(
+      locale === "fr"
+        ? "Relancer la vérification ProprioEnquête pour ce candidat ?"
+        : "Re-run ProprioEnquête for this applicant?"
+    )) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await startCorpiqScreening(applicationId, memberId, { force });
+      onStarted?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <div className="border-b border-[var(--ml-line)] py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-sm font-medium text-[var(--ml-ink)]">
+            {locale === "fr" ? "ProprioEnquête (crédit)" : "ProprioEnquête (credit)"}
+          </p>
+          {stage ? (
+            <p className={`${adminUi.empty} mt-1`}>{stage}</p>
+          ) : completed ? (
+            <p className={`${adminUi.empty} mt-1`}>
+              {formatJobMessagePreview("corpiq_screening", job?.message ?? null, locale)}
+            </p>
+          ) : failed ? (
+            <p className={`${adminUi.empty} mt-1`}>
+              {locale === "fr" ? "Échec — relancer pour réessayer" : "Failed — re-run to try again"}
+            </p>
+          ) : (
+            <p className={`${adminUi.empty} mt-1`}>
+              {locale === "fr"
+                ? "Mock ou dry-run — aucun paiement de points"
+                : "Mock or dry-run — no points paid"}
+            </p>
+          )}
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {!needsForce && !inFlight ? (
+            <button
+              type="button"
+              disabled={busy}
+              className={`${adminUi.btnPrimary} disabled:opacity-50`}
+              onClick={() => void run(false)}
+            >
+              {locale === "fr" ? "Lancer la vérification" : "Run credit check"}
+            </button>
+          ) : null}
+          {inFlight ? (
+            <span className="admin-status admin-status-collecting">
+              {job?.status === "pending"
+                ? locale === "fr"
+                  ? "En file…"
+                  : "Queued…"
+                : locale === "fr"
+                  ? "En cours…"
+                  : "Running…"}
+            </span>
+          ) : null}
+          {needsForce ? (
+            <button
+              type="button"
+              disabled={busy}
+              className={`${adminUi.btnSecondary} disabled:opacity-50`}
+              onClick={() => void run(true)}
+            >
+              {locale === "fr" ? "Relancer" : "Re-run"}
+            </button>
+          ) : null}
+        </div>
+      </div>
+      {error ? <p className={`${adminUi.alertError} mt-2`}>{error}</p> : null}
+    </div>
+  );
+}
+
 export default function ScreeningJobs({
   jobs,
   jobMemberLabel,
@@ -832,6 +949,9 @@ export default function ScreeningJobs({
   householdAffordability,
   docsAnchor: _docsAnchor,
   onReviewDocuments,
+  applicationId,
+  isSuperAdmin = false,
+  onCorpiqStarted,
 }: {
   jobs: ApplicationJob[];
   jobMemberLabel: (memberId: number) => string;
@@ -840,13 +960,22 @@ export default function ScreeningJobs({
   /** href to scroll to the documents section for "review document" links */
   docsAnchor?: string;
   onReviewDocuments?: (memberId: number, kind: "id" | "income") => void;
+  applicationId?: number;
+  isSuperAdmin?: boolean;
+  onCorpiqStarted?: () => void;
 }) {
   const { locale } = useAdminLocaleContext();
   const c = copy(locale);
   const visibleJobs = jobs.filter((job) => !HIDDEN_SCREENING_JOB_TYPES.has(job.job_type));
   const memberById = new Map((members ?? []).map((member) => [member.id, member]));
 
-  if (visibleJobs.length === 0 && !householdAffordability) {
+  const corpiqRunning = jobs.filter(
+    (job) =>
+      job.job_type === "corpiq_screening" &&
+      (job.status === "pending" || job.status === "running")
+  );
+
+  if (visibleJobs.length === 0 && !householdAffordability && !(isSuperAdmin && (members?.length ?? 0) > 0)) {
     return <p className={adminUi.empty}>{c.noJobs}</p>;
   }
 
@@ -856,11 +985,38 @@ export default function ScreeningJobs({
     list.push(job);
     byMember.set(job.application_member_id, list);
   }
+  if (isSuperAdmin) {
+    for (const member of members ?? []) {
+      if (!byMember.has(member.id)) byMember.set(member.id, []);
+    }
+  }
 
   const groups = Array.from(byMember.entries());
 
   return (
     <div className="space-y-4">
+      {corpiqRunning.length > 0 ? (
+        <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] px-4 py-3 text-sm text-[var(--ml-ink)]">
+          {corpiqRunning.map((job) => {
+            const name = jobMemberLabel(job.application_member_id);
+            const stage = parseCorpiqStage(job.message);
+            return (
+              <p key={job.id}>
+                {locale === "fr" ? "ProprioEnquête" : "ProprioEnquête"}{" "}
+                {job.status === "pending"
+                  ? locale === "fr"
+                    ? "en file"
+                    : "queued"
+                  : locale === "fr"
+                    ? "en cours"
+                    : "running"}{" "}
+                — {name}
+                {stage ? ` · ${stage}` : ""}
+              </p>
+            );
+          })}
+        </div>
+      ) : null}
       {householdAffordability ? (
         <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)]">
           <div className="px-4 py-3 sm:px-5">
@@ -892,6 +1048,21 @@ export default function ScreeningJobs({
                 }
               />
             </div>
+            {isSuperAdmin && applicationId ? (
+              <CorpiqMemberControls
+                applicationId={applicationId}
+                memberId={memberId}
+                job={
+                  jobs.find(
+                    (job) =>
+                      job.application_member_id === memberId &&
+                      job.job_type === "corpiq_screening"
+                  ) ?? memberJobs.find((job) => job.job_type === "corpiq_screening")
+                }
+                locale={locale}
+                onStarted={onCorpiqStarted}
+              />
+            ) : null}
             {memberJobs
               .filter(
                 (job) =>
