@@ -276,20 +276,21 @@ export default function ApplicationDetailPage() {
       .catch(() => setIsSuperAdmin(false));
   }, []);
 
+  const corpiqPolling = jobs.some(
+    (job) =>
+      job.job_type === "corpiq_screening" &&
+      (job.status === "pending" || job.status === "running")
+  );
+
   useEffect(() => {
-    const active = jobs.some(
-      (job) =>
-        job.job_type === "corpiq_screening" &&
-        (job.status === "pending" || job.status === "running")
-    );
-    if (!active || !Number.isFinite(id)) return;
+    if (!corpiqPolling || !Number.isFinite(id)) return;
     const timer = window.setInterval(() => {
       getApplicationJobs(id)
         .then(setJobs)
         .catch(() => undefined);
     }, 3000);
     return () => window.clearInterval(timer);
-  }, [id, jobs]);
+  }, [id, corpiqPolling]);
 
   const members = app?.members ?? [];
   const sortedMembers = useMemo(() => {

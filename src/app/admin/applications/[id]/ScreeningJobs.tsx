@@ -854,6 +854,8 @@ function CorpiqMemberControls({
   const [error, setError] = useState<string | null>(null);
   const inFlight = job?.status === "pending" || job?.status === "running";
   const completed = job?.status === "completed";
+  const failed = job?.status === "failed";
+  const needsForce = completed || failed;
   const stage = parseCorpiqStage(job?.message ?? null);
 
   const run = async (force: boolean) => {
@@ -889,6 +891,10 @@ function CorpiqMemberControls({
             <p className={`${adminUi.empty} mt-1`}>
               {formatJobMessagePreview("corpiq_screening", job?.message ?? null, locale)}
             </p>
+          ) : failed ? (
+            <p className={`${adminUi.empty} mt-1`}>
+              {locale === "fr" ? "Échec — relancer pour réessayer" : "Failed — re-run to try again"}
+            </p>
           ) : (
             <p className={`${adminUi.empty} mt-1`}>
               {locale === "fr"
@@ -898,7 +904,7 @@ function CorpiqMemberControls({
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          {!completed && !inFlight ? (
+          {!needsForce && !inFlight ? (
             <button
               type="button"
               disabled={busy}
@@ -919,7 +925,7 @@ function CorpiqMemberControls({
                   : "Running…"}
             </span>
           ) : null}
-          {completed ? (
+          {needsForce ? (
             <button
               type="button"
               disabled={busy}
