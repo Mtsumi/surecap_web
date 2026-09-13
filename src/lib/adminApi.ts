@@ -309,6 +309,20 @@ export function getApplicationJobs(id: number) {
   return adminFetch<ApplicationJob[]>(`/admin/applications/${id}/jobs`);
 }
 
+export function startCorpiqScreening(
+  applicationId: number,
+  memberId: number,
+  opts?: { force?: boolean }
+) {
+  return adminFetch<ApplicationJob>(
+    `/admin/applications/${applicationId}/members/${memberId}/corpiq-screening`,
+    {
+      method: "POST",
+      body: JSON.stringify({ force: Boolean(opts?.force) }),
+    }
+  );
+}
+
 export function regenerateApplicationSummary(id: number) {
   return adminFetch<{ summary_pdf_available: boolean }>(
     `/admin/applications/${id}/summary/regenerate`,

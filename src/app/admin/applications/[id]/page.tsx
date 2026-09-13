@@ -10,6 +10,7 @@ import {
   ApplicationJob,
   ApplicationMember,
   acceptApplication,
+  adminMe,
   getApplication,
   getApplicationJobs,
   offerGuarantor,
@@ -253,6 +254,7 @@ export default function ApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reviewRequest, setReviewRequest] = useState<DocumentReviewRequest | null>(null);
+  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
   const load = () => {
     Promise.all([getApplication(id), getApplicationJobs(id)])
@@ -267,6 +269,27 @@ export default function ApplicationDetailPage() {
     if (!Number.isFinite(id)) return;
     load();
   }, [id]);
+
+  useEffect(() => {
+    adminMe()
+      .then((user) => setIsSuperAdmin(Boolean(user.is_super_admin)))
+      .catch(() => setIsSuperAdmin(false));
+  }, []);
+
+  useEffect(() => {
+    const active = jobs.some(
+      (job) =>
+        job.job_type === "corpiq_screening" &&
+        (job.status === "pending" || job.status === "running")
+    );
+    if (!active || !Number.isFinite(id)) return;
+    const timer = window.setInterval(() => {
+      getApplicationJobs(id)
+        .then(setJobs)
+        .catch(() => undefined);
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [id, jobs]);
 
   const members = app?.members ?? [];
   const sortedMembers = useMemo(() => {
@@ -559,6 +582,9 @@ export default function ApplicationDetailPage() {
           <ScreeningJobs
             jobs={jobs}
             members={members}
+            applicationId={id}
+            isSuperAdmin={isSuperAdmin}
+            onCorpiqStarted={load}
             householdAffordability={app.household_affordability}
             jobMemberLabel={jobMemberLabel}
             docsAnchor="#documents-section"
