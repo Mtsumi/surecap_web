@@ -886,18 +886,27 @@ function CorpiqMemberControls({
 
   const openReport = async () => {
     if (reportDocumentId == null) return;
+    // Open synchronously so the click gesture is not lost during fetch.
+    const tab = window.open("about:blank", "_blank", "noopener,noreferrer");
     setBusy(true);
     setError(null);
     try {
-      // Attachment download — avoid inline HTML XSS and popup blockers.
       const blob = await fetchMemberDocumentBlob(
         applicationId,
         reportDocumentId,
         "attachment",
         "text/html"
       );
-      triggerBlobDownload(blob, `corpiq_report_${reportDocumentId}.html`);
+      // blob: URLs are an opaque origin — safer than inline HTML on the API host.
+      const url = URL.createObjectURL(blob);
+      if (tab && !tab.closed) {
+        tab.location.href = url;
+      } else {
+        triggerBlobDownload(blob, `corpiq_report_${reportDocumentId}.html`);
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
     } catch (e) {
+      tab?.close();
       setError(e instanceof Error ? e.message : "Error");
     } finally {
       setBusy(false);
