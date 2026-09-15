@@ -426,20 +426,28 @@ export function formatJobMessagePreview(
         stage_label?: string;
         score?: number | null;
         risk_band?: string | null;
+        risk_label?: string | null;
         paid?: boolean;
         mode?: string;
       };
       const bits: string[] = [];
-      if (parsed.stage_label) bits.push(parsed.stage_label);
-      if (parsed.summary) bits.push(parsed.summary);
-      else if (parsed.score != null) {
+      if (parsed.score != null) {
+        const band = parsed.risk_label || parsed.risk_band;
         bits.push(
           locale === "fr"
-            ? `Score ${parsed.score}${parsed.risk_band ? ` (${parsed.risk_band})` : ""}`
-            : `Score ${parsed.score}${parsed.risk_band ? ` (${parsed.risk_band})` : ""}`
+            ? `Score ${parsed.score}${band ? ` (${band})` : ""}`
+            : `Score ${parsed.score}${band ? ` (${band})` : ""}`
         );
+      } else if (parsed.stage_label) {
+        bits.push(parsed.stage_label);
+      } else if (parsed.summary) {
+        bits.push(parsed.summary);
       }
-      if (parsed.mode === "dry_run" || parsed.paid === false) {
+      if (parsed.mode === "mock") {
+        bits.push(locale === "fr" ? "mock" : "mock");
+      } else if (parsed.paid === true) {
+        bits.push(locale === "fr" ? "payé" : "paid");
+      } else if (parsed.mode === "dry_run" || parsed.paid === false) {
         bits.push(locale === "fr" ? "sans paiement" : "no payment");
       }
       if (bits.length) return bits.join(" · ");
