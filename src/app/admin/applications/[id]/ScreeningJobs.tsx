@@ -30,7 +30,11 @@ import {
 } from "@/lib/screeningGlance";
 import type { ApplicationJob, ApplicationMember } from "@/lib/adminApi";
 import { startCorpiqScreening } from "@/lib/adminApi";
-import { fetchMemberDocumentBlob } from "@/lib/adminDocuments";
+import {
+  fetchMemberDocumentBlob,
+  triggerBlobDownload,
+} from "@/lib/adminDocuments";
+import { parseCorpiqReportDocumentId } from "@/lib/corpiqAdmin";
 import { adminUi } from "@/lib/adminUi";
 import type { Locale } from "@/lib/i18n";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
@@ -838,18 +842,6 @@ function parseCorpiqStage(message: string | null): string | null {
   }
 }
 
-function parseCorpiqReportDocumentId(message: string | null): number | null {
-  if (!message) return null;
-  try {
-    const parsed = JSON.parse(message) as { report_document_id?: number };
-    return typeof parsed.report_document_id === "number"
-      ? parsed.report_document_id
-      : null;
-  } catch {
-    return null;
-  }
-}
-
 function CorpiqMemberControls({
   applicationId,
   memberId,
@@ -897,15 +889,14 @@ function CorpiqMemberControls({
     setBusy(true);
     setError(null);
     try {
+      // Attachment download — avoid inline HTML XSS and popup blockers.
       const blob = await fetchMemberDocumentBlob(
         applicationId,
         reportDocumentId,
-        "inline",
+        "attachment",
         "text/html"
       );
-      const url = URL.createObjectURL(blob);
-      window.open(url, "_blank", "noopener,noreferrer");
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      triggerBlobDownload(blob, `corpiq_report_${reportDocumentId}.html`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
