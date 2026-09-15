@@ -181,4 +181,45 @@ describe("jobMessageFormat", () => {
       })
     ).toEqual(["payslip_stale"]);
   });
+
+  it("formats CORPIQ mock, dry-run, and paid previews without points", () => {
+    expect(
+      formatJobMessagePreview(
+        "corpiq_screening",
+        JSON.stringify({
+          mode: "mock",
+          score: 720,
+          risk_band: "moderate",
+          risk_label: "Moderate Risk",
+          paid: false,
+        }),
+        "en"
+      )
+    ).toBe("Score 720 (Moderate Risk) · mock");
+
+    expect(
+      formatJobMessagePreview(
+        "corpiq_screening",
+        JSON.stringify({
+          mode: "dry_run",
+          stage_label: "Confirmation reached — no payment",
+          paid: false,
+        }),
+        "en"
+      )
+    ).toBe("Confirmation reached — no payment · no payment");
+
+    expect(
+      formatJobMessagePreview(
+        "corpiq_screening",
+        JSON.stringify({
+          mode: "live",
+          score: 413,
+          risk_band: "high",
+          paid: true,
+        }),
+        "en"
+      )
+    ).toBe("Score 413 (high) · paid");
+  });
 });
