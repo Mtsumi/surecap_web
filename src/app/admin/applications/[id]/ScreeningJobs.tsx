@@ -30,6 +30,7 @@ import {
 } from "@/lib/screeningGlance";
 import type { ApplicationJob, ApplicationMember } from "@/lib/adminApi";
 import { startCorpiqScreening } from "@/lib/adminApi";
+import { fetchMemberDocumentBlob } from "@/lib/adminDocuments";
 import { adminUi } from "@/lib/adminUi";
 import type { Locale } from "@/lib/i18n";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
@@ -837,6 +838,18 @@ function parseCorpiqStage(message: string | null): string | null {
   }
 }
 
+function parseCorpiqReportDocumentId(message: string | null): number | null {
+  if (!message) return null;
+  try {
+    const parsed = JSON.parse(message) as { report_document_id?: number };
+    return typeof parsed.report_document_id === "number"
+      ? parsed.report_document_id
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 function CorpiqMemberControls({
   applicationId,
   memberId,
@@ -857,6 +870,7 @@ function CorpiqMemberControls({
   const failed = job?.status === "failed";
   const needsForce = completed || failed;
   const stage = parseCorpiqStage(job?.message ?? null);
+  const reportDocumentId = parseCorpiqReportDocumentId(job?.message ?? null);
 
   const run = async (force: boolean) => {
     if (force && !window.confirm(
@@ -871,6 +885,27 @@ function CorpiqMemberControls({
     try {
       await startCorpiqScreening(applicationId, memberId, { force });
       onStarted?.();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openReport = async () => {
+    if (reportDocumentId == null) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const blob = await fetchMemberDocumentBlob(
+        applicationId,
+        reportDocumentId,
+        "inline",
+        "text/html"
+      );
+      const url = URL.createObjectURL(blob);
+      window.open(url, "_blank", "noopener,noreferrer");
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
     } finally {
@@ -924,6 +959,16 @@ function CorpiqMemberControls({
                   ? "En cours…"
                   : "Running…"}
             </span>
+          ) : null}
+          {reportDocumentId != null ? (
+            <button
+              type="button"
+              disabled={busy}
+              className={`${adminUi.btnSecondary} disabled:opacity-50`}
+              onClick={() => void openReport()}
+            >
+              {locale === "fr" ? "Voir le rapport" : "View report"}
+            </button>
           ) : null}
           {needsForce ? (
             <button

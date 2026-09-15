@@ -12,6 +12,7 @@ describe("adminDocuments", () => {
   it("labels known document types in French", () => {
     expect(documentTypeLabel("id_passport")).toBe("Passeport");
     expect(documentTypeLabel("pay_slip_1")).toBe("Talons de paie (1)");
+    expect(documentTypeLabel("corpiq_report")).toBe("Rapport ProprioEnquête");
   });
 
   it("formats file sizes", () => {
