@@ -887,7 +887,9 @@ function CorpiqMemberControls({
   const openReport = async () => {
     if (reportDocumentId == null) return;
     // Open synchronously so the click gesture is not lost during fetch.
-    const tab = window.open("about:blank", "_blank", "noopener,noreferrer");
+    // Do not pass "noopener" — window.open then returns null in Chromium/Firefox.
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
     setBusy(true);
     setError(null);
     try {
