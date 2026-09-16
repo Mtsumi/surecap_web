@@ -86,6 +86,15 @@ export const adminMessages = {
     buildingsPhotoConfirmDelete: "Supprimer cette photo ?",
     guarantorOutsideQuebecReview:
       "Garant hors Québec — vérification manuelle recommandée (actions juridiques limitées).",
+    applicationsTitle: "Demandes",
+    applicationsSubtitleAll: "{count} demande{plural} (brouillons exclus)",
+    applicationsSubtitleFiltered: "{count} demande{plural}",
+    applicationsFilterAll: "Toutes (sauf brouillons)",
+    applicationsBuildingAll: "Tous les immeubles",
+    applicationsBuildingLabel: "Immeuble",
+    applicationsEmpty: "Aucune demande pour le moment.",
+    applicationsLoading: "Chargement…",
+    applicationsError: "Erreur",
   },
   en: {
     brand: "Montreal Living",
@@ -169,6 +178,15 @@ export const adminMessages = {
     buildingsPhotoConfirmDelete: "Delete this photo?",
     guarantorOutsideQuebecReview:
       "Guarantor outside Quebec — manual review recommended (limited legal action).",
+    applicationsTitle: "Applications",
+    applicationsSubtitleAll: "{count} application{plural} (drafts hidden)",
+    applicationsSubtitleFiltered: "{count} application{plural}",
+    applicationsFilterAll: "All (non-draft)",
+    applicationsBuildingAll: "All buildings",
+    applicationsBuildingLabel: "Building",
+    applicationsEmpty: "No applications yet.",
+    applicationsLoading: "Loading…",
+    applicationsError: "Error",
   },
 } as const;
 

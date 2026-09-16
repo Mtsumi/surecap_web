@@ -57,7 +57,7 @@ function memberDisplayName(member: ApplicationMember): string {
 }
 
 function MemberCard({ member }: { member: ApplicationMember }) {
-  const { t } = useAdminLocaleContext();
+  const { t, locale } = useAdminLocaleContext();
   const email = member.email || member.invited_email;
   const defaultOpen = member.role === "primary";
 
@@ -66,7 +66,7 @@ function MemberCard({ member }: { member: ApplicationMember }) {
       compact
       defaultOpen={defaultOpen}
       title={memberDisplayName(member)}
-      subtitle={`${memberRoleLabel(member.role)} · ${memberStatusLabel(member.member_status)}`}
+      subtitle={`${memberRoleLabel(member.role)} · ${memberStatusLabel(member.member_status, locale)}`}
       bodyClassName="!pt-0"
     >
       <dl className="grid gap-4 sm:grid-cols-2">
@@ -247,6 +247,7 @@ function MemberCard({ member }: { member: ApplicationMember }) {
 export default function ApplicationDetailPage() {
   const params = useParams();
   const id = Number(params.id);
+  const { locale } = useAdminLocaleContext();
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [jobs, setJobs] = useState<ApplicationJob[]>([]);
   const [reason, setReason] = useState("");
@@ -393,7 +394,7 @@ export default function ApplicationDetailPage() {
               <p className={adminUi.pageSubtitle}>{metaParts.join(" · ")}</p>
             </div>
             <span className={applicationStatusClass(app.status)}>
-              {applicationStatusLabel(app.status)}
+              {applicationStatusLabel(app.status, locale)}
             </span>
           </div>
 
