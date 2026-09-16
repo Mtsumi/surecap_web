@@ -158,10 +158,6 @@ function subsetAlignment(shorter: string[], longer: string[]): boolean {
   return true;
 }
 
-function tokensMatch(left: string, right: string): boolean {
-  return left === right || tokensAreFuzzy(left, right);
-}
-
 /**
  * Form first/last may match an OCR token in any order, but an OCR token that is an
  * exact form middle name must not also satisfy an endpoint via fuzzy overlap
