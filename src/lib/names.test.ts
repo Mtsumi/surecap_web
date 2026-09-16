@@ -10,10 +10,18 @@ describe("nameSimilarity", () => {
     expect(nameSimilarity("Ali Khounch", "Khouinch Ali")).toBe("near");
   });
 
-  it("treats a missing middle name on the ID as a near match", () => {
+  it("treats a missing middle name as near when first and last remain", () => {
     expect(
       nameSimilarity("Mardochee Mulumba Tshibangu", "Mardochee Tshibangu")
     ).toBe("near");
+  });
+
+  it("treats a missing surname as partial, not near", () => {
+    expect(nameSimilarity("John Michael Smith", "John Michael")).toBe("partial");
+  });
+
+  it("treats a single-token document vs two-part form as partial", () => {
+    expect(nameSimilarity("Jane Smith", "Jane")).toBe("partial");
   });
 
   it("treats an extra name on the document as partial", () => {

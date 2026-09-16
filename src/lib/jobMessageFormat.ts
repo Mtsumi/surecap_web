@@ -181,7 +181,7 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
   const fr: Record<string, string> = {
     payslip_not_recognized: "Ne ressemble pas à un talon de paie",
     name_mismatch_payslip_form: "Nom du talon différent du formulaire",
-    name_partial_missing: "Nom du talon incomplet vs formulaire",
+    name_partial_missing: "Nom du talon ne correspond pas pleinement au formulaire",
     employer_mismatch_form: "Employeur du talon ≠ contact RH",
     net_vs_declared_income: "Net du talon différent du revenu déclaré",
     pay_math_inconsistent: "Calcul heures × taux incohérent",
@@ -200,7 +200,7 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
   const en: Record<string, string> = {
     payslip_not_recognized: "Does not look like a pay stub",
     name_mismatch_payslip_form: "Name on the pay stub doesn't match the application",
-    name_partial_missing: "Name on the pay stub is missing part of the form name",
+    name_partial_missing: "Pay stub name doesn't fully match the form name",
     employer_mismatch_form: "Pay stub employer doesn't match the HR contact",
     net_vs_declared_income: "Pay stub net differs from the income on the form",
     pay_math_inconsistent: "Hours × rate math doesn't add up",

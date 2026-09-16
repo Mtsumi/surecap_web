@@ -103,9 +103,9 @@ describe("jobMessageFormat", () => {
       /doesn't match the application/i
     );
     expect(incomeExtractFlagLabel("name_partial_missing", "en")).toBe(
-      "Name on the pay stub is missing part of the form name"
+      "Pay stub name doesn't fully match the form name"
     );
-    expect(incomeExtractFlagLabel("name_partial_missing", "fr")).toMatch(/incomplet/i);
+    expect(incomeExtractFlagLabel("name_partial_missing", "fr")).toMatch(/ne correspond pas pleinement/i);
     expect(incomeExtractFlagLabel("income_doc_partial", "en")).toBe(
       "Fewer than 3 pay stubs uploaded"
     );

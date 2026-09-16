@@ -12,7 +12,7 @@ import {
   isIdExtractInconclusive,
   isIncomeExtractInconclusive,
 } from "./documentExtractReview";
-import { nameSimilarity } from "./names";
+import { nameSimilarity, documentHasExtraName } from "./names";
 
 export type GlanceTone = "ok" | "warn" | "bad" | "pending" | "neutral";
 
@@ -130,14 +130,18 @@ export function idScreeningGlance(
   }
 
   if (similarity === "partial") {
+    const extraOnId = documentHasExtraName(form, name);
     return {
       key: "id",
       tone: "warn",
       checkLabel,
-      summary:
-        locale === "fr"
-          ? `${name} : nom incomplet vs formulaire`
-          : `${name}: name on ID is missing part of the form name`,
+      summary: extraOnId
+        ? locale === "fr"
+          ? `${name} : nom supplémentaire vs formulaire`
+          : `${name}: ID has an extra name vs the form`
+        : locale === "fr"
+          ? `${name} : nom manquant vs formulaire`
+          : `${name}: ID is missing a name from the form`,
       issues: [
         ...issues,
         locale === "fr" ? `Formulaire : ${form}` : `Form: ${form}`,

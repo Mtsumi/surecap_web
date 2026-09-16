@@ -158,6 +158,26 @@ function subsetAlignment(shorter: string[], longer: string[]): boolean {
   return true;
 }
 
+function tokenPresent(needle: string, haystack: string[]): boolean {
+  return haystack.some((token) => token === needle || tokensAreFuzzy(needle, token));
+}
+
+/** Form has ≥3 tokens; document keeps first+last and only drops middle name(s). */
+function isMiddleNameOmission(formTokens: string[], ocrTokens: string[]): boolean {
+  if (formTokens.length < 3 || ocrTokens.length < 2) return false;
+  if (ocrTokens.length >= formTokens.length) return false;
+  if (!subsetAlignment(ocrTokens, formTokens)) return false;
+  return (
+    tokenPresent(formTokens[0], ocrTokens) &&
+    tokenPresent(formTokens[formTokens.length - 1], ocrTokens)
+  );
+}
+
+/** True when the document name has more tokens than the form (extra name on ID/stub). */
+export function documentHasExtraName(formName: string, ocrName: string): boolean {
+  return tokenizeName(ocrName).length > tokenizeName(formName).length;
+}
+
 export function nameSimilarity(formName: string, ocrName: string): NameSimilarity {
   const formTokens = tokenizeName(formName);
   const ocrTokens = tokenizeName(ocrName);
@@ -169,14 +189,11 @@ export function nameSimilarity(formName: string, ocrName: string): NameSimilarit
   }
   const alignment = tokenAlignment(formTokens, ocrTokens);
   if (alignment) return alignment.fuzzy === 0 ? "match" : "near";
-  // ID/payslip shorter than the form (e.g. missing middle name) is a near match.
-  if (
-    ocrTokens.length < formTokens.length &&
-    subsetAlignment(ocrTokens, formTokens)
-  ) {
-    return "near";
+  // Only omit middle name(s): document must still carry form first + last.
+  if (ocrTokens.length < formTokens.length && subsetAlignment(ocrTokens, formTokens)) {
+    return isMiddleNameOmission(formTokens, ocrTokens) ? "near" : "partial";
   }
-  // Document has extra name tokens vs the form — still flag as partial.
+  // Document has extra name tokens vs the form.
   if (
     formTokens.length < ocrTokens.length &&
     subsetAlignment(formTokens, ocrTokens)

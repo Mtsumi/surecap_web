@@ -84,7 +84,7 @@ describe("screeningGlance", () => {
       "Maria Kasanji"
     );
     expect(row.tone).toBe("warn");
-    expect(row.summary).toMatch(/missing part of the form name/i);
+    expect(row.summary).toMatch(/ID has an extra name vs the form/i);
   });
 
   it("marks a mismatched ID name as bad", () => {
@@ -138,7 +138,7 @@ describe("screeningGlance", () => {
     );
     expect(row.summary).toMatch(/2 jobs/);
     expect(row.summary).toMatch(/4437911/);
-    expect(row.issues.some((issue) => /missing part of the form name/i.test(issue))).toBe(
+    expect(row.issues.some((issue) => /doesn't fully match the form name/i.test(issue))).toBe(
       true
     );
   });
