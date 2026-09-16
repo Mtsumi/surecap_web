@@ -51,11 +51,11 @@ describe("screeningGlance", () => {
       "Ali Khounch"
     );
     expect(row.tone).toBe("warn");
-    expect(row.summary).toMatch(/≈ form/);
+    expect(row.summary).toMatch(/close to form name/i);
     expect(row.issues.some((issue) => /Ali Khounch/.test(issue))).toBe(true);
   });
 
-  it("labels a missing middle name as a partial match", () => {
+  it("treats a missing middle name on the ID as close to the form", () => {
     const row = idScreeningGlance(
       {
         screening_context: "canadian",
@@ -68,7 +68,23 @@ describe("screeningGlance", () => {
       "Mardochee Mulumba Tshibangu"
     );
     expect(row.tone).toBe("warn");
-    expect(row.summary).toMatch(/partial match \(missing name\)/i);
+    expect(row.summary).toMatch(/close to form name/i);
+  });
+
+  it("labels an extra name on the ID as incomplete vs the form", () => {
+    const row = idScreeningGlance(
+      {
+        screening_context: "canadian",
+        ocr_name: "Maria Kasanji Extra",
+        name_mismatch: true,
+        flags: [],
+      },
+      "completed",
+      "en",
+      "Maria Kasanji"
+    );
+    expect(row.tone).toBe("warn");
+    expect(row.summary).toMatch(/missing part of the form name/i);
   });
 
   it("marks a mismatched ID name as bad", () => {
@@ -105,7 +121,7 @@ describe("screeningGlance", () => {
     expect(row.summary).toMatch(/Gault/);
     expect(row.summary).toMatch(/1,685\.80|1685\.80/);
     expect(row.issues.some((issue) => /older than 6 months/i.test(issue))).toBe(true);
-    expect(row.issues.some((issue) => /Fewer than 3/i.test(issue))).toBe(true);
+    expect(row.issues.some((issue) => /Fewer than 3 pay stubs uploaded/i.test(issue))).toBe(true);
   });
 
   it("lists concurrent jobs as information, not a mismatch", () => {
@@ -122,7 +138,7 @@ describe("screeningGlance", () => {
     );
     expect(row.summary).toMatch(/2 jobs/);
     expect(row.summary).toMatch(/4437911/);
-    expect(row.issues.some((issue) => /Partial match \(missing name\)/i.test(issue))).toBe(
+    expect(row.issues.some((issue) => /missing part of the form name/i.test(issue))).toBe(
       true
     );
   });
@@ -136,24 +152,26 @@ describe("screeningGlance", () => {
     expect(row.tone).toBe("bad");
   });
 
-  it("shows household OCR vs rent from the shared API snapshot", () => {
+  it("shows income vs rent from the shared API snapshot", () => {
     const row = householdAffordabilityGlance(
       {
         rent: 1500,
         declared_monthly: 4500,
         declared_ratio: 3,
         declared_tone: "ok",
-        declared_label: "3.0× rent ($4,500.00 net / $1,500.00 rent)",
+        declared_label: "3.0x rent ($4,500.00 monthly net / $1,500.00 rent)",
         ocr_monthly: 4500,
         ocr_note: "2 tenants",
         ocr_ratio: 3,
         ocr_tone: "ok",
-        ocr_label: "3.0× rent ($4,500.00 net / $1,500.00 rent)",
+        ocr_label: "3.0x rent ($4,500.00 monthly net / $1,500.00 rent)",
       },
       "en"
     );
     expect(row.tone).toBe("ok");
-    expect(row.summary).toMatch(/3\.0× rent/);
-    expect(row.issues).toContain("2 tenants");
+    expect(row.checkLabel).toBe("Income vs rent");
+    expect(row.summary).toMatch(/From pay stubs: 3\.0x rent/);
+    expect(row.issues).toContain("Pay stub note: 2 tenants");
+    expect(row.issues.some((issue) => /On the form: 3\.0x rent/.test(issue))).toBe(true);
   });
 });

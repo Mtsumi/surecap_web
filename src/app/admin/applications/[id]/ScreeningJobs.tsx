@@ -59,7 +59,7 @@ function copy(locale: Locale) {
       tenantMatches: "Tenant matches",
       landlordMentions: "Landlord mentions",
       otherDossiers: (n: number) =>
-        `${pluralCount(n, "other dossier", "other dossiers")} with no applicant mention`,
+        `${pluralCount(n, "other dossier", "other dossiers")} at this address (not this applicant)`,
       noDossiers: "No dossiers found",
       dossiers: (n: number) => pluralCount(n, "dossier", "dossiers"),
       tenants: (n: number) => pluralCount(n, "tenant", "tenants"),
@@ -68,7 +68,7 @@ function copy(locale: Locale) {
       roleLandlord: "landlord",
       detailSkipped: "Detail page not loaded",
       detailError: "Detail page error",
-      detailTruncated: "Building search truncated — some dossier details were skipped",
+      detailTruncated: "Building search truncated: some dossier details were skipped",
       idCheck: "ID verification",
       idAddressesUsed: "ID addresses used for TAL",
       extractedAddresses: "Extracted addresses",
@@ -77,23 +77,23 @@ function copy(locale: Locale) {
       name: "Name",
       formMismatch: "≠ form",
       formDiffers: "differs from form",
-      incomeTitle: "Payslip check",
-      incomeEmployee: "Employee (slip)",
-      incomeEmployer: "Employer (slip)",
+      incomeTitle: "Pay stub check",
+      incomeEmployee: "Employee (stub)",
+      incomeEmployer: "Employer (stub)",
       incomeNet: "Net pay",
       incomeGross: "Gross",
       incomeRateHours: "Rate / hours",
       incomePeriod: "Pay period",
       incomePayDate: "Pay date",
-      incomeNotPayslip: "Not recognized as a payslip",
+      incomeNotPayslip: "Not recognized as a pay stub",
       soquijOpen: "Open ↗",
       soquijSearchFailed: "Search failed",
       soquijNoDecisions: "No published written decisions found",
-      soquijFound: (n: number) => `${n} published decision(s) found — review recommended`,
+      soquijFound: (n: number) => `${n} published decision(s) found: review recommended`,
       soquijMore: (n: number) => `+${n} more not shown`,
       soquijMock: "Simulation mode",
       soquijQuery: "Query",
-      soquijRelated: "Related — verify in decision (name may be inside text)",
+      soquijRelated: "Related: verify in decision (name may be inside text)",
       soquijSecondary: "Secondary results",
       soquijOther: "Other SOQUIJ results",
       soquijStrong: "High confidence",
@@ -110,7 +110,7 @@ function copy(locale: Locale) {
     tenantMatches: "Correspondances locataire",
     landlordMentions: "Mentions locateur",
     otherDossiers: (n: number) =>
-      `${pluralCount(n, "autre dossier", "autres dossiers")} sans mention du demandeur`,
+      `${pluralCount(n, "autre dossier", "autres dossiers")} à cette adresse (pas ce demandeur)`,
     noDossiers: "Aucun dossier trouvé",
     dossiers: (n: number) => pluralCount(n, "dossier", "dossiers"),
     tenants: (n: number) => pluralCount(n, "locataire", "locataires"),
@@ -120,7 +120,7 @@ function copy(locale: Locale) {
     detailSkipped: "Page détail non chargée",
     detailError: "Erreur page détail",
     detailTruncated:
-      "Recherche immeuble tronquée — certains détails de dossiers ont été omis",
+      "Recherche immeuble tronquée: certains détails de dossiers ont été omis",
     idCheck: "Vérification pièce d'identité",
     idAddressesUsed: "Adresses ID utilisées pour TAL",
     extractedAddresses: "Adresses extraites",
@@ -141,11 +141,11 @@ function copy(locale: Locale) {
     soquijOpen: "Ouvrir ↗",
     soquijSearchFailed: "Échec de la recherche",
     soquijNoDecisions: "Aucune décision écrite publiée trouvée",
-    soquijFound: (n: number) => `${n} décision(s) publiée(s) trouvée(s) — révision recommandée`,
+    soquijFound: (n: number) => `${n} décision(s) publiée(s) trouvée(s): révision recommandée`,
     soquijMore: (n: number) => `+${n} autre(s) non affichée(s)`,
     soquijMock: "Mode simulation",
     soquijQuery: "Recherche",
-    soquijRelated: "Connexe — vérifier dans la décision (nom possiblement dans le texte)",
+    soquijRelated: "Connexe: vérifier dans la décision (nom possiblement dans le texte)",
     soquijSecondary: "Résultats secondaires",
     soquijOther: "Autres résultats SOQUIJ",
       soquijStrong: "Haute confiance",
@@ -647,14 +647,14 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
       {talRespondents.length > 0 ? (
         <p className="font-semibold text-red-700">
           {locale === "fr"
-            ? `⚠ ${talRespondents.length} décision(s) TAL comme défendeur — révision requise`
-            : `⚠ ${talRespondents.length} TAL decision(s) as respondent — review required`}
+            ? `⚠ ${talRespondents.length} décision(s) TAL comme défendeur: révision requise`
+            : `⚠ ${talRespondents.length} TAL decision(s) as respondent: review required`}
         </p>
       ) : otherRespondents.length > 0 ? (
         <p className="font-semibold text-red-700">
           {locale === "fr"
-            ? `⚠ ${otherRespondents.length} décision(s) comme défendeur — révision requise`
-            : `⚠ ${otherRespondents.length} decision(s) as respondent — review required`}
+            ? `⚠ ${otherRespondents.length} décision(s) comme défendeur: révision requise`
+            : `⚠ ${otherRespondents.length} decision(s) as respondent: review required`}
         </p>
       ) : null}
 
@@ -893,13 +893,13 @@ function CorpiqMemberControls({
             </p>
           ) : failed ? (
             <p className={`${adminUi.empty} mt-1`}>
-              {locale === "fr" ? "Échec — relancer pour réessayer" : "Failed — re-run to try again"}
+              {locale === "fr" ? "Échec: relancer pour réessayer" : "Failed: re-run to try again"}
             </p>
           ) : (
             <p className={`${adminUi.empty} mt-1`}>
               {locale === "fr"
-                ? "Mock ou dry-run — aucun paiement de points"
-                : "Mock or dry-run — no points paid"}
+                ? "Mock ou dry-run: aucun paiement de points"
+                : "Mock or dry-run: no points paid"}
             </p>
           )}
         </div>
@@ -1010,7 +1010,7 @@ export default function ScreeningJobs({
                   : locale === "fr"
                     ? "en cours"
                     : "running"}{" "}
-                — {name}
+                - {name}
                 {stage ? ` · ${stage}` : ""}
               </p>
             );

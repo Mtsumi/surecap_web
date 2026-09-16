@@ -169,10 +169,19 @@ export function nameSimilarity(formName: string, ocrName: string): NameSimilarit
   }
   const alignment = tokenAlignment(formTokens, ocrTokens);
   if (alignment) return alignment.fuzzy === 0 ? "match" : "near";
-  const [shorter, longer] =
-    formTokens.length < ocrTokens.length
-      ? [formTokens, ocrTokens]
-      : [ocrTokens, formTokens];
-  if (subsetAlignment(shorter, longer)) return "partial";
+  // ID/payslip shorter than the form (e.g. missing middle name) is a near match.
+  if (
+    ocrTokens.length < formTokens.length &&
+    subsetAlignment(ocrTokens, formTokens)
+  ) {
+    return "near";
+  }
+  // Document has extra name tokens vs the form — still flag as partial.
+  if (
+    formTokens.length < ocrTokens.length &&
+    subsetAlignment(formTokens, ocrTokens)
+  ) {
+    return "partial";
+  }
   return "mismatch";
 }

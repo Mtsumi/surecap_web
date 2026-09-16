@@ -181,40 +181,40 @@ export function incomeExtractFlagLabel(flag: string, locale: Locale = "fr"): str
   const fr: Record<string, string> = {
     payslip_not_recognized: "Ne ressemble pas à un talon de paie",
     name_mismatch_payslip_form: "Nom du talon différent du formulaire",
-    name_partial_missing: "Correspondance partielle (nom manquant)",
+    name_partial_missing: "Nom du talon incomplet vs formulaire",
     employer_mismatch_form: "Employeur du talon ≠ contact RH",
-    net_vs_declared_income: "Net du talon ≠ revenu déclaré",
+    net_vs_declared_income: "Net du talon différent du revenu déclaré",
     pay_math_inconsistent: "Calcul heures × taux incohérent",
     payslip_stale: "Date de paie trop ancienne (plus de 6 mois)",
     payslip_date_in_future: "Date de paie dans le futur",
     payslip_stale_or_future: "Date de paie trop ancienne ou dans le futur",
     income_doc_missing: "Talon de paie manquant",
-    income_doc_unreadable: "Talon illisible",
-    income_doc_partial: "Moins de 3 talons",
-    payslip_net_inconsistent_across_slips: "Nets incohérents entre talons",
-    employer_mismatch_across_slips: "Employeurs différents entre talons",
-    payslip_partial_not_recognized: "Au moins un talon non reconnu",
-    pay_period_assumed_weekly: "Période absente — mensuel estimé en hebdomadaire",
-    pay_period_assumed_biweekly: "Période absente — mensuel estimé en bihebdomadaire",
+    income_doc_unreadable: "Talon de paie illisible",
+    income_doc_partial: "Moins de 3 talons de paie téléversés",
+    payslip_net_inconsistent_across_slips: "Nets différents entre talons de paie",
+    employer_mismatch_across_slips: "Employeurs différents entre talons de paie",
+    payslip_partial_not_recognized: "Au moins un talon de paie non reconnu",
+    pay_period_assumed_weekly: "Période absente - mensuel estimé en hebdomadaire",
+    pay_period_assumed_biweekly: "Période absente - mensuel estimé en bihebdomadaire",
   };
   const en: Record<string, string> = {
-    payslip_not_recognized: "Does not look like a payslip",
-    name_mismatch_payslip_form: "Name on the payslip doesn't match the application",
-    name_partial_missing: "Partial match (missing name)",
-    employer_mismatch_form: "Payslip employer ≠ HR contact",
-    net_vs_declared_income: "Payslip net ≠ declared income",
-    pay_math_inconsistent: "Hours × rate math inconsistent",
+    payslip_not_recognized: "Does not look like a pay stub",
+    name_mismatch_payslip_form: "Name on the pay stub doesn't match the application",
+    name_partial_missing: "Name on the pay stub is missing part of the form name",
+    employer_mismatch_form: "Pay stub employer doesn't match the HR contact",
+    net_vs_declared_income: "Pay stub net differs from the income on the form",
+    pay_math_inconsistent: "Hours × rate math doesn't add up",
     payslip_stale: "Pay date is older than 6 months",
     payslip_date_in_future: "Pay date is in the future",
     payslip_stale_or_future: "Pay date is older than 6 months or in the future",
-    income_doc_missing: "Payslip missing",
-    income_doc_unreadable: "Payslip unreadable",
-    income_doc_partial: "Fewer than 3 payslips",
-    payslip_net_inconsistent_across_slips: "Nets inconsistent across slips",
-    employer_mismatch_across_slips: "Employers differ across slips",
-    payslip_partial_not_recognized: "At least one slip not recognized",
-    pay_period_assumed_weekly: "Pay period missing — monthly estimated as weekly",
-    pay_period_assumed_biweekly: "Pay period missing — monthly estimated as biweekly",
+    income_doc_missing: "Pay stub missing",
+    income_doc_unreadable: "Pay stub unreadable",
+    income_doc_partial: "Fewer than 3 pay stubs uploaded",
+    payslip_net_inconsistent_across_slips: "Net pay differs between pay stubs",
+    employer_mismatch_across_slips: "Different employers on the pay stubs",
+    payslip_partial_not_recognized: "At least one pay stub not recognized",
+    pay_period_assumed_weekly: "Pay period missing - monthly estimated as weekly",
+    pay_period_assumed_biweekly: "Pay period missing - monthly estimated as biweekly",
   };
   const map = locale === "en" ? en : fr;
   return map[flag] || flag.replaceAll("_", " ");
@@ -238,7 +238,7 @@ export function uniqueIncomeFlags(payload: IncomeDocumentExtractPayload): string
 function photoQualityWord(quality: string | undefined, locale: Locale): string | null {
   if (quality === "sharp") return locale === "fr" ? "nette" : "clear";
   if (quality === "soft") return locale === "fr" ? "un peu floue" : "a bit soft";
-  if (quality === "blurry") return locale === "fr" ? "floue — à revérifier" : "blurry — check the photo";
+  if (quality === "blurry") return locale === "fr" ? "floue - à revérifier" : "blurry - check the photo";
   return null;
 }
 
@@ -270,27 +270,29 @@ export function formatIncomeExtractPreview(
     ? ` · ${payload.flags.length} ${locale === "fr" ? "signal(s)" : "flag(s)"}`
     : "";
   if (payload.flags?.includes("income_doc_missing")) {
-    return locale === "fr" ? `Talon manquant${flags}` : `Payslip missing${flags}`;
+    return locale === "fr" ? `Talon de paie manquant${flags}` : `Pay stub missing${flags}`;
   }
   if (payload.flags?.includes("income_doc_unreadable")) {
     return locale === "fr"
-      ? `Talon illisible — vérification manuelle${flags}`
-      : `Payslip unreadable — manual review${flags}`;
+      ? `Talon de paie illisible - vérification manuelle${flags}`
+      : `Pay stub unreadable - manual review${flags}`;
   }
   if (payload.flags?.includes("payslip_not_recognized")) {
     return locale === "fr"
-      ? `Document non reconnu comme talon — vérification manuelle${flags}`
-      : `Not recognized as payslip — manual review${flags}`;
+      ? `Document non reconnu comme talon de paie - vérification manuelle${flags}`
+      : `Not recognized as a pay stub - manual review${flags}`;
   }
   if (payload.flags?.includes("payslip_partial_not_recognized")) {
     return locale === "fr"
-      ? `Au moins un talon non reconnu — vérification manuelle${flags}`
-      : `At least one slip not recognized — manual review${flags}`;
+      ? `Au moins un talon de paie non reconnu - vérification manuelle${flags}`
+      : `At least one pay stub not recognized - manual review${flags}`;
   }
   const bits: string[] = [];
   if (payload.slip_count && payload.slip_count > 1) {
     bits.push(
-      locale === "fr" ? `${payload.slip_count} talons` : `${payload.slip_count} slips`
+      locale === "fr"
+        ? `${payload.slip_count} talons de paie`
+        : `${payload.slip_count} pay stubs`
     );
   }
   const employers = Array.isArray(payload.employers)
@@ -406,8 +408,8 @@ export function formatJobMessagePreview(
         idExtract.flags?.includes("blur_back")
       ) {
         return locale === "fr"
-          ? `Pièce peu lisible — vérification manuelle${flags}`
-          : `ID poorly readable — manual review${flags}`;
+          ? `Pièce peu lisible - vérification manuelle${flags}`
+          : `ID poorly readable - manual review${flags}`;
       }
       if (idExtract.pdf417_ok) {
         return `PDF417 (${idExtract.pdf417_variant || "ok"})${flags}`;
@@ -473,9 +475,9 @@ export function sourceLabel(source: string | undefined, locale: Locale = "fr"): 
   if (locale === "en") {
     switch (source) {
       case "current_address":
-        return "Form — current address";
+        return "Form: current address";
       case "previous_address":
-        return "Form — previous address";
+        return "Form: previous address";
       case "id_pdf417_address":
         return "ID (barcode)";
       case "id_front_ocr_address":
@@ -492,9 +494,9 @@ export function sourceLabel(source: string | undefined, locale: Locale = "fr"): 
   }
   switch (source) {
     case "current_address":
-      return "Formulaire — adresse actuelle";
+      return "Formulaire: adresse actuelle";
     case "previous_address":
-      return "Formulaire — adresse précédente";
+      return "Formulaire: adresse précédente";
     case "id_pdf417_address":
       return "Pièce d'identité (code-barres)";
     case "id_front_ocr_address":
@@ -526,31 +528,31 @@ export function talReasonLabel(
   if (isPayslipAddressIssue) {
     return locale === "fr"
       ? "Aucune adresse utilisable trouvée sur le talon de paie"
-      : "No usable address found on the payslip";
+      : "No usable address found on the pay stub";
   }
   if (locale === "en") {
     switch (reason) {
       case "missing_postal_code":
-        return "Incomplete address — no postal code";
+        return "Incomplete address: no postal code";
       case "missing_civic_number":
-        return "Incomplete address — no street number";
+        return "Incomplete address: no street number";
       case "empty_address":
         return "No address provided";
       case "not_quebec":
-        return "Outside Quebec — not searched";
+        return "Outside Quebec: not searched";
       default:
         return reason;
     }
   }
   switch (reason) {
     case "missing_postal_code":
-      return "Adresse incomplète — code postal manquant";
+      return "Adresse incomplète: code postal manquant";
     case "missing_civic_number":
-      return "Adresse incomplète — numéro civique manquant";
+      return "Adresse incomplète: numéro civique manquant";
     case "empty_address":
       return "Aucune adresse fournie";
     case "not_quebec":
-      return "Hors Québec — non recherchée";
+      return "Hors Québec: non recherchée";
     default:
       return reason;
   }
@@ -571,7 +573,7 @@ export function jobTypeLabel(jobType: string, locale: Locale = "fr"): string {
     case "id_document_extract":
       return locale === "fr" ? "Pièce d'identité" : "ID document";
     case "income_document_extract":
-      return locale === "fr" ? "Talon de paie" : "Payslip";
+      return locale === "fr" ? "Talon de paie" : "Pay stub";
     case "soquij_screening":
       return "SOQUIJ";
     case "corpiq_screening":
@@ -589,18 +591,18 @@ export function precisionLabel(precision: string | undefined, locale: Locale = "
   if (locale === "en") {
     switch (precision) {
       case "unit":
-        return "unit";
+        return "unit only";
       case "building":
-        return "building";
+        return "whole building";
       default:
         return precision || "—";
     }
   }
   switch (precision) {
     case "unit":
-      return "unité";
+      return "unité seulement";
     case "building":
-      return "immeuble";
+      return "tout l'immeuble";
     default:
       return precision || "—";
   }

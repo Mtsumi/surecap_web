@@ -10,10 +10,14 @@ describe("nameSimilarity", () => {
     expect(nameSimilarity("Ali Khounch", "Khouinch Ali")).toBe("near");
   });
 
-  it("labels a missing middle name as partial", () => {
+  it("treats a missing middle name on the ID as a near match", () => {
     expect(
       nameSimilarity("Mardochee Mulumba Tshibangu", "Mardochee Tshibangu")
-    ).toBe("partial");
+    ).toBe("near");
+  });
+
+  it("treats an extra name on the document as partial", () => {
+    expect(nameSimilarity("Maria Kasanji", "Maria Kasanji Extra")).toBe("partial");
   });
 
   it("treats two extra OCR letters as near", () => {

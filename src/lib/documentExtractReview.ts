@@ -87,12 +87,12 @@ export function inconclusiveReviewBody(
 ): string {
   if (locale === "fr") {
     if (kind === "income") {
-      return "Le système n'a pas pu tout lire automatiquement. Ouvrez l'aperçu du talon (ou des talons) avant de conclure sur le revenu.";
+      return "Le système n'a pas pu tout lire automatiquement. Ouvrez l'aperçu du talon de paie (ou des talons) avant de conclure sur le revenu.";
     }
     return "Le nom n'a pas pu être lu automatiquement sur cette pièce. Ouvrez l'aperçu pour confirmer qu'elle correspond à la demande.";
   }
   if (kind === "income") {
-    return "The system could not read everything automatically. Open the payslip preview(s) before drawing income conclusions.";
+    return "The system could not read everything automatically. Open the pay stub preview(s) before drawing income conclusions.";
   }
   return "The name could not be read automatically from this ID. Open the preview to confirm it matches the application.";
 }
@@ -103,11 +103,11 @@ export function incomeSlipSlotLabel(
 ): string {
   switch (documentType) {
     case "pay_slip_1":
-      return locale === "fr" ? "Talon 1 (plus récent)" : "Slip 1 (most recent)";
+      return locale === "fr" ? "Talon de paie 1 (plus récent)" : "Pay stub 1 (most recent)";
     case "pay_slip_2":
-      return locale === "fr" ? "Talon 2" : "Slip 2";
+      return locale === "fr" ? "Talon de paie 2" : "Pay stub 2";
     case "pay_slip_3":
-      return locale === "fr" ? "Talon 3" : "Slip 3";
+      return locale === "fr" ? "Talon de paie 3" : "Pay stub 3";
     default:
       return documentType || (locale === "fr" ? "Document" : "Document");
   }
@@ -119,10 +119,10 @@ export function slipRecognizedLabel(
   hasExtractedFields = false
 ): string {
   if (payslipLike) {
-    return locale === "fr" ? "Reconnu comme talon" : "Recognized as payslip";
+    return locale === "fr" ? "Reconnu comme talon de paie" : "Recognized as a pay stub";
   }
   if (hasExtractedFields) {
     return locale === "fr" ? "Lu en partie" : "Partially read";
   }
-  return locale === "fr" ? "Non reconnu comme talon" : "Not recognized as payslip";
+  return locale === "fr" ? "Non reconnu comme talon de paie" : "Not recognized as a pay stub";
 }

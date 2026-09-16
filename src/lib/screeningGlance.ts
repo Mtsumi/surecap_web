@@ -119,7 +119,9 @@ export function idScreeningGlance(
       tone: "warn",
       checkLabel,
       summary:
-        locale === "fr" ? `${name} ≈ formulaire` : `${name} ≈ form`,
+        locale === "fr"
+          ? `${name} proche du formulaire`
+          : `${name} close to form name`,
       issues: [
         ...issues,
         locale === "fr" ? `Formulaire : ${form}` : `Form: ${form}`,
@@ -134,8 +136,8 @@ export function idScreeningGlance(
       checkLabel,
       summary:
         locale === "fr"
-          ? `${name} — correspondance partielle (nom manquant)`
-          : `${name} — partial match (missing name)`,
+          ? `${name} : nom incomplet vs formulaire`
+          : `${name}: name on ID is missing part of the form name`,
       issues: [
         ...issues,
         locale === "fr" ? `Formulaire : ${form}` : `Form: ${form}`,
@@ -174,7 +176,7 @@ export function incomeScreeningGlance(
   status: string,
   locale: Locale
 ): ScreeningGlanceRow {
-  const checkLabel = locale === "fr" ? "Talon de paie" : "Payslip";
+  const checkLabel = locale === "fr" ? "Talon de paie" : "Pay stub";
   const fromJob = jobTone(status);
   if (fromJob === "pending") {
     return { key: "income", tone: "pending", checkLabel, summary: status, issues: [] };
@@ -230,7 +232,9 @@ export function incomeScreeningGlance(
   }
   if (payload.slip_count && payload.slip_count > 1) {
     facts.push(
-      locale === "fr" ? `${payload.slip_count} talons` : `${payload.slip_count} slips`
+      locale === "fr"
+        ? `${payload.slip_count} talons de paie`
+        : `${payload.slip_count} pay stubs`
     );
   }
 
@@ -283,34 +287,48 @@ export function householdAffordabilityGlance(
   snapshot: HouseholdAffordability,
   locale: Locale
 ): ScreeningGlanceRow {
-  const checkLabel = locale === "fr" ? "Ménage vs loyer" : "Household vs rent";
+  const checkLabel = locale === "fr" ? "Revenu vs loyer" : "Income vs rent";
   const issues: string[] = [];
   if (snapshot.ocr_monthly != null) {
-    if (snapshot.ocr_note) issues.push(snapshot.ocr_note);
+    if (snapshot.ocr_note) {
+      issues.push(
+        locale === "fr"
+          ? `Note OCR : ${snapshot.ocr_note}`
+          : `Pay stub note: ${snapshot.ocr_note}`
+      );
+    }
     if (snapshot.declared_label && snapshot.declared_label !== "—") {
       issues.push(
         locale === "fr"
-          ? `Déclaré : ${snapshot.declared_label}`
-          : `Declared: ${snapshot.declared_label}`
+          ? `Sur le formulaire : ${snapshot.declared_label}`
+          : `On the form: ${snapshot.declared_label}`
       );
     }
     return {
       key: "household",
       tone: asGlanceTone(snapshot.ocr_tone),
       checkLabel,
-      summary: snapshot.ocr_label,
+      summary:
+        locale === "fr"
+          ? `Selon les talons de paie : ${snapshot.ocr_label}`
+          : `From pay stubs: ${snapshot.ocr_label}`,
       issues,
     };
   }
   if (snapshot.declared_monthly != null) {
     issues.push(
-      locale === "fr" ? "Talons : pas encore de total OCR" : "Payslip OCR: no household total yet"
+      locale === "fr"
+        ? "Talons de paie : total mensuel pas encore lu"
+        : "Pay stubs: no readable monthly total yet"
     );
     return {
       key: "household",
       tone: asGlanceTone(snapshot.declared_tone),
       checkLabel,
-      summary: snapshot.declared_label,
+      summary:
+        locale === "fr"
+          ? `Sur le formulaire : ${snapshot.declared_label}`
+          : `On the form: ${snapshot.declared_label}`,
       issues,
     };
   }

@@ -103,9 +103,12 @@ describe("jobMessageFormat", () => {
       /doesn't match the application/i
     );
     expect(incomeExtractFlagLabel("name_partial_missing", "en")).toBe(
-      "Partial match (missing name)"
+      "Name on the pay stub is missing part of the form name"
     );
-    expect(incomeExtractFlagLabel("name_partial_missing", "fr")).toMatch(/partielle/i);
+    expect(incomeExtractFlagLabel("name_partial_missing", "fr")).toMatch(/incomplet/i);
+    expect(incomeExtractFlagLabel("income_doc_partial", "en")).toBe(
+      "Fewer than 3 pay stubs uploaded"
+    );
     expect(incomeExtractFlagLabel("payslip_stale", "fr")).toContain("6 mois");
     expect(incomeExtractFlagLabel("payslip_stale_or_future", "en")).toMatch(/future/i);
     expect(incomeExtractFlagLabel("payslip_stale_or_future", "fr")).toMatch(/futur/i);
@@ -125,7 +128,7 @@ describe("jobMessageFormat", () => {
     expect(formatJobMessagePreview("income_document_extract", message, "fr")).toContain(
       "Etalex"
     );
-    expect(incomeExtractFlagLabel("payslip_not_recognized", "en")).toContain("payslip");
+    expect(incomeExtractFlagLabel("payslip_not_recognized", "en")).toContain("pay stub");
   });
 
   it("lists both employers on a two-job income preview", () => {
@@ -144,7 +147,7 @@ describe("jobMessageFormat", () => {
   });
 
   it("labels address sources in French and English", () => {
-    expect(sourceLabel("current_address", "fr")).toBe("Formulaire — adresse actuelle");
+    expect(sourceLabel("current_address", "fr")).toBe("Formulaire: adresse actuelle");
     expect(sourceLabel("id_pdf417_address", "fr")).toBe("Pièce d'identité (code-barres)");
     expect(sourceLabel("id_sticker_address", "en")).toBe("ID (sticker)");
     expect(sourceLabel("income_doc_address", "en")).toBe("Proof of income");
@@ -153,13 +156,13 @@ describe("jobMessageFormat", () => {
 
   it("labels payslip TAL unusable-address reason", () => {
     expect(talReasonLabel("missing_postal_code", "income_doc_address", "en")).toBe(
-      "No usable address found on the payslip"
+      "No usable address found on the pay stub"
     );
     expect(talReasonLabel("payslip_address_unusable", "income_doc_address", "fr")).toBe(
       "Aucune adresse utilisable trouvée sur le talon de paie"
     );
     expect(talReasonLabel("not_quebec", "income_doc_address", "en")).toBe(
-      "Outside Quebec — not searched"
+      "Outside Quebec: not searched"
     );
   });
 

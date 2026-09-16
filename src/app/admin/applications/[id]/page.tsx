@@ -306,7 +306,7 @@ export default function ApplicationDetailPage() {
   const jobMemberLabel = (memberId: number) => {
     const member = members.find((m) => m.id === memberId);
     if (!member) return `Membre #${memberId}`;
-    return `${memberRoleLabel(member.role)} — ${memberDisplayName(member)}`;
+    return `${memberRoleLabel(member.role)} - ${memberDisplayName(member)}`;
   };
 
   const onAccept = async () => {
@@ -389,7 +389,7 @@ export default function ApplicationDetailPage() {
             <div className="min-w-0">
               <h1 className={adminUi.pageTitle}>
                 Demande #{app.id}
-                {primaryName ? ` — ${primaryName}` : ""}
+                {primaryName ? ` - ${primaryName}` : ""}
               </h1>
               <p className={adminUi.pageSubtitle}>{metaParts.join(" · ")}</p>
             </div>
