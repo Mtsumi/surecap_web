@@ -16,6 +16,10 @@ describe("nameSimilarity", () => {
     ).toBe("near");
   });
 
+  it("treats a reordered ID that omits only a middle name as near", () => {
+    expect(nameSimilarity("Ali Middle Khounch", "Khounch Ali")).toBe("near");
+  });
+
   it("treats a missing surname as partial, not near", () => {
     expect(nameSimilarity("John Michael Smith", "John Michael")).toBe("partial");
   });

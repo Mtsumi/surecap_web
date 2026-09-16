@@ -162,21 +162,31 @@ function tokensMatch(left: string, right: string): boolean {
   return left === right || tokensAreFuzzy(left, right);
 }
 
+function matchingIndices(needle: string, haystack: string[]): number[] {
+  const indices: number[] = [];
+  haystack.forEach((token, index) => {
+    if (tokensMatch(needle, token)) indices.push(index);
+  });
+  return indices;
+}
+
 /**
- * Form has ≥3 tokens; document keeps first+last (in order) and only drops middle name(s).
- * Endpoints must be distinct OCR tokens — no single token satisfying both first and last
- * via fuzzy overlap (e.g. Paul ≈ Paulette).
+ * Form has ≥3 tokens; document keeps first+last (any order) and only drops middle name(s).
+ * Endpoints must bind to distinct OCR tokens so one fuzzy hit (e.g. Paul ≈ Paulette)
+ * cannot satisfy both first and last.
  */
 function isMiddleNameOmission(formTokens: string[], ocrTokens: string[]): boolean {
   if (formTokens.length < 3 || ocrTokens.length < 2) return false;
   if (ocrTokens.length >= formTokens.length) return false;
   if (!subsetAlignment(ocrTokens, formTokens)) return false;
-  const formFirst = formTokens[0];
-  const formLast = formTokens[formTokens.length - 1];
-  const ocrFirst = ocrTokens[0];
-  const ocrLast = ocrTokens[ocrTokens.length - 1];
-  // Positional endpoints on distinct indices (length ≥ 2 guarantees 0 ≠ last).
-  return tokensMatch(formFirst, ocrFirst) && tokensMatch(formLast, ocrLast);
+  const firstHits = matchingIndices(formTokens[0], ocrTokens);
+  const lastHits = matchingIndices(formTokens[formTokens.length - 1], ocrTokens);
+  for (const firstIndex of firstHits) {
+    for (const lastIndex of lastHits) {
+      if (firstIndex !== lastIndex) return true;
+    }
+  }
+  return false;
 }
 
 /** True when the document name has more tokens than the form (extra name on ID/stub). */
