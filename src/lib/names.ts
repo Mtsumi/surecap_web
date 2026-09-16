@@ -162,10 +162,29 @@ function tokensMatch(left: string, right: string): boolean {
   return left === right || tokensAreFuzzy(left, right);
 }
 
-function matchingIndices(needle: string, haystack: string[]): number[] {
+/**
+ * Form first/last may match an OCR token in any order, but an OCR token that is an
+ * exact form middle name must not also satisfy an endpoint via fuzzy overlap
+ * (e.g. Jonathan must not stand in for John).
+ */
+function endpointMatchAllowed(
+  formEndpoint: string,
+  ocrToken: string,
+  formMiddle: Set<string>
+): boolean {
+  if (formEndpoint === ocrToken) return true;
+  if (formMiddle.has(ocrToken)) return false;
+  return tokensAreFuzzy(formEndpoint, ocrToken);
+}
+
+function matchingEndpointIndices(
+  formEndpoint: string,
+  ocrTokens: string[],
+  formMiddle: Set<string>
+): number[] {
   const indices: number[] = [];
-  haystack.forEach((token, index) => {
-    if (tokensMatch(needle, token)) indices.push(index);
+  ocrTokens.forEach((token, index) => {
+    if (endpointMatchAllowed(formEndpoint, token, formMiddle)) indices.push(index);
   });
   return indices;
 }
@@ -179,8 +198,13 @@ function isMiddleNameOmission(formTokens: string[], ocrTokens: string[]): boolea
   if (formTokens.length < 3 || ocrTokens.length < 2) return false;
   if (ocrTokens.length >= formTokens.length) return false;
   if (!subsetAlignment(ocrTokens, formTokens)) return false;
-  const firstHits = matchingIndices(formTokens[0], ocrTokens);
-  const lastHits = matchingIndices(formTokens[formTokens.length - 1], ocrTokens);
+  const formMiddle = new Set(formTokens.slice(1, -1));
+  const firstHits = matchingEndpointIndices(formTokens[0], ocrTokens, formMiddle);
+  const lastHits = matchingEndpointIndices(
+    formTokens[formTokens.length - 1],
+    ocrTokens,
+    formMiddle
+  );
   for (const firstIndex of firstHits) {
     for (const lastIndex of lastHits) {
       if (firstIndex !== lastIndex) return true;

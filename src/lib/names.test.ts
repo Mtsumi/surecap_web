@@ -20,6 +20,10 @@ describe("nameSimilarity", () => {
     expect(nameSimilarity("Ali Middle Khounch", "Khounch Ali")).toBe("near");
   });
 
+  it("does not let a retained middle name fuzzily stand in for a missing first name", () => {
+    expect(nameSimilarity("John Jonathan Smith", "Smyth Jonathan")).toBe("partial");
+  });
+
   it("treats a missing surname as partial, not near", () => {
     expect(nameSimilarity("John Michael Smith", "John Michael")).toBe("partial");
   });
