@@ -20,6 +20,11 @@ describe("nameSimilarity", () => {
     expect(nameSimilarity("John Michael Smith", "John Michael")).toBe("partial");
   });
 
+  it("treats a missing first name as partial even when the surname fuzzily overlaps", () => {
+    // "Paulette" must not also satisfy "Paul" — that hid a first-name omission as near.
+    expect(nameSimilarity("Paul Luca Paulette", "Luca Paulette")).toBe("partial");
+  });
+
   it("treats a single-token document vs two-part form as partial", () => {
     expect(nameSimilarity("Jane Smith", "Jane")).toBe("partial");
   });
