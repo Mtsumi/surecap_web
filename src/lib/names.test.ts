@@ -10,10 +10,35 @@ describe("nameSimilarity", () => {
     expect(nameSimilarity("Ali Khounch", "Khouinch Ali")).toBe("near");
   });
 
-  it("labels a missing middle name as partial", () => {
+  it("treats a missing middle name as near when first and last remain", () => {
     expect(
       nameSimilarity("Mardochee Mulumba Tshibangu", "Mardochee Tshibangu")
-    ).toBe("partial");
+    ).toBe("near");
+  });
+
+  it("treats a reordered ID that omits only a middle name as near", () => {
+    expect(nameSimilarity("Ali Middle Khounch", "Khounch Ali")).toBe("near");
+  });
+
+  it("does not let a retained middle name fuzzily stand in for a missing first name", () => {
+    expect(nameSimilarity("John Jonathan Smith", "Smyth Jonathan")).toBe("partial");
+  });
+
+  it("treats a missing surname as partial, not near", () => {
+    expect(nameSimilarity("John Michael Smith", "John Michael")).toBe("partial");
+  });
+
+  it("treats a missing first name as partial even when the surname fuzzily overlaps", () => {
+    // "Paulette" must not also satisfy "Paul" — that hid a first-name omission as near.
+    expect(nameSimilarity("Paul Luca Paulette", "Luca Paulette")).toBe("partial");
+  });
+
+  it("treats a single-token document vs two-part form as partial", () => {
+    expect(nameSimilarity("Jane Smith", "Jane")).toBe("partial");
+  });
+
+  it("treats an extra name on the document as partial", () => {
+    expect(nameSimilarity("Maria Kasanji", "Maria Kasanji Extra")).toBe("partial");
   });
 
   it("treats two extra OCR letters as near", () => {

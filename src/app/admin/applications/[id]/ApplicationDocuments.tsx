@@ -392,7 +392,7 @@ export default function ApplicationDocuments({
             ) : null}
 
             {membersWithDocs.map((member) => {
-              const memberLabel = `${memberRoleLabel(member.role)} — ${memberDisplayName(member)}`;
+              const memberLabel = `${memberRoleLabel(member.role)} - ${memberDisplayName(member)}`;
               return (member.documents ?? []).map((document) => {
                 const label = documentTypeLabel(document.document_type);
                 const key = `doc-${document.id}`;
