@@ -30,6 +30,11 @@ import {
 } from "@/lib/screeningGlance";
 import type { ApplicationJob, ApplicationMember } from "@/lib/adminApi";
 import { startCorpiqScreening } from "@/lib/adminApi";
+import {
+  fetchMemberDocumentBlob,
+  triggerBlobDownload,
+} from "@/lib/adminDocuments";
+import { parseCorpiqReportDocumentId } from "@/lib/corpiqAdmin";
 import { adminUi } from "@/lib/adminUi";
 import type { Locale } from "@/lib/i18n";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
@@ -857,6 +862,7 @@ function CorpiqMemberControls({
   const failed = job?.status === "failed";
   const needsForce = completed || failed;
   const stage = parseCorpiqStage(job?.message ?? null);
+  const reportDocumentId = parseCorpiqReportDocumentId(job?.message ?? null);
 
   const run = async (force: boolean) => {
     if (force && !window.confirm(
@@ -872,6 +878,37 @@ function CorpiqMemberControls({
       await startCorpiqScreening(applicationId, memberId, { force });
       onStarted?.();
     } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openReport = async () => {
+    if (reportDocumentId == null) return;
+    // Open synchronously so the click gesture is not lost during fetch.
+    // Do not pass "noopener" — window.open then returns null in Chromium/Firefox.
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
+    setBusy(true);
+    setError(null);
+    try {
+      const blob = await fetchMemberDocumentBlob(
+        applicationId,
+        reportDocumentId,
+        "attachment",
+        "text/html"
+      );
+      // blob: URLs are an opaque origin — safer than inline HTML on the API host.
+      const url = URL.createObjectURL(blob);
+      if (tab && !tab.closed) {
+        tab.location.href = url;
+      } else {
+        triggerBlobDownload(blob, `corpiq_report_${reportDocumentId}.html`);
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    } catch (e) {
+      tab?.close();
       setError(e instanceof Error ? e.message : "Error");
     } finally {
       setBusy(false);
@@ -924,6 +961,16 @@ function CorpiqMemberControls({
                   ? "En cours…"
                   : "Running…"}
             </span>
+          ) : null}
+          {reportDocumentId != null ? (
+            <button
+              type="button"
+              disabled={busy}
+              className={`${adminUi.btnSecondary} disabled:opacity-50`}
+              onClick={() => void openReport()}
+            >
+              {locale === "fr" ? "Voir le rapport" : "View report"}
+            </button>
           ) : null}
           {needsForce ? (
             <button
