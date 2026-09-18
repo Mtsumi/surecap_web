@@ -125,10 +125,23 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   const passwordChangeRequired = user?.must_change_password ?? false;
 
-  const fullNav = [
+  const fullNav: {
+    href: string;
+    label: string;
+    external?: boolean;
+  }[] = [
     { href: "/admin/applications", label: t("navApplications") },
     { href: "/admin/buildings", label: t("navBuildings") },
-    ...(user?.is_super_admin ? [{ href: "/admin/team", label: t("navTeam") }] : []),
+    ...(user?.is_super_admin
+      ? [
+          { href: "/admin/team", label: t("navTeam") },
+          {
+            href: "https://scraper.montrealliving.info/scraper-form/",
+            label: t("navRentalInsights"),
+            external: true,
+          },
+        ]
+      : []),
     { href: "/admin/account", label: t("navAccount") },
   ];
 
@@ -138,8 +151,8 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   const showCollapsed = sidebarCollapsed && !mobileOpen;
 
-  const navLinkClass = (href: string) => {
-    const active = pathname.startsWith(href);
+  const navLinkClass = (href: string, external?: boolean) => {
+    const active = !external && pathname.startsWith(href);
     return [
       "rounded-lg text-sm transition-colors",
       showCollapsed ? "flex h-10 w-10 items-center justify-center" : "px-3 py-2.5",
@@ -180,16 +193,29 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       ) : null}
 
       <nav className={`mt-6 flex flex-1 flex-col gap-1 ${showCollapsed ? "items-center" : ""}`}>
-        {nav.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            title={showCollapsed ? item.label : undefined}
-            className={navLinkClass(item.href)}
-          >
-            {showCollapsed ? navShortLabel(item.label) : item.label}
-          </Link>
-        ))}
+        {nav.map((item) =>
+          item.external ? (
+            <a
+              key={item.href}
+              href={item.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={showCollapsed ? item.label : undefined}
+              className={navLinkClass(item.href, true)}
+            >
+              {showCollapsed ? navShortLabel(item.label) : item.label}
+            </a>
+          ) : (
+            <Link
+              key={item.href}
+              href={item.href}
+              title={showCollapsed ? item.label : undefined}
+              className={navLinkClass(item.href)}
+            >
+              {showCollapsed ? navShortLabel(item.label) : item.label}
+            </Link>
+          )
+        )}
       </nav>
 
       {!mobileOpen ? (
