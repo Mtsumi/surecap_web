@@ -135,11 +135,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     ...(user?.is_super_admin
       ? [
           { href: "/admin/team", label: t("navTeam") },
-          {
-            href: "https://scraper.montrealliving.info/scraper-form/",
-            label: t("navRentalInsights"),
-            external: true,
-          },
+          { href: "/admin/insights", label: t("navRentalInsights") },
         ]
       : []),
     { href: "/admin/account", label: t("navAccount") },
