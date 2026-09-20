@@ -49,21 +49,29 @@ const SCRAPER_FORM_URL =
     ? `${process.env.NEXT_PUBLIC_SCRAPER_URL}/scraper-form/`
     : "https://scraper.montrealliving.info/scraper-form/";
 
-/** Returns {h, m} until next 6 AM Montreal time, DST-aware. */
+/** Returns {h, m} until next 6 AM Montreal time, DST-aware and browser-timezone-agnostic. */
 function nextSixAmMontreal(): { h: number; m: number } {
   const now = new Date();
-  // Use Intl to get the true Montreal wall-clock time (handles EST/EDT automatically)
-  const montrealTime = new Date(
-    now.toLocaleString("en-US", { timeZone: "America/Montreal" })
-  );
-  const next = new Date(montrealTime);
-  next.setHours(6, 0, 0, 0);
-  if (montrealTime >= next) next.setDate(next.getDate() + 1);
-  const diff = next.getTime() - montrealTime.getTime();
-  return {
-    h: Math.floor(diff / 3600000),
-    m: Math.floor((diff % 3600000) / 60000),
-  };
+
+  // Use formatToParts to read Montreal's current hour/minute directly.
+  // Avoids new Date(toLocaleString(...)) which parses in the browser's local timezone.
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Montreal",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(now);
+
+  const currentH = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const currentM = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+
+  // Minutes from Montreal-midnight to the next 6:00 AM
+  const elapsedMin = currentH * 60 + currentM;
+  const target6amMin = 6 * 60;
+  let diffMin = target6amMin - elapsedMin;
+  if (diffMin <= 0) diffMin += 24 * 60; // already past 6 AM — aim for tomorrow
+
+  return { h: Math.floor(diffMin / 60), m: diffMin % 60 };
 }
 
 /** True if last_scraped is more than 26 hours ago (buffer over 24h beat). */
