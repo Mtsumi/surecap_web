@@ -30,12 +30,14 @@ export async function POST(request: NextRequest) {
 
   // Forward to scraper
   const scraperUrl = process.env.SCRAPER_URL;
+  const scraperApiKey = process.env.SCRAPER_API_KEY;
   if (!scraperUrl) {
     return NextResponse.json({ error: "SCRAPER_URL not configured." }, { status: 500 });
   }
   try {
     const res = await fetch(`${scraperUrl}/api/listings/run_all_buildings/`, {
       method: "POST",
+      headers: scraperApiKey ? { Authorization: `Bearer ${scraperApiKey}` } : {},
     });
     const data = await res.json();
     return NextResponse.json(data, { status: res.ok ? 200 : 502 });
