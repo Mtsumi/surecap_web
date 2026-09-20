@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
@@ -303,6 +303,18 @@ export default function InsightsPage() {
   };
 
   const [scrapeInProgress, setScrapeInProgress] = useState(false);
+  // Ref so the interval callback can read current selectedKey without stale closure
+  const hasSetInitialKey = useRef(false);
+  // Prevent overlapping poll requests
+  const pollInFlight = useRef(false);
+
+  // Helper to expire the localStorage flag regardless of fetch outcome
+  const expireProgressIfDue = (queuedAt: number, anyFresh = false) => {
+    if (anyFresh || Date.now() - queuedAt >= SCRAPE_TTL_MS) {
+      try { localStorage.removeItem(SCRAPE_KEY); } catch { /* ignore */ }
+      setScrapeInProgress(false);
+    }
+  };
 
   // Initialise from localStorage on mount (after hydration)
   useEffect(() => {
@@ -311,6 +323,10 @@ export default function InsightsPage() {
   }, []);
 
   const fetchInsights = () => {
+    // Skip if a request is already in-flight (prevents overlapping polls)
+    if (pollInFlight.current) return;
+    pollInFlight.current = true;
+
     const token = getAdminToken();
     fetch("/api/insights", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -319,14 +335,23 @@ export default function InsightsPage() {
       .then((json) => {
         if (json.error) {
           setError(json.error as string);
+          // Still expire the progress flag on error if TTL has passed
+          try {
+            const ts = localStorage.getItem(SCRAPE_KEY);
+            if (ts) expireProgressIfDue(parseInt(ts, 10));
+          } catch { /* ignore */ }
         } else {
           const incoming = json as InsightsData;
           setData(incoming);
           const keys = Object.keys(incoming);
-          if (keys.length && !selectedKey) setSelectedKey(keys[0]);
 
-          // Clear the in-progress flag if any building has data scraped
-          // after the queued timestamp (scrape completed)
+          // Only set the initial selected building once — never override user's choice
+          if (keys.length && !hasSetInitialKey.current) {
+            setSelectedKey(keys[0]);
+            hasSetInitialKey.current = true;
+          }
+
+          // Clear in-progress flag when fresh data arrives or TTL expires
           try {
             const ts = localStorage.getItem(SCRAPE_KEY);
             if (ts) {
@@ -335,15 +360,13 @@ export default function InsightsPage() {
                 const ls = incoming[k]?.last_scraped;
                 return ls && new Date(ls).getTime() > queuedAt;
               });
-              if (anyFresh || Date.now() - queuedAt >= SCRAPE_TTL_MS) {
-                localStorage.removeItem(SCRAPE_KEY);
-                setScrapeInProgress(false);
-              }
+              expireProgressIfDue(queuedAt, anyFresh);
             }
           } catch { /* localStorage unavailable */ }
         }
       })
-      .catch(() => setError(t("insightsError")));
+      .catch(() => setError(t("insightsError")))
+      .finally(() => { pollInFlight.current = false; });
   };
 
   useEffect(() => {
