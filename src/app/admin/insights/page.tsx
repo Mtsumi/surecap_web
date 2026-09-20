@@ -290,6 +290,26 @@ export default function InsightsPage() {
   const [toastIsError, setToastIsError] = useState(false);
   const [nextRun, setNextRun] = useState(nextSixAmMontreal);
 
+  // Persistent in-progress flag — survives page refresh for up to 35 min
+  const SCRAPE_KEY = "scrapeQueuedAt";
+  const SCRAPE_TTL_MS = 35 * 60 * 1000;
+
+  const isScrapeInProgress = (): boolean => {
+    try {
+      const ts = localStorage.getItem(SCRAPE_KEY);
+      if (!ts) return false;
+      return Date.now() - parseInt(ts, 10) < SCRAPE_TTL_MS;
+    } catch { return false; }
+  };
+
+  const [scrapeInProgress, setScrapeInProgress] = useState(false);
+
+  // Initialise from localStorage on mount (after hydration)
+  useEffect(() => {
+    setScrapeInProgress(isScrapeInProgress());
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const fetchInsights = () => {
     const token = getAdminToken();
     fetch("/api/insights", {
@@ -300,9 +320,27 @@ export default function InsightsPage() {
         if (json.error) {
           setError(json.error as string);
         } else {
-          setData(json as InsightsData);
-          const keys = Object.keys(json);
+          const incoming = json as InsightsData;
+          setData(incoming);
+          const keys = Object.keys(incoming);
           if (keys.length && !selectedKey) setSelectedKey(keys[0]);
+
+          // Clear the in-progress flag if any building has data scraped
+          // after the queued timestamp (scrape completed)
+          try {
+            const ts = localStorage.getItem(SCRAPE_KEY);
+            if (ts) {
+              const queuedAt = parseInt(ts, 10);
+              const anyFresh = keys.some((k) => {
+                const ls = incoming[k]?.last_scraped;
+                return ls && new Date(ls).getTime() > queuedAt;
+              });
+              if (anyFresh || Date.now() - queuedAt >= SCRAPE_TTL_MS) {
+                localStorage.removeItem(SCRAPE_KEY);
+                setScrapeInProgress(false);
+              }
+            }
+          } catch { /* localStorage unavailable */ }
         }
       })
       .catch(() => setError(t("insightsError")));
@@ -310,6 +348,9 @@ export default function InsightsPage() {
 
   useEffect(() => {
     fetchInsights();
+    // Auto-poll every 60s so data refreshes without manual reload
+    const pollId = setInterval(fetchInsights, 60_000);
+    return () => clearInterval(pollId);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -336,6 +377,11 @@ export default function InsightsPage() {
       } else {
         setToastIsError(false);
         setToast(t("insightsQueued"));
+        // Persist in-progress state so button stays disabled across page refreshes
+        try {
+          localStorage.setItem(SCRAPE_KEY, String(Date.now()));
+        } catch { /* ignore */ }
+        setScrapeInProgress(true);
       }
     } catch {
       setToastIsError(true);
@@ -359,11 +405,15 @@ export default function InsightsPage() {
         <div className="flex shrink-0 flex-col items-end gap-2">
           <button
             type="button"
-            disabled={refreshing}
+            disabled={refreshing || scrapeInProgress}
             onClick={() => void handleRefreshAll()}
-            className={adminUi.btnPrimary + " text-sm"}
+            className={
+              adminUi.btnPrimary +
+              " text-sm" +
+              (scrapeInProgress ? " cursor-not-allowed opacity-50" : "")
+            }
           >
-            {refreshing ? t("insightsRefreshing") : t("insightsRefreshAll")}
+            {refreshing || scrapeInProgress ? t("insightsRefreshing") : t("insightsRefreshAll")}
           </button>
           <a
             href={SCRAPER_FORM_URL}
@@ -375,6 +425,16 @@ export default function InsightsPage() {
           </a>
         </div>
       </div>
+
+      {scrapeInProgress && !toast && (
+        <div className="mt-3 flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800">
+          <svg className="h-4 w-4 shrink-0 animate-spin" viewBox="0 0 24 24" fill="none">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"/>
+          </svg>
+          {t("insightsQueued")}
+        </div>
+      )}
 
       {toast && (
         <div
