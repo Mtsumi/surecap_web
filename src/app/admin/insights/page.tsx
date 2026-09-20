@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
+import { getAdminToken } from "@/lib/adminAuth";
 
 // ---------- Types ----------
 
@@ -112,10 +113,18 @@ function BuildingCard({
 
   return (
     <div
-      className={`${adminUi.card} cursor-pointer transition-shadow hover:shadow-md ${
+      role="button"
+      tabIndex={0}
+      className={`${adminUi.card} cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--ml-pine)] ${
         isSelected ? "ring-2 ring-[var(--ml-pine)]" : ""
       }`}
       onClick={onSelect}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onSelect();
+        }
+      }}
     >
       <div className="flex items-start justify-between gap-3 p-4">
         <div className="min-w-0">
@@ -241,7 +250,10 @@ export default function InsightsPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("/api/insights")
+    const token = getAdminToken();
+    fetch("/api/insights", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    })
       .then((r) => r.json())
       .then((json) => {
         if (json.error) {
@@ -291,7 +303,21 @@ export default function InsightsPage() {
         </div>
       )}
 
-      {data && (
+      {data && Object.keys(data).length === 0 && (
+        <div className={`${adminUi.empty} mt-8`}>
+          <p>{t("insightsNoData")}</p>
+          <a
+            href={SCRAPER_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`${adminUi.btnPrimary} mt-3 inline-block`}
+          >
+            {t("insightsRunScrape")}
+          </a>
+        </div>
+      )}
+
+      {data && Object.keys(data).length > 0 && (
         <div className="mt-6 grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
           {Object.entries(data).map(([bkey, bdata]) => (
             <BuildingCard
