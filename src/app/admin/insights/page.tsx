@@ -49,6 +49,38 @@ const SCRAPER_FORM_URL =
     ? `${process.env.NEXT_PUBLIC_SCRAPER_URL}/scraper-form/`
     : "https://scraper.montrealliving.info/scraper-form/";
 
+/** Returns {h, m} until next 6 AM Montreal time, DST-aware and browser-timezone-agnostic. */
+function nextSixAmMontreal(): { h: number; m: number } {
+  const now = new Date();
+
+  // Use formatToParts to read Montreal's current hour/minute directly.
+  // Avoids new Date(toLocaleString(...)) which parses in the browser's local timezone.
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Montreal",
+    hour: "numeric",
+    minute: "numeric",
+    hour12: false,
+  }).formatToParts(now);
+
+  const currentH = parseInt(parts.find((p) => p.type === "hour")?.value ?? "0", 10);
+  const currentM = parseInt(parts.find((p) => p.type === "minute")?.value ?? "0", 10);
+
+  // Minutes from Montreal-midnight to the next 6:00 AM
+  const elapsedMin = currentH * 60 + currentM;
+  const target6amMin = 6 * 60;
+  let diffMin = target6amMin - elapsedMin;
+  if (diffMin <= 0) diffMin += 24 * 60; // already past 6 AM — aim for tomorrow
+
+  return { h: Math.floor(diffMin / 60), m: diffMin % 60 };
+}
+
+/** True if last_scraped is more than 26 hours ago (buffer over 24h beat). */
+function isStale(lastScraped: string | null): boolean {
+  if (!lastScraped) return true;
+  const age = Date.now() - new Date(lastScraped).getTime();
+  return age > 26 * 3600 * 1000;
+}
+
 function bedsLabel(key: string, studioLabel: string): string {
   if (key === "studio") return studioLabel;
   if (key === "?") return "?";
@@ -141,6 +173,11 @@ function BuildingCard({
             <p className="text-[10px] text-[var(--ml-steel)]">
               {data.run_count} {t("insightsRuns")}
             </p>
+          )}
+          {isStale(data.last_scraped) && (
+            <span className="mt-1 inline-flex rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700">
+              ⚠ {t("insightsStale")}
+            </span>
           )}
         </div>
       </div>
@@ -248,8 +285,12 @@ export default function InsightsPage() {
   const [data, setData] = useState<InsightsData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [toastIsError, setToastIsError] = useState(false);
+  const [nextRun, setNextRun] = useState(nextSixAmMontreal);
 
-  useEffect(() => {
+  const fetchInsights = () => {
     const token = getAdminToken();
     fetch("/api/insights", {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
@@ -261,12 +302,49 @@ export default function InsightsPage() {
         } else {
           setData(json as InsightsData);
           const keys = Object.keys(json);
-          if (keys.length) setSelectedKey(keys[0]);
+          if (keys.length && !selectedKey) setSelectedKey(keys[0]);
         }
       })
       .catch(() => setError(t("insightsError")));
+  };
+
+  useEffect(() => {
+    fetchInsights();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Keep countdown live — recalculate every minute
+  useEffect(() => {
+    const id = setInterval(() => setNextRun(nextSixAmMontreal()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
+  const handleRefreshAll = async () => {
+    setRefreshing(true);
+    setToast(null);
+    setToastIsError(false);
+    try {
+      const token = getAdminToken();
+      const res = await fetch("/api/insights/run-all", {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      const json = await res.json();
+      if (json.error) {
+        setToastIsError(true);
+        setToast(json.error as string);
+      } else {
+        setToastIsError(false);
+        setToast(t("insightsQueued"));
+      }
+    } catch {
+      setToastIsError(true);
+      setToast(t("insightsError"));
+    } finally {
+      setRefreshing(false);
+      setTimeout(() => setToast(null), 8000);
+    }
+  };
 
   return (
     <>
@@ -274,16 +352,39 @@ export default function InsightsPage() {
         <div>
           <h1 className={adminUi.pageTitle}>{t("insightsTitle")}</h1>
           <p className="mt-1 text-sm text-[var(--ml-steel)]">{t("insightsSubtitle")}</p>
+          <p className="mt-0.5 text-xs text-[var(--ml-steel)]">
+            {t("insightsNextRun")}: {t("insightsIn")} {nextRun.h}h {nextRun.m}m
+          </p>
         </div>
-        <a
-          href={SCRAPER_FORM_URL}
-          target="_blank"
-          rel="noopener noreferrer"
-          className={adminUi.btnPrimary + " shrink-0 text-sm"}
-        >
-          {t("insightsRunScrape")}
-        </a>
+        <div className="flex shrink-0 flex-col items-end gap-2">
+          <button
+            type="button"
+            disabled={refreshing}
+            onClick={() => void handleRefreshAll()}
+            className={adminUi.btnPrimary + " text-sm"}
+          >
+            {refreshing ? t("insightsRefreshing") : t("insightsRefreshAll")}
+          </button>
+          <a
+            href={SCRAPER_FORM_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-[var(--ml-steel)] underline hover:text-[var(--ml-ink)]"
+          >
+            {t("insightsRunScrape")}
+          </a>
+        </div>
       </div>
+
+      {toast && (
+        <div
+          className={`mt-3 rounded-lg px-4 py-2.5 text-sm text-white ${
+            toastIsError ? "bg-red-600" : "bg-[var(--ml-pine)]"
+          }`}
+        >
+          {toast}
+        </div>
+      )}
 
       {!data && !error && (
         <p className={`${adminUi.empty} mt-8`}>{t("insightsLoading")}</p>
