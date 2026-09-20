@@ -49,22 +49,21 @@ const SCRAPER_FORM_URL =
     ? `${process.env.NEXT_PUBLIC_SCRAPER_URL}/scraper-form/`
     : "https://scraper.montrealliving.info/scraper-form/";
 
-/** Next 6 AM Montreal time from now (for "next auto-run" display). */
-function nextSixAmMontreal(): string {
+/** Returns {h, m} until next 6 AM Montreal time, DST-aware. */
+function nextSixAmMontreal(): { h: number; m: number } {
   const now = new Date();
-  // Montreal is UTC-4 (EDT) or UTC-5 (EST); approximate with offset
-  const montrealOffset = -4 * 60; // minutes, EDT
-  const utcNow = now.getTime() + now.getTimezoneOffset() * 60000;
-  const montrealNow = new Date(utcNow + montrealOffset * 60000);
-
-  const next = new Date(montrealNow);
+  // Use Intl to get the true Montreal wall-clock time (handles EST/EDT automatically)
+  const montrealTime = new Date(
+    now.toLocaleString("en-US", { timeZone: "America/Montreal" })
+  );
+  const next = new Date(montrealTime);
   next.setHours(6, 0, 0, 0);
-  if (montrealNow >= next) next.setDate(next.getDate() + 1);
-
-  const diff = next.getTime() - montrealNow.getTime();
-  const h = Math.floor(diff / 3600000);
-  const m = Math.floor((diff % 3600000) / 60000);
-  return h > 0 ? `in ${h}h ${m}m` : `in ${m}m`;
+  if (montrealTime >= next) next.setDate(next.getDate() + 1);
+  const diff = next.getTime() - montrealTime.getTime();
+  return {
+    h: Math.floor(diff / 3600000),
+    m: Math.floor((diff % 3600000) / 60000),
+  };
 }
 
 /** True if last_scraped is more than 26 hours ago (buffer over 24h beat). */
@@ -280,6 +279,8 @@ export default function InsightsPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  const [toastIsError, setToastIsError] = useState(false);
+  const [nextRun, setNextRun] = useState(nextSixAmMontreal);
 
   const fetchInsights = () => {
     const token = getAdminToken();
@@ -304,9 +305,16 @@ export default function InsightsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Keep countdown live — recalculate every minute
+  useEffect(() => {
+    const id = setInterval(() => setNextRun(nextSixAmMontreal()), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const handleRefreshAll = async () => {
     setRefreshing(true);
     setToast(null);
+    setToastIsError(false);
     try {
       const token = getAdminToken();
       const res = await fetch("/api/insights/run-all", {
@@ -314,8 +322,15 @@ export default function InsightsPage() {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const json = await res.json();
-      setToast(json.error ?? t("insightsQueued"));
+      if (json.error) {
+        setToastIsError(true);
+        setToast(json.error as string);
+      } else {
+        setToastIsError(false);
+        setToast(t("insightsQueued"));
+      }
     } catch {
+      setToastIsError(true);
       setToast(t("insightsError"));
     } finally {
       setRefreshing(false);
@@ -330,7 +345,7 @@ export default function InsightsPage() {
           <h1 className={adminUi.pageTitle}>{t("insightsTitle")}</h1>
           <p className="mt-1 text-sm text-[var(--ml-steel)]">{t("insightsSubtitle")}</p>
           <p className="mt-0.5 text-xs text-[var(--ml-steel)]">
-            {t("insightsNextRun")}: {nextSixAmMontreal()}
+            {t("insightsNextRun")}: {t("insightsIn")} {nextRun.h}h {nextRun.m}m
           </p>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-2">
@@ -354,7 +369,11 @@ export default function InsightsPage() {
       </div>
 
       {toast && (
-        <div className="mt-3 rounded-lg bg-[var(--ml-pine)] px-4 py-2.5 text-sm text-white">
+        <div
+          className={`mt-3 rounded-lg px-4 py-2.5 text-sm text-white ${
+            toastIsError ? "bg-red-600" : "bg-[var(--ml-pine)]"
+          }`}
+        >
           {toast}
         </div>
       )}

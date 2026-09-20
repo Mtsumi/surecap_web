@@ -39,8 +39,20 @@ export async function POST(request: NextRequest) {
       method: "POST",
       headers: scraperApiKey ? { Authorization: `Bearer ${scraperApiKey}` } : {},
     });
+    // Parse JSON only when the Content-Type is JSON; fall back to text otherwise
+    const contentType = res.headers.get("content-type") ?? "";
+    if (!res.ok) {
+      let errMsg = `Scraper error ${res.status}`;
+      if (contentType.includes("application/json")) {
+        try {
+          const e = await res.json();
+          errMsg = (e as { error?: string }).error ?? errMsg;
+        } catch { /* leave default */ }
+      }
+      return NextResponse.json({ error: errMsg }, { status: 502 });
+    }
     const data = await res.json();
-    return NextResponse.json(data, { status: res.ok ? 200 : 502 });
+    return NextResponse.json(data, { status: 200 });
   } catch {
     return NextResponse.json(
       { error: "Could not reach the scraper server." },
