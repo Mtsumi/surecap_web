@@ -305,8 +305,14 @@ export default function InsightsPage() {
   const [scrapeInProgress, setScrapeInProgress] = useState(false);
   // Ref so the interval callback can read current selectedKey without stale closure
   const hasSetInitialKey = useRef(false);
+  const selectedKeyRef = useRef<string | null>(null);
   // Prevent overlapping poll requests
   const pollInFlight = useRef(false);
+
+  // Keep ref in sync whenever selectedKey state changes
+  useEffect(() => {
+    selectedKeyRef.current = selectedKey;
+  }, [selectedKey]);
 
   // Helper to expire the localStorage flag regardless of fetch outcome
   const expireProgressIfDue = (queuedAt: number, anyFresh = false) => {
@@ -345,10 +351,16 @@ export default function InsightsPage() {
           setData(incoming);
           const keys = Object.keys(incoming);
 
-          // Only set the initial selected building once — never override user's choice
-          if (keys.length && !hasSetInitialKey.current) {
-            setSelectedKey(keys[0]);
-            hasSetInitialKey.current = true;
+          // Set initial selection on first load; on subsequent polls, fall back
+          // to first key only if the user's current selection is no longer present
+          if (keys.length) {
+            if (!hasSetInitialKey.current) {
+              setSelectedKey(keys[0]);
+              hasSetInitialKey.current = true;
+            } else if (selectedKeyRef.current && !keys.includes(selectedKeyRef.current)) {
+              // Selected building disappeared from data — recover gracefully
+              setSelectedKey(keys[0]);
+            }
           }
 
           // Clear in-progress flag when fresh data arrives or TTL expires
