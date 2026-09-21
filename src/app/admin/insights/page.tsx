@@ -118,7 +118,6 @@ function BuildingCard({
   data: BuildingInsight;
   t: (k: AdminMessageKey) => string;
 }) {
-  const hasData = Object.keys(data.by_bedrooms).length > 0;
   const bedKeys = Object.keys(data.by_bedrooms)
     .filter((k) => k !== "?")
     .sort((a, b) => {
@@ -126,6 +125,7 @@ function BuildingCard({
       if (b === "studio") return 1;
       return Number(a) - Number(b);
     });
+  const hasData = bedKeys.length > 0;
 
   return (
     <Link
