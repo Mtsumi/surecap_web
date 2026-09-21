@@ -48,8 +48,11 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const res = await fetch(`${scraperUrl}/api/listings/insights/`, {
-      next: { revalidate: 300 },
+    const upstream = new URL(`${scraperUrl}/api/listings/insights/`);
+    const building = request.nextUrl.searchParams.get("building");
+    if (building) upstream.searchParams.set("building", building);
+    const res = await fetch(upstream.toString(), {
+      next: { revalidate: building ? 0 : 300 },
     });
     if (!res.ok) {
       return NextResponse.json(
