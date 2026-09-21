@@ -122,37 +122,56 @@ function postalOf(s: string): string | null {
   return m ? m[0].replace(/\s/g, "") : null;
 }
 
+function civicNumber(s: string): string | null {
+  const m = s.match(/\d+/);
+  return m ? m[0] : null;
+}
+
+function streetToken(s: string, civic: string | null): string | undefined {
+  return fold(s)
+    .split(" ")
+    .find((w) => w.length > 3 && w !== civic);
+}
+
+function nameOverlaps(insightName: string, buildingName: string): boolean {
+  const a = fold(insightName);
+  const b = fold(buildingName);
+  return Boolean(a && b && (a === b || a.includes(b) || b.includes(a)));
+}
+
+function addressCorroborates(
+  insight: { display_name: string; address: string },
+  building: BuildingAdmin
+): boolean {
+  const civic = civicNumber(insight.address);
+  const street = streetToken(insight.address, civic);
+  const ba = fold(building.address);
+  const civicOk = Boolean(civic && ba.includes(civic));
+  const streetOk = Boolean(street && ba.includes(street));
+  const nameOk = nameOverlaps(insight.display_name, building.name);
+  return (civicOk && streetOk) || (civicOk && nameOk) || (streetOk && nameOk);
+}
+
 function matchInventoryBuilding(
   insight: { display_name: string; address: string },
   buildings: BuildingAdmin[]
 ): BuildingAdmin | null {
+  const corroborated = buildings.filter((b) => addressCorroborates(insight, b));
   const postal = postalOf(insight.address);
   if (postal) {
-    const byPostal = buildings.filter((b) => postalOf(b.address) === postal);
+    const byPostal = corroborated.filter((b) => postalOf(b.address) === postal);
     if (byPostal.length === 1) return byPostal[0];
     if (byPostal.length > 1) {
-      const num = insight.address.match(/\d+/);
-      const hit = byPostal.find((b) => num && b.address.includes(num[0]));
+      const civic = civicNumber(insight.address);
+      const street = streetToken(insight.address, civic);
+      const hit = byPostal.find((b) => {
+        const ba = fold(b.address);
+        return Boolean(civic && ba.includes(civic) && street && ba.includes(street));
+      });
       if (hit) return hit;
     }
   }
-  const name = fold(insight.display_name);
-  const byName = buildings.find((b) => {
-    const bn = fold(b.name);
-    return bn === name || bn.includes(name) || name.includes(bn);
-  });
-  if (byName) return byName;
-  const num = insight.address.match(/\d+/);
-  const street = fold(insight.address)
-    .split(" ")
-    .find((w) => w.length > 3 && w !== num?.[0]);
-  if (num && street) {
-    const hit = buildings.find((b) => {
-      const ba = fold(b.address);
-      return ba.includes(num[0]) && ba.includes(street);
-    });
-    if (hit) return hit;
-  }
+  if (corroborated.length === 1) return corroborated[0];
   return null;
 }
 
