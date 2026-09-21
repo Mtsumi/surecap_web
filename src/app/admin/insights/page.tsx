@@ -107,21 +107,6 @@ function trendBadge(pct: number | null) {
   );
 }
 
-function AmenityDot({ on, label }: { on: boolean; label: string }) {
-  return (
-    <span
-      title={label}
-      className={`inline-flex rounded px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide ${
-        on
-          ? "bg-[var(--ml-pine)] text-white"
-          : "bg-[var(--ml-paper)] text-[var(--ml-line)]"
-      }`}
-    >
-      {label}
-    </span>
-  );
-}
-
 // ---------- Building card ----------
 
 function BuildingCard({
@@ -133,12 +118,14 @@ function BuildingCard({
   data: BuildingInsight;
   t: (k: AdminMessageKey) => string;
 }) {
-  const hasData = Object.keys(data.by_bedrooms).length > 0;
-  const bedKeys = Object.keys(data.by_bedrooms).sort((a, b) => {
-    if (a === "studio") return -1;
-    if (b === "studio") return 1;
-    return Number(a) - Number(b);
-  });
+  const bedKeys = Object.keys(data.by_bedrooms)
+    .filter((k) => k !== "?")
+    .sort((a, b) => {
+      if (a === "studio") return -1;
+      if (b === "studio") return 1;
+      return Number(a) - Number(b);
+    });
+  const hasData = bedKeys.length > 0;
 
   return (
     <Link

@@ -28,9 +28,17 @@ type Comp = {
   address: string;
   title: string;
   url: string;
+  square_feet: number | null;
+  image: string;
   heating: boolean;
   parking: boolean;
+  parking_type: string;
   air_conditioning: boolean;
+  laundry_in_unit: boolean;
+  furnished: boolean;
+  electricity_included: boolean;
+  dishwasher: boolean;
+  balcony: boolean;
 };
 
 type BuildingInsight = {
@@ -69,15 +77,20 @@ function trendBadge(pct: number | null) {
   );
 }
 
-function AmenityDot({ on, label }: { on: boolean; label: string }) {
+function AmenityChip({
+  on,
+  label,
+  tip,
+}: {
+  on: boolean;
+  label: string;
+  tip: string;
+}) {
+  if (!on) return null;
   return (
     <span
-      title={label}
-      className={`inline-flex rounded px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide ${
-        on
-          ? "bg-[var(--ml-pine)] text-white"
-          : "bg-[var(--ml-paper)] text-[var(--ml-line)]"
-      }`}
+      title={tip}
+      className="inline-flex rounded bg-[var(--ml-pine)] px-1.5 py-0.5 text-[10px] font-medium text-white"
     >
       {label}
     </span>
@@ -90,24 +103,38 @@ function downloadCsv(comps: Comp[], buildingName: string) {
     "Price",
     "Beds",
     "Distance (km)",
+    "Sqft",
     "Source",
     "Title",
     "Address",
     "Heating",
     "Parking",
+    "Parking type",
     "A/C",
+    "Laundry in unit",
+    "Furnished",
+    "Electricity included",
+    "Dishwasher",
+    "Balcony",
     "URL",
   ];
   const rows = comps.map((c) => [
     c.price,
     csvCell(c.beds),
     c.distance_km,
+    c.square_feet ?? "",
     csvCell(c.source),
     csvCell(c.title || ""),
     csvCell(c.address || ""),
     c.heating ? "Yes" : "No",
     c.parking ? "Yes" : "No",
+    csvCell(c.parking_type || ""),
     c.air_conditioning ? "Yes" : "No",
+    c.laundry_in_unit ? "Yes" : "No",
+    c.furnished ? "Yes" : "No",
+    c.electricity_included ? "Yes" : "No",
+    c.dishwasher ? "Yes" : "No",
+    c.balcony ? "Yes" : "No",
     csvCell(c.url || ""),
   ]);
   const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
@@ -151,11 +178,13 @@ export default function BuildingDetailPage() {
   }, [key]);
 
   const bedKeys = data
-    ? Object.keys(data.by_bedrooms).sort((a, b) => {
-        if (a === "studio") return -1;
-        if (b === "studio") return 1;
-        return Number(a) - Number(b);
-      })
+    ? Object.keys(data.by_bedrooms)
+        .filter((k) => k !== "?")
+        .sort((a, b) => {
+          if (a === "studio") return -1;
+          if (b === "studio") return 1;
+          return Number(a) - Number(b);
+        })
     : [];
 
   return (
@@ -260,14 +289,14 @@ export default function BuildingDetailPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="text-left text-[10px] uppercase tracking-wide text-[var(--ml-steel)]">
+                      <th className="px-4 py-2" />
                       <th className="px-4 py-2 text-right">{t("insightsPrice")}</th>
                       <th className="px-4 py-2">{t("insightsBeds")}</th>
                       <th className="px-4 py-2 text-right">{t("insightsDistance")}</th>
+                      <th className="px-4 py-2 text-right">{t("insightsSqft")}</th>
                       <th className="px-4 py-2">{t("insightsSource")}</th>
                       <th className="px-4 py-2">{t("insightsAddress")}</th>
-                      <th className="px-4 py-2">{t("insightsHeating")}</th>
-                      <th className="px-4 py-2">{t("insightsParking")}</th>
-                      <th className="px-4 py-2">{t("insightsAC")}</th>
+                      <th className="px-4 py-2">{t("insightsAmenities")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -276,6 +305,18 @@ export default function BuildingDetailPage() {
                         key={i}
                         className="border-t border-[var(--ml-line)] hover:bg-[var(--ml-paper)]"
                       >
+                        <td className="px-4 py-2.5">
+                          {comp.image ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={comp.image}
+                              alt=""
+                              className="h-12 w-16 rounded object-cover"
+                            />
+                          ) : (
+                            <div className="h-12 w-16 rounded bg-[var(--ml-paper)]" />
+                          )}
+                        </td>
                         <td className="px-4 py-2.5 text-right font-semibold text-[var(--ml-ink)]">
                           ${comp.price.toLocaleString()}
                         </td>
@@ -285,8 +326,13 @@ export default function BuildingDetailPage() {
                         <td className="px-4 py-2.5 text-right text-xs text-[var(--ml-steel)]">
                           {comp.distance_km} km
                         </td>
+                        <td className="px-4 py-2.5 text-right text-xs text-[var(--ml-steel)]">
+                          {comp.square_feet
+                            ? `${comp.square_feet.toLocaleString()}`
+                            : "—"}
+                        </td>
                         <td className="px-4 py-2.5">
-                          <span className="inline-flex rounded bg-[var(--ml-paper)] px-1 py-0.5 text-[9px] uppercase tracking-wide text-[var(--ml-steel)]">
+                          <span className="inline-flex rounded bg-[var(--ml-paper)] px-1.5 py-0.5 text-[10px] text-[var(--ml-steel)]">
                             {comp.source}
                           </span>
                         </td>
@@ -312,13 +358,52 @@ export default function BuildingDetailPage() {
                           )}
                         </td>
                         <td className="px-4 py-2.5">
-                          <AmenityDot on={comp.heating} label={t("insightsHeating")} />
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <AmenityDot on={comp.parking} label={t("insightsParking")} />
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <AmenityDot on={comp.air_conditioning} label={t("insightsAC")} />
+                          <div className="flex flex-wrap gap-1">
+                            <AmenityChip
+                              on={comp.heating}
+                              label={t("insightsHeating")}
+                              tip={t("insightsHeatingTip")}
+                            />
+                            <AmenityChip
+                              on={comp.parking}
+                              label={t("insightsParking")}
+                              tip={
+                                comp.parking_type
+                                  ? String(comp.parking_type)
+                                  : t("insightsParkingTip")
+                              }
+                            />
+                            <AmenityChip
+                              on={comp.air_conditioning}
+                              label={t("insightsAC")}
+                              tip={t("insightsACTip")}
+                            />
+                            <AmenityChip
+                              on={comp.laundry_in_unit}
+                              label={t("insightsLaundry")}
+                              tip={t("insightsLaundryTip")}
+                            />
+                            <AmenityChip
+                              on={comp.furnished}
+                              label={t("insightsFurnished")}
+                              tip={t("insightsFurnishedTip")}
+                            />
+                            <AmenityChip
+                              on={comp.electricity_included}
+                              label={t("insightsElectricity")}
+                              tip={t("insightsElectricityTip")}
+                            />
+                            <AmenityChip
+                              on={comp.dishwasher}
+                              label={t("insightsDishwasher")}
+                              tip={t("insightsDishwasherTip")}
+                            />
+                            <AmenityChip
+                              on={comp.balcony}
+                              label={t("insightsBalcony")}
+                              tip={t("insightsBalconyTip")}
+                            />
+                          </div>
                         </td>
                       </tr>
                     ))}
