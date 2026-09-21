@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
@@ -126,14 +127,10 @@ function AmenityDot({ on, label }: { on: boolean; label: string }) {
 function BuildingCard({
   bkey,
   data,
-  isSelected,
-  onSelect,
   t,
 }: {
   bkey: string;
   data: BuildingInsight;
-  isSelected: boolean;
-  onSelect: () => void;
   t: (k: AdminMessageKey) => string;
 }) {
   const hasData = Object.keys(data.by_bedrooms).length > 0;
@@ -144,19 +141,9 @@ function BuildingCard({
   });
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      className={`${adminUi.card} cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--ml-pine)] ${
-        isSelected ? "ring-2 ring-[var(--ml-pine)]" : ""
-      }`}
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onSelect();
-        }
-      }}
+    <Link
+      href={`/admin/insights/${bkey}`}
+      className={`${adminUi.card} block cursor-pointer transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-[var(--ml-pine)]`}
     >
       <div className="flex items-start justify-between gap-3 p-4">
         <div className="min-w-0">
@@ -224,57 +211,7 @@ function BuildingCard({
           {t("insightsNoData")}
         </p>
       )}
-    </div>
-  );
-}
-
-// ---------- Comps detail panel ----------
-
-function CompsPanel({
-  data,
-  t,
-}: {
-  data: BuildingInsight;
-  t: (k: AdminMessageKey) => string;
-}) {
-  if (!data.top_comps.length) return null;
-
-  return (
-    <div className={`${adminUi.card} mt-4`}>
-      <p className="px-4 py-3 text-sm font-semibold text-[var(--ml-ink)]">
-        {data.display_name} — {t("insightsTopComps")}
-      </p>
-      <ul className="divide-y divide-[var(--ml-line)]">
-        {data.top_comps.map((comp, i) => (
-          <li key={i} className="flex items-start gap-3 px-4 py-3">
-            <div className="shrink-0 text-right">
-              <p className="font-semibold text-[var(--ml-ink)]">${comp.price.toLocaleString()}</p>
-              <p className="text-xs text-[var(--ml-steel)]">{bedsLabel(comp.beds, t("insightsStudio"))}</p>
-              <p className="text-[10px] text-[var(--ml-steel)]">{comp.distance_km} km</p>
-            </div>
-            <div className="min-w-0 flex-1">
-              <a
-                href={comp.url || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="block truncate text-sm font-medium text-[var(--ml-pine)] hover:underline"
-              >
-                {comp.title || comp.address || "Listing"}
-              </a>
-              <p className="mt-0.5 truncate text-xs text-[var(--ml-steel)]">{comp.address}</p>
-              <div className="mt-1.5 flex gap-1">
-                <AmenityDot on={comp.heating} label={t("insightsHeating")} />
-                <AmenityDot on={comp.parking} label={t("insightsParking")} />
-                <AmenityDot on={comp.air_conditioning} label={t("insightsAC")} />
-                <span className="inline-flex rounded bg-[var(--ml-paper)] px-1 py-0.5 text-[9px] uppercase tracking-wide text-[var(--ml-steel)]">
-                  {comp.source}
-                </span>
-              </div>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </div>
+    </Link>
   );
 }
 
@@ -284,7 +221,6 @@ export default function InsightsPage() {
   const { t } = useAdminLocaleContext();
   const [data, setData] = useState<InsightsData | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedKey, setSelectedKey] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [toastIsError, setToastIsError] = useState(false);
@@ -303,16 +239,8 @@ export default function InsightsPage() {
   };
 
   const [scrapeInProgress, setScrapeInProgress] = useState(false);
-  // Ref so the interval callback can read current selectedKey without stale closure
-  const hasSetInitialKey = useRef(false);
-  const selectedKeyRef = useRef<string | null>(null);
   // Prevent overlapping poll requests
   const pollInFlight = useRef(false);
-
-  // Keep ref in sync whenever selectedKey state changes
-  useEffect(() => {
-    selectedKeyRef.current = selectedKey;
-  }, [selectedKey]);
 
   // Helper to expire the localStorage flag regardless of fetch outcome
   const expireProgressIfDue = (queuedAt: number, anyFresh = false) => {
@@ -350,18 +278,6 @@ export default function InsightsPage() {
           const incoming = json as InsightsData;
           setData(incoming);
           const keys = Object.keys(incoming);
-
-          // Set initial selection on first load; on subsequent polls, fall back
-          // to first key only if the user's current selection is no longer present
-          if (keys.length) {
-            if (!hasSetInitialKey.current) {
-              setSelectedKey(keys[0]);
-              hasSetInitialKey.current = true;
-            } else if (selectedKeyRef.current && !keys.includes(selectedKeyRef.current)) {
-              // Selected building disappeared from data — recover gracefully
-              setSelectedKey(keys[0]);
-            }
-          }
 
           // Clear in-progress flag when fresh data arrives or TTL expires
           try {
@@ -520,17 +436,12 @@ export default function InsightsPage() {
               key={bkey}
               bkey={bkey}
               data={bdata}
-              isSelected={selectedKey === bkey}
-              onSelect={() => setSelectedKey(bkey)}
               t={t}
             />
           ))}
         </div>
       )}
 
-      {data && selectedKey && data[selectedKey] && (
-        <CompsPanel data={data[selectedKey]} t={t} />
-      )}
     </>
   );
 }
