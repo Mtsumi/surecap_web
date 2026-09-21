@@ -7,6 +7,12 @@ import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 import { getAdminToken } from "@/lib/adminAuth";
+import {
+  listBuildingsAdmin,
+  listUnitsAdmin,
+  type BuildingAdmin,
+  type UnitAdmin,
+} from "@/lib/adminApi";
 
 // ---------- Types ----------
 
@@ -97,6 +103,92 @@ function AmenityChip({
   );
 }
 
+const ASK_BAND = 100;
+
+function fold(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function postalOf(s: string): string | null {
+  const m = s
+    .toUpperCase()
+    .replace(/\s+/g, " ")
+    .match(/[A-Z]\d[A-Z]\s?\d[A-Z]\d/);
+  return m ? m[0].replace(/\s/g, "") : null;
+}
+
+function civicNumber(s: string): string | null {
+  const m = s.match(/\d+/);
+  return m ? m[0] : null;
+}
+
+function streetToken(s: string, civic: string | null): string | undefined {
+  return fold(s)
+    .split(" ")
+    .find((w) => w.length > 3 && w !== civic);
+}
+
+function nameOverlaps(insightName: string, buildingName: string): boolean {
+  const a = fold(insightName);
+  const b = fold(buildingName);
+  return Boolean(a && b && (a === b || a.includes(b) || b.includes(a)));
+}
+
+function addressCorroborates(
+  insight: { display_name: string; address: string },
+  building: BuildingAdmin
+): boolean {
+  const civic = civicNumber(insight.address);
+  const street = streetToken(insight.address, civic);
+  const ba = fold(building.address);
+  const civicOk = Boolean(civic && ba.includes(civic));
+  const streetOk = Boolean(street && ba.includes(street));
+  const nameOk = nameOverlaps(insight.display_name, building.name);
+  return (civicOk && streetOk) || (civicOk && nameOk) || (streetOk && nameOk);
+}
+
+function matchInventoryBuilding(
+  insight: { display_name: string; address: string },
+  buildings: BuildingAdmin[]
+): BuildingAdmin | null {
+  const corroborated = buildings.filter((b) => addressCorroborates(insight, b));
+  const postal = postalOf(insight.address);
+  if (postal) {
+    const byPostal = corroborated.filter((b) => postalOf(b.address) === postal);
+    if (byPostal.length === 1) return byPostal[0];
+    if (byPostal.length > 1) {
+      const civic = civicNumber(insight.address);
+      const street = streetToken(insight.address, civic);
+      const hit = byPostal.find((b) => {
+        const ba = fold(b.address);
+        return Boolean(civic && ba.includes(civic) && street && ba.includes(street));
+      });
+      if (hit) return hit;
+    }
+  }
+  if (corroborated.length === 1) return corroborated[0];
+  return null;
+}
+
+function unitBedsKey(unit: UnitAdmin): string {
+  const raw = unit.amenities?.bedrooms;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (Number.isNaN(n)) return "?";
+  if (n === 0) return "studio";
+  return n === Math.floor(n) ? String(n) : String(n);
+}
+
+type InventoryState =
+  | { status: "loading" }
+  | { status: "unmatched" }
+  | { status: "error" }
+  | { status: "ok"; building: BuildingAdmin; units: UnitAdmin[] };
+
 function downloadCsv(comps: Comp[], buildingName: string) {
   const csvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
   const headers = [
@@ -154,6 +246,8 @@ export default function BuildingDetailPage() {
   const { t } = useAdminLocaleContext();
   const [data, setData] = useState<BuildingInsight | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [inventory, setInventory] = useState<InventoryState>({ status: "loading" });
+  const [selectedUnitId, setSelectedUnitId] = useState<number | null>(null);
 
   useEffect(() => {
     const token = getAdminToken();
@@ -176,6 +270,49 @@ export default function BuildingDetailPage() {
       .catch(() => setError(t("insightsError")));
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
+
+  useEffect(() => {
+    if (!data) return;
+    let cancelled = false;
+    setInventory({ status: "loading" });
+    setSelectedUnitId(null);
+    void listBuildingsAdmin()
+      .then(async (buildings) => {
+        const matched = matchInventoryBuilding(data, buildings);
+        if (!matched) {
+          if (!cancelled) setInventory({ status: "unmatched" });
+          return;
+        }
+        const units = await listUnitsAdmin(matched.id);
+        if (!cancelled) {
+          setInventory({
+            status: "ok",
+            building: matched,
+            units: units.filter((u) => u.active && u.for_rent),
+          });
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setInventory({ status: "error" });
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [data]);
+
+  const selectedUnit =
+    inventory.status === "ok"
+      ? inventory.units.find((u) => u.id === selectedUnitId) ?? null
+      : null;
+  const selectedBeds = selectedUnit ? unitBedsKey(selectedUnit) : null;
+  const selectedAsk = selectedUnit?.rent ?? null;
+
+  const visibleComps = data
+    ? data.top_comps.filter((comp) => {
+        if (!selectedBeds || selectedBeds === "?") return true;
+        return comp.beds === selectedBeds;
+      })
+    : [];
 
   const bedKeys = data
     ? Object.keys(data.by_bedrooms)
@@ -232,6 +369,141 @@ export default function BuildingDetailPage() {
             )}
           </div>
 
+          {/* Steve's vacant units */}
+          <div className={`${adminUi.card} mb-6`}>
+            <div className="flex items-center justify-between gap-3 px-4 py-3">
+              <p className="text-sm font-semibold text-[var(--ml-ink)]">
+                {t("insightsYourUnits")}
+              </p>
+              <Link
+                href="/admin/buildings"
+                className="text-xs text-[var(--ml-steel)] underline hover:text-[var(--ml-ink)]"
+              >
+                {t("insightsManageUnits")}
+              </Link>
+            </div>
+            {inventory.status === "loading" && (
+              <p className="border-t border-[var(--ml-line)] px-4 py-3 text-xs text-[var(--ml-steel)]">
+                {t("insightsLoading")}
+              </p>
+            )}
+            {inventory.status === "unmatched" && (
+              <p className="border-t border-[var(--ml-line)] px-4 py-3 text-xs text-[var(--ml-steel)]">
+                {t("insightsNoInventoryMatch")}
+              </p>
+            )}
+            {inventory.status === "error" && (
+              <p className="border-t border-[var(--ml-line)] px-4 py-3 text-xs text-red-700">
+                {t("insightsError")}
+              </p>
+            )}
+            {inventory.status === "ok" && inventory.units.length === 0 && (
+              <p className="border-t border-[var(--ml-line)] px-4 py-3 text-xs text-[var(--ml-steel)]">
+                {t("insightsNoVacantUnits")}
+              </p>
+            )}
+            {inventory.status === "ok" && inventory.units.length > 0 && (
+              <>
+                <p className="border-t border-[var(--ml-line)] px-4 py-2 text-[10px] text-[var(--ml-steel)]">
+                  {t("insightsSelectUnit")}
+                </p>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-[10px] uppercase tracking-wide text-[var(--ml-steel)]">
+                        <th className="px-4 py-2">{t("insightsUnit")}</th>
+                        <th className="px-4 py-2">{t("insightsBeds")}</th>
+                        <th className="px-4 py-2 text-right">{t("insightsAsking")}</th>
+                        <th className="px-4 py-2 text-right">{t("insightsMarketMedian")}</th>
+                        <th className="px-4 py-2 text-right">{t("insightsVsMarket")}</th>
+                        <th className="px-4 py-2 text-right">{t("insightsNearAsk")}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {inventory.units.map((unit) => {
+                        const beds = unitBedsKey(unit);
+                        const market = beds !== "?" ? data.by_bedrooms[beds] : undefined;
+                        const ask = unit.rent;
+                        const vs =
+                          ask != null && market
+                            ? ask - market.median
+                            : null;
+                        const near =
+                          ask != null
+                            ? data.top_comps.filter(
+                                (c) =>
+                                  (beds === "?" || c.beds === beds) &&
+                                  Math.abs(c.price - ask) <= ASK_BAND
+                              ).length
+                            : 0;
+                        const selected = selectedUnitId === unit.id;
+                        return (
+                          <tr
+                            key={unit.id}
+                            role="button"
+                            tabIndex={0}
+                            onClick={() =>
+                              setSelectedUnitId(selected ? null : unit.id)
+                            }
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setSelectedUnitId(selected ? null : unit.id);
+                              }
+                            }}
+                            className={`cursor-pointer border-t border-[var(--ml-line)] hover:bg-[var(--ml-paper)] ${
+                              selected ? "bg-[var(--ml-paper)]" : ""
+                            }`}
+                          >
+                            <td className="px-4 py-2.5 font-medium text-[var(--ml-ink)]">
+                              {unit.unit_number}
+                              {unit.available_date && (
+                                <span className="ml-2 text-[10px] font-normal text-[var(--ml-steel)]">
+                                  {unit.available_date}
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-2.5 text-[var(--ml-steel)]">
+                              {bedsLabel(beds, t("insightsStudio"))}
+                            </td>
+                            <td className="px-4 py-2.5 text-right font-semibold text-[var(--ml-ink)]">
+                              {ask != null
+                                ? `$${ask.toLocaleString()}`
+                                : t("insightsNoAsking")}
+                            </td>
+                            <td className="px-4 py-2.5 text-right text-[var(--ml-steel)]">
+                              {market
+                                ? `$${market.median.toLocaleString()}`
+                                : "—"}
+                            </td>
+                            <td
+                              className={`px-4 py-2.5 text-right text-xs ${
+                                vs == null
+                                  ? "text-[var(--ml-steel)]"
+                                  : vs > 0
+                                  ? "text-red-700"
+                                  : vs < 0
+                                  ? "text-green-700"
+                                  : "text-[var(--ml-steel)]"
+                              }`}
+                            >
+                              {vs == null
+                                ? "—"
+                                : `${vs > 0 ? "+" : ""}$${vs.toLocaleString()}`}
+                            </td>
+                            <td className="px-4 py-2.5 text-right text-[var(--ml-steel)]">
+                              {ask != null ? near : "—"}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+
           {/* Bedroom summary */}
           {bedKeys.length > 0 && (
             <div className={`${adminUi.card} mb-6`}>
@@ -280,10 +552,17 @@ export default function BuildingDetailPage() {
           )}
 
           {/* All comps */}
-          {data.top_comps.length > 0 ? (
+          {visibleComps.length > 0 ? (
             <div className={adminUi.card}>
               <p className="px-4 py-3 text-sm font-semibold text-[var(--ml-ink)]">
-                {t("insightsAllComps")} ({data.top_comps.length})
+                {selectedUnit && selectedBeds
+                  ? `${bedsLabel(selectedBeds, t("insightsStudio"))} — ${visibleComps.length}`
+                  : `${t("insightsAllComps")} (${visibleComps.length})`}
+                {selectedAsk != null && (
+                  <span className="ml-2 text-xs font-normal text-[var(--ml-steel)]">
+                    {t("insightsShowingNearAsk")}
+                  </span>
+                )}
               </p>
               <div className="overflow-x-auto border-t border-[var(--ml-line)]">
                 <table className="w-full text-sm">
@@ -300,10 +579,16 @@ export default function BuildingDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.top_comps.map((comp, i) => (
+                    {visibleComps.map((comp, i) => {
+                      const nearAsk =
+                        selectedAsk != null &&
+                        Math.abs(comp.price - selectedAsk) <= ASK_BAND;
+                      return (
                       <tr
                         key={i}
-                        className="border-t border-[var(--ml-line)] hover:bg-[var(--ml-paper)]"
+                        className={`border-t border-[var(--ml-line)] hover:bg-[var(--ml-paper)] ${
+                          nearAsk ? "bg-amber-50" : ""
+                        }`}
                       >
                         <td className="px-4 py-2.5">
                           {comp.image ? (
@@ -406,7 +691,8 @@ export default function BuildingDetailPage() {
                           </div>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
