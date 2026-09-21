@@ -85,6 +85,7 @@ function AmenityDot({ on, label }: { on: boolean; label: string }) {
 }
 
 function downloadCsv(comps: Comp[], buildingName: string) {
+  const csvCell = (value: string) => `"${value.replace(/"/g, '""')}"`;
   const headers = [
     "Price",
     "Beds",
@@ -99,15 +100,15 @@ function downloadCsv(comps: Comp[], buildingName: string) {
   ];
   const rows = comps.map((c) => [
     c.price,
-    c.beds,
+    csvCell(c.beds),
     c.distance_km,
-    c.source,
-    `"${(c.title || "").replace(/"/g, '""')}"`,
-    `"${(c.address || "").replace(/"/g, '""')}"`,
+    csvCell(c.source),
+    csvCell(c.title || ""),
+    csvCell(c.address || ""),
     c.heating ? "Yes" : "No",
     c.parking ? "Yes" : "No",
     c.air_conditioning ? "Yes" : "No",
-    c.url || "",
+    csvCell(c.url || ""),
   ]);
   const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
   const blob = new Blob([csv], { type: "text/csv" });
