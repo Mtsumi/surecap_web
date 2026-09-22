@@ -44,6 +44,12 @@ export type Comp = {
   electricity_included: boolean;
   dishwasher: boolean;
   balcony: boolean;
+  fridge_freezer?: boolean;
+  stove_included?: boolean;
+  microwave?: boolean;
+  water_included?: boolean;
+  concierge?: boolean;
+  bike_parking?: boolean;
 };
 
 export type BuildingInsight = {
@@ -73,7 +79,7 @@ export function AmenityChip({
   label,
   tip,
 }: {
-  on: boolean;
+  on?: boolean;
   label: string;
   tip: string;
 }) {
@@ -216,6 +222,10 @@ const AMENITY_I18N: Record<string, AdminMessageKey> = {
   balcony: "insightsBalcony",
   electricity_included: "insightsElectricity",
   heating: "insightsHeating",
+  fridge_freezer: "insightsFridge",
+  stove_included: "insightsStove",
+  microwave: "insightsMicrowave",
+  water_included: "insightsWater",
 };
 
 export function amenitySplitLines(

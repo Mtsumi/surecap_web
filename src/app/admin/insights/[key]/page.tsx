@@ -442,6 +442,36 @@ export default function BuildingDetailPage() {
                               label={t("insightsBalcony")}
                               tip={t("insightsBalconyTip")}
                             />
+                            <AmenityChip
+                              on={comp.fridge_freezer}
+                              label={t("insightsFridge")}
+                              tip={t("insightsFridgeTip")}
+                            />
+                            <AmenityChip
+                              on={comp.stove_included}
+                              label={t("insightsStove")}
+                              tip={t("insightsStoveTip")}
+                            />
+                            <AmenityChip
+                              on={comp.microwave}
+                              label={t("insightsMicrowave")}
+                              tip={t("insightsMicrowaveTip")}
+                            />
+                            <AmenityChip
+                              on={comp.water_included}
+                              label={t("insightsWater")}
+                              tip={t("insightsWaterTip")}
+                            />
+                            <AmenityChip
+                              on={comp.bike_parking}
+                              label={t("insightsBike")}
+                              tip={t("insightsBikeTip")}
+                            />
+                            <AmenityChip
+                              on={comp.concierge}
+                              label={t("insightsConcierge")}
+                              tip={t("insightsConciergeTip")}
+                            />
                           </div>
                         </td>
                       </tr>

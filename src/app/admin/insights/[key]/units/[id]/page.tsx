@@ -61,7 +61,9 @@ export default function UnitInsightPage() {
         }
         const units = await listUnitsAdmin(matched.id);
         if (!cancelled) {
-          setUnit(units.find((u) => u.id === unitId) ?? null);
+          setUnit(
+            units.find((u) => u.id === unitId && u.active && u.for_rent) ?? null
+          );
         }
       })
       .catch(() => {
@@ -279,6 +281,36 @@ export default function UnitInsightPage() {
                                 on={comp.balcony}
                                 label={t("insightsBalcony")}
                                 tip={t("insightsBalconyTip")}
+                              />
+                              <AmenityChip
+                                on={comp.fridge_freezer}
+                                label={t("insightsFridge")}
+                                tip={t("insightsFridgeTip")}
+                              />
+                              <AmenityChip
+                                on={comp.stove_included}
+                                label={t("insightsStove")}
+                                tip={t("insightsStoveTip")}
+                              />
+                              <AmenityChip
+                                on={comp.microwave}
+                                label={t("insightsMicrowave")}
+                                tip={t("insightsMicrowaveTip")}
+                              />
+                              <AmenityChip
+                                on={comp.water_included}
+                                label={t("insightsWater")}
+                                tip={t("insightsWaterTip")}
+                              />
+                              <AmenityChip
+                                on={comp.bike_parking}
+                                label={t("insightsBike")}
+                                tip={t("insightsBikeTip")}
+                              />
+                              <AmenityChip
+                                on={comp.concierge}
+                                label={t("insightsConcierge")}
+                                tip={t("insightsConciergeTip")}
                               />
                             </div>
                           </td>
