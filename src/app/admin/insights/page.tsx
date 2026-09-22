@@ -6,40 +6,7 @@ import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 import { getAdminToken } from "@/lib/adminAuth";
-
-// ---------- Types ----------
-
-type BedroomSummary = {
-  count: number;
-  median: number;
-  min: number;
-  max: number;
-  suggested_min: number;
-  suggested_max: number;
-  trend_pct: number | null;
-};
-
-type Comp = {
-  beds: string;
-  price: number;
-  distance_km: number;
-  source: string;
-  address: string;
-  title: string;
-  url: string;
-  heating: boolean;
-  parking: boolean;
-  air_conditioning: boolean;
-};
-
-type BuildingInsight = {
-  display_name: string;
-  address: string;
-  last_scraped: string | null;
-  run_count: number;
-  by_bedrooms: Record<string, BedroomSummary>;
-  top_comps: Comp[];
-};
+import { TrendBadge, bedsLabel, type BuildingInsight } from "./shared";
 
 type InsightsData = Record<string, BuildingInsight>;
 
@@ -80,31 +47,6 @@ function isStale(lastScraped: string | null): boolean {
   if (!lastScraped) return true;
   const age = Date.now() - new Date(lastScraped).getTime();
   return age > 26 * 3600 * 1000;
-}
-
-function bedsLabel(key: string, studioLabel: string): string {
-  if (key === "studio") return studioLabel;
-  if (key === "?") return "?";
-  return `${key} BR`;
-}
-
-function trendBadge(pct: number | null) {
-  if (pct === null) return null;
-  const up = pct > 0;
-  const neutral = pct === 0;
-  return (
-    <span
-      className={`ml-1 inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ${
-        neutral
-          ? "bg-[var(--ml-line)] text-[var(--ml-steel)]"
-          : up
-          ? "bg-green-100 text-green-700"
-          : "bg-red-100 text-red-700"
-      }`}
-    >
-      {up ? "▲" : pct < 0 ? "▼" : "—"} {Math.abs(pct)}%
-    </span>
-  );
 }
 
 // ---------- Building card ----------
@@ -175,7 +117,7 @@ function BuildingCard({
                   <tr key={k} className="border-t border-[var(--ml-line)]">
                     <td className="px-4 py-2.5 font-medium text-[var(--ml-ink)]">
                       {bedsLabel(k, t("insightsStudio"))}
-                      {trendBadge(s.trend_pct)}
+                      <TrendBadge summary={s} t={t} />
                     </td>
                     <td className="px-4 py-2.5 text-right text-[var(--ml-steel)]">{s.count}</td>
                     <td className="px-4 py-2.5 text-right font-semibold text-[var(--ml-ink)]">
