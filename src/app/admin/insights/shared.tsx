@@ -144,11 +144,11 @@ export function CompPhotos({
       if (e.key !== "Tab") return;
       const root = dialogRef.current;
       if (!root) return;
-      const focusable = [
-        ...root.querySelectorAll<HTMLElement>(
+      const focusable = Array.from(
+        root.querySelectorAll<HTMLElement>(
           'button, a[href], [tabindex]:not([tabindex="-1"])'
-        ),
-      ].filter((el) => !el.hasAttribute("disabled"));
+        )
+      ).filter((el) => !el.hasAttribute("disabled"));
       if (!focusable.length) return;
       const first = focusable[0];
       const last = focusable[focusable.length - 1];
