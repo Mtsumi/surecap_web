@@ -17,7 +17,6 @@ import {
   AmenityChip,
   CompPhotos,
   TrendBadge,
-  amenitySplitLines,
   bedsLabel,
   downloadCsv,
   matchInventoryBuilding,
@@ -287,19 +286,11 @@ export default function BuildingDetailPage() {
                   <tbody>
                     {bedKeys.map((k) => {
                       const s = data.by_bedrooms[k];
-                      const lines = amenitySplitLines(s.amenity_splits, t);
                       return (
                         <tr key={k} className="border-t border-[var(--ml-line)]">
                           <td className="px-4 py-2.5 font-medium text-[var(--ml-ink)]">
                             {bedsLabel(k, t("insightsStudio"))}
                             <TrendBadge summary={s} t={t} />
-                            {lines.length > 0 && (
-                              <ul className="mt-1 space-y-0.5 text-[10px] font-normal text-[var(--ml-steel)]">
-                                {lines.map((line) => (
-                                  <li key={line}>{line}</li>
-                                ))}
-                              </ul>
-                            )}
                           </td>
                           <td className="px-4 py-2.5 text-right text-[var(--ml-steel)]">
                             {s.count}
@@ -352,8 +343,12 @@ export default function BuildingDetailPage() {
                           <CompPhotos
                             images={photoUrls(comp)}
                             alt={comp.title || comp.address || ""}
+                            listingUrl={comp.url}
+                            viewLabel={t("insightsViewPhotos")}
                             prevLabel={t("insightsPhotoPrev")}
                             nextLabel={t("insightsPhotoNext")}
+                            openLabel={t("insightsPhotoOpen")}
+                            closeLabel={t("insightsPhotoClose")}
                           />
                         </td>
                         <td className="px-4 py-2.5 text-right font-semibold text-[var(--ml-ink)]">

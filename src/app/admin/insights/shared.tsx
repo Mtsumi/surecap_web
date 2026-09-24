@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 import type { BuildingAdmin, UnitAdmin } from "@/lib/adminApi";
 
@@ -97,67 +97,148 @@ export function AmenityChip({
 export function CompPhotos({
   images,
   alt,
-  size = "thumb",
+  listingUrl,
+  viewLabel,
   prevLabel,
   nextLabel,
+  openLabel,
+  closeLabel,
 }: {
   images: string[];
   alt: string;
-  size?: "thumb" | "card";
+  listingUrl?: string;
+  viewLabel: string;
   prevLabel: string;
   nextLabel: string;
+  openLabel: string;
+  closeLabel: string;
 }) {
+  const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
+  const [broken, setBroken] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const urls = images.filter(Boolean);
-  if (!urls.length) {
-    return size === "card" ? (
-      <div className="h-28 w-40 rounded bg-[var(--ml-paper)]" />
-    ) : (
-      <div className="h-12 w-16 rounded bg-[var(--ml-paper)]" />
-    );
-  }
+  useEffect(() => {
+    if (!open) return;
+    dialogRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+      if (e.key === "ArrowLeft") setI((cur) => cur - 1);
+      if (e.key === "ArrowRight") setI((cur) => cur + 1);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+  if (!urls.length) return null;
   const n = urls.length;
   const src = urls[((i % n) + n) % n];
-  const box =
-    size === "card"
-      ? "relative h-28 w-40 shrink-0 overflow-hidden rounded"
-      : "relative h-12 w-16 shrink-0 overflow-hidden rounded";
+  const label = viewLabel.replace("{count}", String(n));
+
   return (
-    <div className={box}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={alt} className="h-full w-full object-cover" />
-      {n > 1 && (
-        <>
-          <button
-            type="button"
-            aria-label={prevLabel}
-            className="absolute left-0 top-1/2 -translate-y-1/2 bg-black/45 px-1 text-[10px] leading-none text-white"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setI((cur) => cur - 1);
-            }}
+    <>
+      <button
+        type="button"
+        className="whitespace-nowrap text-xs text-[var(--ml-pine)] underline hover:text-[var(--ml-ink)]"
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          setBroken(false);
+          setI(0);
+          setOpen(true);
+        }}
+      >
+        {label}
+      </button>
+      {open && (
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label={alt || label}
+          tabIndex={-1}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          onClick={() => setOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-3xl rounded bg-black p-3"
+            onClick={(e) => e.stopPropagation()}
           >
-            ‹
-          </button>
-          <button
-            type="button"
-            aria-label={nextLabel}
-            className="absolute right-0 top-1/2 -translate-y-1/2 bg-black/45 px-1 text-[10px] leading-none text-white"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              setI((cur) => cur + 1);
-            }}
-          >
-            ›
-          </button>
-          <span className="absolute bottom-0 right-0 bg-black/50 px-1 text-[9px] text-white">
-            {(((i % n) + n) % n) + 1}/{n}
-          </span>
-        </>
+            <button
+              type="button"
+              className="absolute right-3 top-3 z-10 rounded bg-white/90 px-2 py-1 text-xs text-[var(--ml-ink)]"
+              onClick={() => setOpen(false)}
+            >
+              {closeLabel}
+            </button>
+            {broken ? (
+              <div className="flex h-72 flex-col items-center justify-center gap-2 text-sm text-white">
+                {listingUrl ? (
+                  <a
+                    href={listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    {openLabel}
+                  </a>
+                ) : (
+                  <span>{alt}</span>
+                )}
+              </div>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={src}
+                alt={alt}
+                className="max-h-[75vh] w-full object-contain"
+                onError={() => setBroken(true)}
+              />
+            )}
+            <div className="mt-2 flex items-center justify-between text-xs text-white">
+              <span>
+                {(((i % n) + n) % n) + 1}/{n}
+              </span>
+              <div className="flex gap-2">
+                {n > 1 && (
+                  <>
+                    <button
+                      type="button"
+                      aria-label={prevLabel}
+                      onClick={() => {
+                        setBroken(false);
+                        setI((c) => c - 1);
+                      }}
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      aria-label={nextLabel}
+                      onClick={() => {
+                        setBroken(false);
+                        setI((c) => c + 1);
+                      }}
+                    >
+                      ›
+                    </button>
+                  </>
+                )}
+                {listingUrl && (
+                  <a
+                    href={listingUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    {openLabel}
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
-    </div>
+    </>
   );
 }
 
@@ -185,14 +266,14 @@ export function TrendBadge({
   const title = trendTitle(summary, t);
   const thin = summary.prev_count != null && summary.prev_count < 5;
   if (thin || summary.trend_pct == null) {
-    return title ? (
+    return (
       <span
-        title={title}
+        title={title || t("insightsTrendNoneTip")}
         className="ml-1 inline-flex items-center rounded bg-[var(--ml-line)] px-1.5 py-0.5 text-[10px] text-[var(--ml-steel)]"
       >
-        ·
+        {t("insightsTrendNone")}
       </span>
-    ) : null;
+    );
   }
   const pct = summary.trend_pct;
   const up = pct > 0;
@@ -239,6 +320,46 @@ export function amenitySplitLines(
     const key = s.premium >= 0 ? "insightsAmenityMore" : "insightsAmenityLess";
     return t(key).replace("{amenity}", label).replace("{amount}", amount);
   });
+}
+
+export function AmenitySplitChips({
+  splits,
+  t,
+}: {
+  splits: AmenitySplit[] | undefined;
+  t: (k: AdminMessageKey) => string;
+}) {
+  if (!splits?.length) return null;
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-semibold text-[var(--ml-ink)]">
+        {t("insightsAmenityMarket")}
+      </p>
+      <p className="mt-0.5 text-[10px] text-[var(--ml-steel)]">
+        {t("insightsAmenityHint")}
+      </p>
+      <div className="mt-2 flex flex-wrap gap-1.5">
+        {splits.map((s) => {
+          const label = t(AMENITY_I18N[s.key] ?? "insightsAmenities");
+          const amount = Math.abs(s.premium).toLocaleString();
+          const more = s.premium >= 0;
+          return (
+            <span
+              key={s.key}
+              title={t("insightsAmenityHint")}
+              className={`inline-flex rounded px-1.5 py-0.5 text-[11px] font-medium ${
+                more
+                  ? "bg-[var(--ml-paper)] text-[var(--ml-pine)]"
+                  : "bg-red-50 text-red-700"
+              }`}
+            >
+              {label} {more ? "+" : "−"}${amount}
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 function fold(s: string): string {
