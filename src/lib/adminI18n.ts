@@ -105,6 +105,8 @@ export const adminMessages = {
     insightsTrendNoneTip:
       "Pas assez d'annonces de ce type à la dernière collecte pour comparer.",
     insightsAmenityHint: "Dans cet ensemble de chambres — pas une hausse garantie.",
+    insightsAmenityChipMore: "{amenity} +{amount} $",
+    insightsAmenityChipLess: "{amenity} −{amount} $",
     insightsBackToBuilding: "← Retour à l'immeuble",
     insightsUnitNotFound: "Logement introuvable.",
     loginTitle: "Montreal Living",
@@ -294,6 +296,8 @@ export const adminMessages = {
     insightsTrendNoneTip:
       "Not enough last-scrape comps of this type to compare.",
     insightsAmenityHint: "In this bedroom set — not a guaranteed add-on.",
+    insightsAmenityChipMore: "{amenity} +${amount}",
+    insightsAmenityChipLess: "{amenity} −${amount}",
     insightsBackToBuilding: "← Back to building",
     insightsUnitNotFound: "Unit not found.",
     loginTitle: "Montreal Living",

@@ -117,14 +117,48 @@ export function CompPhotos({
   const [i, setI] = useState(0);
   const [broken, setBroken] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
   const urls = images.filter(Boolean);
+  const closeViewer = () => {
+    setOpen(false);
+    queueMicrotask(() => triggerRef.current?.focus());
+  };
   useEffect(() => {
     if (!open) return;
     dialogRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setOpen(false);
-      if (e.key === "ArrowLeft") setI((cur) => cur - 1);
-      if (e.key === "ArrowRight") setI((cur) => cur + 1);
+      if (e.key === "Escape") {
+        closeViewer();
+        return;
+      }
+      if (e.key === "ArrowLeft") {
+        setBroken(false);
+        setI((cur) => cur - 1);
+        return;
+      }
+      if (e.key === "ArrowRight") {
+        setBroken(false);
+        setI((cur) => cur + 1);
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const root = dialogRef.current;
+      if (!root) return;
+      const focusable = [
+        ...root.querySelectorAll<HTMLElement>(
+          'button, a[href], [tabindex]:not([tabindex="-1"])'
+        ),
+      ].filter((el) => !el.hasAttribute("disabled"));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -137,6 +171,7 @@ export function CompPhotos({
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         className="whitespace-nowrap text-xs text-[var(--ml-pine)] underline hover:text-[var(--ml-ink)]"
         onClick={(e) => {
@@ -157,7 +192,7 @@ export function CompPhotos({
           aria-label={alt || label}
           tabIndex={-1}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
-          onClick={() => setOpen(false)}
+          onClick={closeViewer}
         >
           <div
             className="relative w-full max-w-3xl rounded bg-black p-3"
@@ -166,7 +201,7 @@ export function CompPhotos({
             <button
               type="button"
               className="absolute right-3 top-3 z-10 rounded bg-white/90 px-2 py-1 text-xs text-[var(--ml-ink)]"
-              onClick={() => setOpen(false)}
+              onClick={closeViewer}
             >
               {closeLabel}
             </button>
@@ -325,24 +360,38 @@ export function amenitySplitLines(
 export function AmenitySplitChips({
   splits,
   t,
+  heading,
+  compact,
 }: {
   splits: AmenitySplit[] | undefined;
   t: (k: AdminMessageKey) => string;
+  heading?: string;
+  compact?: boolean;
 }) {
   if (!splits?.length) return null;
   return (
-    <div className="mt-3">
-      <p className="text-xs font-semibold text-[var(--ml-ink)]">
-        {t("insightsAmenityMarket")}
-      </p>
-      <p className="mt-0.5 text-[10px] text-[var(--ml-steel)]">
-        {t("insightsAmenityHint")}
-      </p>
+    <div className={compact ? "mt-2" : "mt-3"}>
+      {!compact && (
+        <>
+          <p className="text-xs font-semibold text-[var(--ml-ink)]">
+            {heading ?? t("insightsAmenityMarket")}
+          </p>
+          <p className="mt-0.5 text-[10px] text-[var(--ml-steel)]">
+            {t("insightsAmenityHint")}
+          </p>
+        </>
+      )}
+      {compact && heading && (
+        <p className="text-[11px] font-medium text-[var(--ml-ink)]">{heading}</p>
+      )}
       <div className="mt-2 flex flex-wrap gap-1.5">
         {splits.map((s) => {
           const label = t(AMENITY_I18N[s.key] ?? "insightsAmenities");
           const amount = Math.abs(s.premium).toLocaleString();
           const more = s.premium >= 0;
+          const chip = t(more ? "insightsAmenityChipMore" : "insightsAmenityChipLess")
+            .replace("{amenity}", label)
+            .replace("{amount}", amount);
           return (
             <span
               key={s.key}
@@ -353,7 +402,7 @@ export function AmenitySplitChips({
                   : "bg-red-50 text-red-700"
               }`}
             >
-              {label} {more ? "+" : "−"}${amount}
+              {chip}
             </span>
           );
         })}

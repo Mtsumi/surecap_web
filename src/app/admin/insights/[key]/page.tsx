@@ -15,6 +15,7 @@ import {
 import {
   ASK_BAND,
   AmenityChip,
+  AmenitySplitChips,
   CompPhotos,
   TrendBadge,
   bedsLabel,
@@ -311,6 +312,27 @@ export default function BuildingDetailPage() {
                   </tbody>
                 </table>
               </div>
+              {bedKeys.some(
+                (k) => (data.by_bedrooms[k].amenity_splits?.length ?? 0) > 0
+              ) && (
+                <div className="border-t border-[var(--ml-line)] px-4 py-3">
+                  <p className="text-xs font-semibold text-[var(--ml-ink)]">
+                    {t("insightsAmenityMarket")}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-[var(--ml-steel)]">
+                    {t("insightsAmenityHint")}
+                  </p>
+                  {bedKeys.map((k) => (
+                    <AmenitySplitChips
+                      key={k}
+                      splits={data.by_bedrooms[k].amenity_splits}
+                      t={t}
+                      heading={bedsLabel(k, t("insightsStudio"))}
+                      compact
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
