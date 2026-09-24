@@ -30,6 +30,10 @@ import {
 } from "@/lib/screeningGlance";
 import type { ApplicationJob, ApplicationMember } from "@/lib/adminApi";
 import { startCorpiqScreening } from "@/lib/adminApi";
+import {
+  corpiqPortalPreflightIssues,
+  corpiqPreflightLabel,
+} from "@/lib/corpiqPreflight";
 import { adminUi } from "@/lib/adminUi";
 import type { Locale } from "@/lib/i18n";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
@@ -840,12 +844,14 @@ function parseCorpiqStage(message: string | null): string | null {
 function CorpiqMemberControls({
   applicationId,
   memberId,
+  member,
   job,
   locale,
   onStarted,
 }: {
   applicationId: number;
   memberId: number;
+  member: ApplicationMember | undefined;
   job: ApplicationJob | undefined;
   locale: Locale;
   onStarted?: () => void;
@@ -857,6 +863,8 @@ function CorpiqMemberControls({
   const failed = job?.status === "failed";
   const needsForce = completed || failed;
   const stage = parseCorpiqStage(job?.message ?? null);
+  const preflightIssues = corpiqPortalPreflightIssues(member);
+  const portalReady = preflightIssues.length === 0;
 
   const run = async (force: boolean) => {
     if (force && !window.confirm(
@@ -907,7 +915,14 @@ function CorpiqMemberControls({
           {!needsForce && !inFlight ? (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || !portalReady}
+              title={
+                !portalReady
+                  ? locale === "fr"
+                    ? "Complétez les champs requis ci-dessous"
+                    : "Complete the required items below"
+                  : undefined
+              }
               className={`${adminUi.btnPrimary} disabled:opacity-50`}
               onClick={() => void run(false)}
             >
@@ -928,7 +943,14 @@ function CorpiqMemberControls({
           {needsForce ? (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || !portalReady}
+              title={
+                !portalReady
+                  ? locale === "fr"
+                    ? "Complétez les champs requis ci-dessous"
+                    : "Complete the required items below"
+                  : undefined
+              }
               className={`${adminUi.btnSecondary} disabled:opacity-50`}
               onClick={() => void run(true)}
             >
@@ -937,6 +959,20 @@ function CorpiqMemberControls({
           ) : null}
         </div>
       </div>
+      {!portalReady ? (
+        <div className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
+          <p className="font-medium">
+            {locale === "fr"
+              ? "Avant ProprioEnquête (sans paiement)"
+              : "Before ProprioEnquête (no payment yet)"}
+          </p>
+          <ul className="mt-1 list-inside list-disc space-y-0.5">
+            {preflightIssues.map((code) => (
+              <li key={code}>{corpiqPreflightLabel(code, locale)}</li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
       {error ? <p className={`${adminUi.alertError} mt-2`}>{error}</p> : null}
     </div>
   );
@@ -1052,6 +1088,7 @@ export default function ScreeningJobs({
               <CorpiqMemberControls
                 applicationId={applicationId}
                 memberId={memberId}
+                member={memberById.get(memberId)}
                 job={
                   jobs.find(
                     (job) =>
