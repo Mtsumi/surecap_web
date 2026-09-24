@@ -3,6 +3,8 @@
 import { useEffect, useRef, useState } from "react";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 import type { BuildingAdmin, UnitAdmin } from "@/lib/adminApi";
+import { getAdminToken } from "@/lib/adminAuth";
+import { compPhotoProxyPath } from "@/lib/compPhotoHosts";
 
 export type AmenitySplit = {
   key: string;
@@ -116,6 +118,8 @@ export function CompPhotos({
   const [open, setOpen] = useState(false);
   const [i, setI] = useState(0);
   const [broken, setBroken] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [displaySrc, setDisplaySrc] = useState<string | null>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const urls = images.filter(Boolean);
@@ -163,9 +167,50 @@ export function CompPhotos({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open]);
-  if (!urls.length) return null;
+
   const n = urls.length;
-  const src = urls[((i % n) + n) % n];
+  const src = n ? urls[((i % n) + n) % n] : "";
+
+  useEffect(() => {
+    if (!open || !src) return;
+    let cancelled = false;
+    let objectUrl: string | null = null;
+    setLoading(true);
+    setBroken(false);
+    setDisplaySrc(null);
+    const token = getAdminToken();
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), 16_000);
+    fetch(compPhotoProxyPath(src), {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      signal: controller.signal,
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(String(res.status));
+        return res.blob();
+      })
+      .then((blob) => {
+        if (cancelled) return;
+        if (!blob.type.startsWith("image/")) throw new Error("not-image");
+        objectUrl = URL.createObjectURL(blob);
+        setDisplaySrc(objectUrl);
+      })
+      .catch(() => {
+        if (!cancelled) setBroken(true);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+        window.clearTimeout(timer);
+      });
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      controller.abort();
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [open, src]);
+
+  if (!urls.length) return null;
   const label = viewLabel.replace("{count}", String(n));
 
   return (
@@ -220,10 +265,14 @@ export function CompPhotos({
                   <span>{alt}</span>
                 )}
               </div>
+            ) : loading || !displaySrc ? (
+              <div className="flex h-72 items-center justify-center text-sm text-white/80">
+                …
+              </div>
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={src}
+                src={displaySrc}
                 alt={alt}
                 className="max-h-[75vh] w-full object-contain"
                 onError={() => setBroken(true)}
