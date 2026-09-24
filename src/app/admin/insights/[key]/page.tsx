@@ -15,9 +15,9 @@ import {
 import {
   ASK_BAND,
   AmenityChip,
+  AmenitySplitChips,
   CompPhotos,
   TrendBadge,
-  amenitySplitLines,
   bedsLabel,
   downloadCsv,
   matchInventoryBuilding,
@@ -287,19 +287,11 @@ export default function BuildingDetailPage() {
                   <tbody>
                     {bedKeys.map((k) => {
                       const s = data.by_bedrooms[k];
-                      const lines = amenitySplitLines(s.amenity_splits, t);
                       return (
                         <tr key={k} className="border-t border-[var(--ml-line)]">
                           <td className="px-4 py-2.5 font-medium text-[var(--ml-ink)]">
                             {bedsLabel(k, t("insightsStudio"))}
                             <TrendBadge summary={s} t={t} />
-                            {lines.length > 0 && (
-                              <ul className="mt-1 space-y-0.5 text-[10px] font-normal text-[var(--ml-steel)]">
-                                {lines.map((line) => (
-                                  <li key={line}>{line}</li>
-                                ))}
-                              </ul>
-                            )}
                           </td>
                           <td className="px-4 py-2.5 text-right text-[var(--ml-steel)]">
                             {s.count}
@@ -320,6 +312,27 @@ export default function BuildingDetailPage() {
                   </tbody>
                 </table>
               </div>
+              {bedKeys.some(
+                (k) => (data.by_bedrooms[k].amenity_splits?.length ?? 0) > 0
+              ) && (
+                <div className="border-t border-[var(--ml-line)] px-4 py-3">
+                  <p className="text-xs font-semibold text-[var(--ml-ink)]">
+                    {t("insightsAmenityMarket")}
+                  </p>
+                  <p className="mt-0.5 text-[10px] text-[var(--ml-steel)]">
+                    {t("insightsAmenityHint")}
+                  </p>
+                  {bedKeys.map((k) => (
+                    <AmenitySplitChips
+                      key={k}
+                      splits={data.by_bedrooms[k].amenity_splits}
+                      t={t}
+                      heading={bedsLabel(k, t("insightsStudio"))}
+                      compact
+                    />
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -352,8 +365,12 @@ export default function BuildingDetailPage() {
                           <CompPhotos
                             images={photoUrls(comp)}
                             alt={comp.title || comp.address || ""}
+                            listingUrl={comp.url}
+                            viewLabel={t("insightsViewPhotos")}
                             prevLabel={t("insightsPhotoPrev")}
                             nextLabel={t("insightsPhotoNext")}
+                            openLabel={t("insightsPhotoOpen")}
+                            closeLabel={t("insightsPhotoClose")}
                           />
                         </td>
                         <td className="px-4 py-2.5 text-right font-semibold text-[var(--ml-ink)]">

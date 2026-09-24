@@ -10,8 +10,8 @@ import { listBuildingsAdmin, listUnitsAdmin, type UnitAdmin } from "@/lib/adminA
 import {
   ASK_BAND,
   AmenityChip,
+  AmenitySplitChips,
   CompPhotos,
-  amenitySplitLines,
   bedsLabel,
   matchInventoryBuilding,
   photoUrls,
@@ -86,7 +86,6 @@ export default function UnitInsightPage() {
     ask != null
       ? comps.filter((c) => Math.abs(c.price - ask) <= ASK_BAND).length
       : 0;
-  const amenityLines = amenitySplitLines(market?.amenity_splits, t);
 
   return (
     <>
@@ -136,18 +135,7 @@ export default function UnitInsightPage() {
                 {market.suggested_max.toLocaleString()}
               </p>
             )}
-            {amenityLines.length > 0 && (
-              <div className="mt-3">
-                <p className="text-xs font-semibold text-[var(--ml-ink)]">
-                  {t("insightsAmenityMarket")}
-                </p>
-                <ul className="mt-1 space-y-0.5 text-xs text-[var(--ml-steel)]">
-                  {amenityLines.map((line) => (
-                    <li key={line}>{line}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <AmenitySplitChips splits={market?.amenity_splits} t={t} />
           </div>
 
           {comps.length > 0 ? (
@@ -191,9 +179,12 @@ export default function UnitInsightPage() {
                             <CompPhotos
                               images={photoUrls(comp)}
                               alt={comp.title || comp.address || ""}
-                              size="card"
+                              listingUrl={comp.url}
+                              viewLabel={t("insightsViewPhotos")}
                               prevLabel={t("insightsPhotoPrev")}
                               nextLabel={t("insightsPhotoNext")}
+                              openLabel={t("insightsPhotoOpen")}
+                              closeLabel={t("insightsPhotoClose")}
                             />
                           </td>
                           <td className="px-4 py-2.5 text-right font-semibold text-[var(--ml-ink)]">
