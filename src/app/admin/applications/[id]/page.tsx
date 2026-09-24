@@ -256,6 +256,8 @@ export default function ApplicationDetailPage() {
   const [busy, setBusy] = useState(false);
   const [reviewRequest, setReviewRequest] = useState<DocumentReviewRequest | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
+  /** Keep polling after Re-run until CORPIQ reaches a terminal status (avoids stale failed UI). */
+  const [corpiqWatchUntil, setCorpiqWatchUntil] = useState(0);
 
   const load = () => {
     Promise.all([getApplication(id), getApplicationJobs(id)])
@@ -277,21 +279,36 @@ export default function ApplicationDetailPage() {
       .catch(() => setIsSuperAdmin(false));
   }, []);
 
-  const corpiqPolling = jobs.some(
+  const corpiqInFlight = jobs.some(
     (job) =>
       job.job_type === "corpiq_screening" &&
       (job.status === "pending" || job.status === "running")
   );
+  const corpiqWatchActive = corpiqWatchUntil > Date.now();
+  const shouldPollCorpiq = corpiqInFlight || corpiqWatchActive;
 
   useEffect(() => {
-    if (!corpiqPolling || !Number.isFinite(id)) return;
-    const timer = window.setInterval(() => {
+    if (!shouldPollCorpiq || !Number.isFinite(id)) return;
+    const refreshJobs = () => {
       getApplicationJobs(id)
-        .then(setJobs)
+        .then((next) => {
+          setJobs(next);
+          const corpiq = next.find((j) => j.job_type === "corpiq_screening");
+          if (corpiq && (corpiq.status === "completed" || corpiq.status === "failed")) {
+            setCorpiqWatchUntil(0);
+          }
+        })
         .catch(() => undefined);
-    }, 3000);
+    };
+    refreshJobs();
+    const timer = window.setInterval(refreshJobs, 3000);
     return () => window.clearInterval(timer);
-  }, [id, corpiqPolling]);
+  }, [id, shouldPollCorpiq, corpiqWatchUntil]);
+
+  const onCorpiqStarted = () => {
+    setCorpiqWatchUntil(Date.now() + 120_000);
+    load();
+  };
 
   const members = app?.members ?? [];
   const sortedMembers = useMemo(() => {
@@ -586,7 +603,7 @@ export default function ApplicationDetailPage() {
             members={members}
             applicationId={id}
             isSuperAdmin={isSuperAdmin}
-            onCorpiqStarted={load}
+            onCorpiqStarted={onCorpiqStarted}
             householdAffordability={app.household_affordability}
             jobMemberLabel={jobMemberLabel}
             docsAnchor="#documents-section"

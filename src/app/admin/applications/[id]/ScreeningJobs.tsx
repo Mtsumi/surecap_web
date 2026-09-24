@@ -2,6 +2,7 @@
 
 import {
   formatJobMessagePreview,
+  parseCorpiqJobMessage,
   formatSearchAddress,
   formatTalScreeningPreview,
   landlordFromDossier,
@@ -831,16 +832,6 @@ function JobRow({
   );
 }
 
-function parseCorpiqStage(message: string | null): string | null {
-  if (!message) return null;
-  try {
-    const parsed = JSON.parse(message) as { stage_label?: string };
-    return parsed.stage_label || null;
-  } catch {
-    return null;
-  }
-}
-
 function CorpiqMemberControls({
   applicationId,
   memberId,
@@ -862,7 +853,12 @@ function CorpiqMemberControls({
   const completed = job?.status === "completed";
   const failed = job?.status === "failed";
   const needsForce = completed || failed;
-  const stage = parseCorpiqStage(job?.message ?? null);
+  const corpiq = parseCorpiqJobMessage(job?.message ?? null);
+  const resultLine = formatJobMessagePreview(
+    "corpiq_screening",
+    job?.message ?? null,
+    locale
+  );
   const preflightIssues = corpiqPortalPreflightIssues(member);
   const portalReady = preflightIssues.length === 0;
 
@@ -889,27 +885,29 @@ function CorpiqMemberControls({
   return (
     <div className="border-b border-[var(--ml-line)] py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-medium text-[var(--ml-ink)]">
-            {locale === "fr" ? "ProprioEnquête (crédit)" : "ProprioEnquête (credit)"}
-          </p>
-          {stage ? (
-            <p className={`${adminUi.empty} mt-1`}>{stage}</p>
-          ) : completed ? (
-            <p className={`${adminUi.empty} mt-1`}>
-              {formatJobMessagePreview("corpiq_screening", job?.message ?? null, locale)}
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-medium text-[var(--ml-ink)]">
+              {locale === "fr" ? "ProprioEnquête (crédit)" : "ProprioEnquête (credit)"}
             </p>
-          ) : failed ? (
-            <p className={`${adminUi.empty} mt-1`}>
-              {locale === "fr" ? "Échec: relancer pour réessayer" : "Failed: re-run to try again"}
-            </p>
-          ) : (
+            {completed ? (
+              <span className="admin-status admin-status-accepted">
+                {locale === "fr" ? "Terminé" : "Complete"}
+              </span>
+            ) : null}
+            {failed && !inFlight ? (
+              <span className="admin-status admin-status-rejected">
+                {locale === "fr" ? "Échec" : "Failed"}
+              </span>
+            ) : null}
+          </div>
+          {!completed && !failed && !inFlight ? (
             <p className={`${adminUi.empty} mt-1`}>
               {locale === "fr"
-                ? "Mock ou dry-run: aucun paiement de points"
-                : "Mock or dry-run: no points paid"}
+                ? "Dry-run si LIVE_SUBMIT est désactivé sur le serveur."
+                : "Dry-run when LIVE_SUBMIT is off on the server."}
             </p>
-          )}
+          ) : null}
         </div>
         <div className="flex flex-wrap gap-2">
           {!needsForce && !inFlight ? (
@@ -959,6 +957,37 @@ function CorpiqMemberControls({
           ) : null}
         </div>
       </div>
+      {completed && !inFlight ? (
+        <div className="mt-2 rounded border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-950">
+          <p className="font-medium">
+            {corpiq?.stage_label ||
+              (locale === "fr" ? "Vérification terminée" : "Credit check finished")}
+          </p>
+          {resultLine ? (
+            <p className="mt-0.5 text-xs text-green-900">{resultLine}</p>
+          ) : null}
+          {corpiq?.summary && corpiq.summary !== corpiq.stage_label ? (
+            <p className="mt-1 text-xs text-green-900">{corpiq.summary}</p>
+          ) : null}
+        </div>
+      ) : null}
+      {failed && !inFlight ? (
+        <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-950">
+          <p className="font-medium">
+            {corpiq?.stage_label ||
+              (locale === "fr" ? "La vérification a échoué" : "Credit check failed")}
+          </p>
+          {corpiq?.summary ? (
+            <p className="mt-0.5 text-xs">{corpiq.summary}</p>
+          ) : null}
+          {corpiq?.error ? (
+            <p className="mt-1 font-mono text-[11px] text-red-800">{corpiq.error}</p>
+          ) : null}
+          {!corpiq?.summary && !corpiq?.error && job?.message ? (
+            <p className="mt-0.5 text-xs">{resultLine}</p>
+          ) : null}
+        </div>
+      ) : null}
       {!portalReady ? (
         <div className="mt-2 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-950">
           <p className="font-medium">
@@ -973,7 +1002,14 @@ function CorpiqMemberControls({
           </ul>
         </div>
       ) : null}
-      {error ? <p className={`${adminUi.alertError} mt-2`}>{error}</p> : null}
+      {error ? (
+        <p className={`${adminUi.alertError} mt-2`}>
+          {locale === "fr"
+            ? "Impossible de joindre l’API (relancez ou rafraîchissez la page). "
+            : "Could not reach the API (retry or refresh the page). "}
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -1035,7 +1071,7 @@ export default function ScreeningJobs({
         <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] px-4 py-3 text-sm text-[var(--ml-ink)]">
           {corpiqRunning.map((job) => {
             const name = jobMemberLabel(job.application_member_id);
-            const stage = parseCorpiqStage(job.message);
+            const stage = parseCorpiqJobMessage(job.message)?.stage_label;
             return (
               <p key={job.id}>
                 {locale === "fr" ? "ProprioEnquête" : "ProprioEnquête"}{" "}

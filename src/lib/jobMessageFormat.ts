@@ -2,6 +2,27 @@
 
 import type { Locale } from "./i18n";
 
+export type CorpiqJobPayload = {
+  mode?: string;
+  stage?: string;
+  stage_label?: string;
+  summary?: string;
+  error?: string;
+  paid?: boolean;
+  score?: number | null;
+  risk_band?: string | null;
+  risk_label?: string | null;
+};
+
+export function parseCorpiqJobMessage(message: string | null): CorpiqJobPayload | null {
+  if (!message?.trim()) return null;
+  try {
+    return JSON.parse(message) as CorpiqJobPayload;
+  } catch {
+    return null;
+  }
+}
+
 export type TalMatchedParty = {
   role?: string;
   name?: string;
@@ -422,16 +443,8 @@ export function formatJobMessagePreview(
     if (income) return formatIncomeExtractPreview(income, locale);
   }
   if (jobType === "corpiq_screening") {
-    try {
-      const parsed = JSON.parse(message) as {
-        summary?: string;
-        stage_label?: string;
-        score?: number | null;
-        risk_band?: string | null;
-        risk_label?: string | null;
-        paid?: boolean;
-        mode?: string;
-      };
+    const parsed = parseCorpiqJobMessage(message);
+    if (parsed) {
       const bits: string[] = [];
       if (parsed.score != null) {
         const band = parsed.risk_label || parsed.risk_band;
@@ -453,8 +466,6 @@ export function formatJobMessagePreview(
         bits.push(locale === "fr" ? "sans paiement" : "no payment");
       }
       if (bits.length) return bits.join(" · ");
-    } catch {
-      /* fall through */
     }
   }
   if (message.trim().startsWith("{")) {
