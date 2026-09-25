@@ -258,6 +258,9 @@ export default function ApplicationDetailPage() {
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   /** Keep polling after Re-run until CORPIQ reaches a terminal status (avoids stale failed UI). */
   const [corpiqWatchUntil, setCorpiqWatchUntil] = useState(0);
+  const [corpiqWatchMemberId, setCorpiqWatchMemberId] = useState<number | null>(
+    null
+  );
 
   const load = () => {
     Promise.all([getApplication(id), getApplicationJobs(id)])
@@ -293,9 +296,19 @@ export default function ApplicationDetailPage() {
       getApplicationJobs(id)
         .then((next) => {
           setJobs(next);
-          const corpiq = next.find((j) => j.job_type === "corpiq_screening");
-          if (corpiq && (corpiq.status === "completed" || corpiq.status === "failed")) {
-            setCorpiqWatchUntil(0);
+          if (corpiqWatchMemberId != null) {
+            const corpiq = next.find(
+              (j) =>
+                j.job_type === "corpiq_screening" &&
+                j.application_member_id === corpiqWatchMemberId
+            );
+            if (
+              corpiq &&
+              (corpiq.status === "completed" || corpiq.status === "failed")
+            ) {
+              setCorpiqWatchUntil(0);
+              setCorpiqWatchMemberId(null);
+            }
           }
         })
         .catch(() => undefined);
@@ -303,9 +316,10 @@ export default function ApplicationDetailPage() {
     refreshJobs();
     const timer = window.setInterval(refreshJobs, 3000);
     return () => window.clearInterval(timer);
-  }, [id, shouldPollCorpiq, corpiqWatchUntil]);
+  }, [id, shouldPollCorpiq, corpiqWatchUntil, corpiqWatchMemberId]);
 
-  const onCorpiqStarted = () => {
+  const onCorpiqStarted = (memberId: number) => {
+    setCorpiqWatchMemberId(memberId);
     setCorpiqWatchUntil(Date.now() + 120_000);
     load();
   };

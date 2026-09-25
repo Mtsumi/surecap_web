@@ -29,6 +29,8 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   signature: "Signature",
   signed_declaration: "Déclaration signée",
   credit_consent: "Formulaire de crédit signé",
+  corpiq_report: "Rapport ProprioEnquête (HTML)",
+  corpiq_report_pdf: "Rapport ProprioEnquête",
   selfie: "Selfie",
 };
 
