@@ -987,7 +987,13 @@ function CorpiqMemberControls({
               className={`${adminUi.btnSecondary} disabled:opacity-50`}
               onClick={() => void openReport()}
             >
-              {locale === "fr" ? "Voir le rapport" : "View report"}
+              {reportBusy
+                ? locale === "fr"
+                  ? "Ouverture…"
+                  : "Opening…"
+                : locale === "fr"
+                  ? "Voir le rapport"
+                  : "View report"}
             </button>
           ) : null}
           {needsForce ? (
@@ -1086,7 +1092,7 @@ export default function ScreeningJobs({
   onReviewDocuments?: (memberId: number, kind: "id" | "income") => void;
   applicationId?: number;
   isSuperAdmin?: boolean;
-  onCorpiqStarted?: () => void;
+  onCorpiqStarted?: (memberId: number) => void;
 }) {
   const { locale } = useAdminLocaleContext();
   const c = copy(locale);
@@ -1185,14 +1191,19 @@ export default function ScreeningJobs({
                   ) ?? memberJobs.find((job) => job.job_type === "corpiq_screening")
                 }
                 locale={locale}
-                onStarted={onCorpiqStarted}
+                onStarted={
+                  onCorpiqStarted
+                    ? () => onCorpiqStarted(memberId)
+                    : undefined
+                }
               />
             ) : null}
             {memberJobs
               .filter(
                 (job) =>
                   job.job_type !== "id_document_extract" &&
-                  job.job_type !== "income_document_extract"
+                  job.job_type !== "income_document_extract" &&
+                  job.job_type !== "corpiq_screening"
               )
               .map((job) => (
                 <JobRow key={job.id} job={job} locale={locale} />

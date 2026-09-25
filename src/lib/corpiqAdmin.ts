@@ -23,11 +23,13 @@ export function corpiqReportDownloadContentType(message: string | null): string 
     const htmlId = payload.report_html_document_id;
     if (
       typeof viewId === "number" &&
-      (htmlId == null || htmlId !== viewId)
+      typeof htmlId === "number" &&
+      htmlId !== viewId
     ) {
       return "application/pdf";
     }
-    return "text/html";
+    if (payload.report_document_id != null) return "text/html";
+    return "application/pdf";
   } catch {
     return "application/pdf";
   }
