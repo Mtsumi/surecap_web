@@ -26,5 +26,13 @@ describe("corpiqAdmin", () => {
     expect(
       corpiqReportDownloadContentType(JSON.stringify({ report_document_id: 1 }))
     ).toBe("text/html");
+    expect(
+      corpiqReportDownloadContentType(
+        JSON.stringify({
+          report_document_id: 360,
+          report_html_document_id: 359,
+        })
+      )
+    ).toBe("application/pdf");
   });
 });

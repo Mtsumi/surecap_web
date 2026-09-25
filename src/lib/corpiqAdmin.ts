@@ -19,6 +19,14 @@ export function corpiqReportDownloadContentType(message: string | null): string 
   try {
     const payload = JSON.parse(message) as Record<string, unknown>;
     if (payload.report_pdf_document_id != null) return "application/pdf";
+    const viewId = payload.report_document_id;
+    const htmlId = payload.report_html_document_id;
+    if (
+      typeof viewId === "number" &&
+      (htmlId == null || htmlId !== viewId)
+    ) {
+      return "application/pdf";
+    }
     return "text/html";
   } catch {
     return "application/pdf";

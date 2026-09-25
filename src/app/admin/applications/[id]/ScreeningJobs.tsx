@@ -856,6 +856,7 @@ function CorpiqMemberControls({
   onStarted?: () => void;
 }) {
   const [busy, setBusy] = useState(false);
+  const [reportBusy, setReportBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const inFlight = job?.status === "pending" || job?.status === "running";
   const completed = job?.status === "completed";
@@ -895,7 +896,7 @@ function CorpiqMemberControls({
     if (reportDocumentId == null) return;
     const tab = window.open("about:blank", "_blank");
     if (tab) tab.opener = null;
-    setBusy(true);
+    setReportBusy(true);
     setError(null);
     const contentType = corpiqReportDownloadContentType(job?.message ?? null);
     try {
@@ -919,7 +920,7 @@ function CorpiqMemberControls({
       tab?.close();
       setError(e instanceof Error ? e.message : "Error");
     } finally {
-      setBusy(false);
+      setReportBusy(false);
     }
   };
 
@@ -982,7 +983,7 @@ function CorpiqMemberControls({
           {reportDocumentId != null ? (
             <button
               type="button"
-              disabled={busy}
+              disabled={reportBusy}
               className={`${adminUi.btnSecondary} disabled:opacity-50`}
               onClick={() => void openReport()}
             >
