@@ -32,6 +32,14 @@ import {
 import type { ApplicationJob, ApplicationMember } from "@/lib/adminApi";
 import { startCorpiqScreening } from "@/lib/adminApi";
 import {
+  fetchMemberDocumentBlob,
+  triggerBlobDownload,
+} from "@/lib/adminDocuments";
+import {
+  corpiqReportDownloadContentType,
+  parseCorpiqReportDocumentId,
+} from "@/lib/corpiqAdmin";
+import {
   corpiqPortalPreflightIssues,
   corpiqPreflightLabel,
 } from "@/lib/corpiqPreflight";
@@ -861,6 +869,7 @@ function CorpiqMemberControls({
   );
   const preflightIssues = corpiqPortalPreflightIssues(member);
   const portalReady = preflightIssues.length === 0;
+  const reportDocumentId = parseCorpiqReportDocumentId(job?.message ?? null);
 
   const run = async (force: boolean) => {
     if (force && !window.confirm(
@@ -876,6 +885,38 @@ function CorpiqMemberControls({
       await startCorpiqScreening(applicationId, memberId, { force });
       onStarted?.();
     } catch (e) {
+      setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openReport = async () => {
+    if (reportDocumentId == null) return;
+    const tab = window.open("about:blank", "_blank");
+    if (tab) tab.opener = null;
+    setBusy(true);
+    setError(null);
+    const contentType = corpiqReportDownloadContentType(job?.message ?? null);
+    try {
+      const blob = await fetchMemberDocumentBlob(
+        applicationId,
+        reportDocumentId,
+        "inline",
+        contentType
+      );
+      const url = URL.createObjectURL(blob);
+      if (tab && !tab.closed) {
+        tab.location.href = url;
+      } else {
+        triggerBlobDownload(
+          blob,
+          contentType.includes("pdf") ? "corpiq_report.pdf" : "corpiq_report.html"
+        );
+      }
+      window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
+    } catch (e) {
+      tab?.close();
       setError(e instanceof Error ? e.message : "Error");
     } finally {
       setBusy(false);
@@ -937,6 +978,16 @@ function CorpiqMemberControls({
                   ? "En cours…"
                   : "Running…"}
             </span>
+          ) : null}
+          {reportDocumentId != null ? (
+            <button
+              type="button"
+              disabled={busy}
+              className={`${adminUi.btnSecondary} disabled:opacity-50`}
+              onClick={() => void openReport()}
+            >
+              {locale === "fr" ? "Voir le rapport" : "View report"}
+            </button>
           ) : null}
           {needsForce ? (
             <button
