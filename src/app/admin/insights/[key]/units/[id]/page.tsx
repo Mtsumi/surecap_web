@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAdminLocaleContext } from "../../../../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
@@ -10,10 +10,12 @@ import { listBuildingsAdmin, listUnitsAdmin, type UnitAdmin } from "@/lib/adminA
 import {
   ASK_BAND,
   AmenityChip,
+  AmenityFiltersPanel,
   AmenitySplitChips,
   CompFiltersBar,
   CompPhotos,
   ScrapeRadiusNote,
+  amenitiesFromUnit,
   bedsLabel,
   insightWithFilters,
   matchInventoryBuilding,
@@ -31,6 +33,7 @@ export default function UnitInsightPage() {
   const [unit, setUnit] = useState<UnitAdmin | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useCompFilters();
+  const unitDefaultsApplied = useRef<number | null>(null);
 
   useEffect(() => {
     const token = getAdminToken();
@@ -78,6 +81,18 @@ export default function UnitInsightPage() {
       cancelled = true;
     };
   }, [data, unitId, t]);
+
+  // Once per unit: pre-fill amenity With/Without from inventory amenities.
+  useEffect(() => {
+    if (!unit || unitDefaultsApplied.current === unit.id) return;
+    unitDefaultsApplied.current = unit.id;
+    setFilters({
+      ...filters,
+      amenities: amenitiesFromUnit(unit),
+    });
+    // Intentionally only when unit identity changes; ignore live filters deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unit?.id]);
 
   const filtered = data ? insightWithFilters(data, filters) : null;
   const beds = unit ? unitBedsKey(unit) : null;
@@ -165,6 +180,12 @@ export default function UnitInsightPage() {
                   return c.beds === beds;
                 }).length
               }
+            />
+            <AmenityFiltersPanel
+              filters={filters}
+              onChange={setFilters}
+              t={t}
+              showMatchHint
             />
             {filtered?.narrowed ? (
               <p className="text-[11px] text-[var(--ml-steel)]">

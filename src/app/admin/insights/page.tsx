@@ -7,6 +7,7 @@ import { adminUi } from "@/lib/adminUi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 import { getAdminToken } from "@/lib/adminAuth";
 import {
+  AmenityFiltersPanel,
   CompFiltersBar,
   ScrapeRadiusNote,
   TrendBadge,
@@ -348,6 +349,7 @@ export default function InsightsPage() {
       <div className="mt-4 space-y-3">
         <ScrapeRadiusNote t={t} />
         <CompFiltersBar filters={filters} onChange={setFilters} t={t} />
+        <AmenityFiltersPanel filters={filters} onChange={setFilters} t={t} />
       </div>
 
       {!data && !error && (

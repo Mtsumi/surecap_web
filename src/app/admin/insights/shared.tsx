@@ -77,6 +77,68 @@ export type CompFilters = {
   minSqft: string;
   maxSqft: string;
   requireSqft: boolean;
+  /**
+   * Amenity constraints. Missing key = Any.
+   * "with" = must have; "without" = must not have (missing/false counts as without).
+   */
+  amenities: Partial<Record<AmenityFilterKey, "with" | "without">>;
+};
+
+export type AmenityFilterKey =
+  | "heating"
+  | "electricity_included"
+  | "air_conditioning"
+  | "balcony"
+  | "laundry_in_unit"
+  | "water_included"
+  | "fridge_freezer"
+  | "stove_included"
+  | "parking"
+  | "furnished"
+  | "dishwasher";
+
+/** Inventory amenity → Comp field. Fridge/stove both map from fridge_stove. */
+const UNIT_AMENITY_TO_COMP: {
+  unitKey: string;
+  compKey: AmenityFilterKey;
+}[] = [
+  { unitKey: "heating_included", compKey: "heating" },
+  { unitKey: "electricity_included", compKey: "electricity_included" },
+  { unitKey: "air_conditioning", compKey: "air_conditioning" },
+  { unitKey: "balcony", compKey: "balcony" },
+  { unitKey: "washer_dryer_hookup", compKey: "laundry_in_unit" },
+  { unitKey: "hot_water_included", compKey: "water_included" },
+  { unitKey: "fridge_stove", compKey: "fridge_freezer" },
+  { unitKey: "fridge_stove", compKey: "stove_included" },
+];
+
+/** Filters shown in the amenity panel (order). */
+export const AMENITY_FILTER_KEYS: AmenityFilterKey[] = [
+  "heating",
+  "electricity_included",
+  "air_conditioning",
+  "balcony",
+  "laundry_in_unit",
+  "water_included",
+  "fridge_freezer",
+  "stove_included",
+  "parking",
+  "furnished",
+  "dishwasher",
+];
+
+const AMENITY_FILTER_LABEL: Record<AmenityFilterKey, AdminMessageKey> = {
+  heating: "insightsHeating",
+  electricity_included: "insightsElectricity",
+  air_conditioning: "insightsAC",
+  balcony: "insightsBalcony",
+  laundry_in_unit: "insightsLaundry",
+  water_included: "insightsWater",
+  fridge_freezer: "insightsFridge",
+  stove_included: "insightsStove",
+  parking: "insightsParking",
+  furnished: "insightsFurnished",
+  dishwasher: "insightsDishwasher",
 };
 
 export const DEFAULT_COMP_FILTERS: CompFilters = {
@@ -84,20 +146,76 @@ export const DEFAULT_COMP_FILTERS: CompFilters = {
   minSqft: "",
   maxSqft: "",
   requireSqft: false,
+  amenities: {},
 };
+
+function amenityModesActive(
+  amenities: CompFilters["amenities"] | undefined
+): boolean {
+  if (!amenities) return false;
+  return Object.values(amenities).some((m) => m === "with" || m === "without");
+}
 
 export function filtersAreActive(f: CompFilters): boolean {
   return (
     f.maxKm != null ||
     f.requireSqft ||
     f.minSqft.trim() !== "" ||
-    f.maxSqft.trim() !== ""
+    f.maxSqft.trim() !== "" ||
+    amenityModesActive(f.amenities)
   );
+}
+
+function unitAmenityTruthy(raw: unknown): boolean | null {
+  if (raw == null || raw === "") return null;
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") {
+    if (raw === 1) return true;
+    if (raw === 0) return false;
+    return null;
+  }
+  const s = String(raw).trim().toLowerCase();
+  if (s === "?" || s === "") return null;
+  if (
+    s === "oui" ||
+    s === "yes" ||
+    s === "true" ||
+    s === "1" ||
+    s === "inclus" ||
+    s.startsWith("oui")
+  ) {
+    return true;
+  }
+  if (s === "non" || s === "no" || s === "false" || s === "0") return false;
+  return null;
+}
+
+/** Defaults for unit page: has amenity → Must have; clearly no → Must not have. */
+export function amenitiesFromUnit(
+  unit: UnitAdmin
+): Partial<Record<AmenityFilterKey, "with" | "without">> {
+  const a = unit.amenities ?? {};
+  const out: Partial<Record<AmenityFilterKey, "with" | "without">> = {};
+  for (const { unitKey, compKey } of UNIT_AMENITY_TO_COMP) {
+    const truth = unitAmenityTruthy(a[unitKey]);
+    if (truth === true) out[compKey] = "with";
+    else if (truth === false) out[compKey] = "without";
+  }
+  return out;
+}
+
+function compAmenityOn(c: Comp, key: AmenityFilterKey): boolean {
+  const v = c[key];
+  return v === true;
 }
 
 export function filterComps(comps: Comp[], f: CompFilters): Comp[] {
   const minS = f.minSqft.trim() === "" ? null : Number(f.minSqft);
   const maxS = f.maxSqft.trim() === "" ? null : Number(f.maxSqft);
+  const amenityEntries = Object.entries(f.amenities ?? {}).filter(
+    ([, mode]) => mode === "with" || mode === "without"
+  ) as [AmenityFilterKey, "with" | "without"][];
+
   return comps.filter((c) => {
     if (f.maxKm != null) {
       const d = Number(c.distance_km);
@@ -110,6 +228,11 @@ export function filterComps(comps: Comp[], f: CompFilters): Comp[] {
     }
     if (maxS != null && !Number.isNaN(maxS) && (sq == null || sq > maxS)) {
       return false;
+    }
+    for (const [key, mode] of amenityEntries) {
+      const on = compAmenityOn(c, key);
+      if (mode === "with" && !on) return false;
+      if (mode === "without" && on) return false;
     }
     return true;
   });
@@ -197,23 +320,34 @@ export function useCompFilters(): [
   CompFilters,
   (next: CompFilters) => void,
 ] {
-  const [filters, setFilters] = useState<CompFilters>(DEFAULT_COMP_FILTERS);
-
-  useEffect(() => {
+  const [filters, setFilters] = useState<CompFilters>(() => {
+    if (typeof window === "undefined") return DEFAULT_COMP_FILTERS;
     try {
       const raw = sessionStorage.getItem(COMP_FILTERS_STORAGE_KEY);
-      if (!raw) return;
+      if (!raw) return DEFAULT_COMP_FILTERS;
       const parsed = JSON.parse(raw) as Partial<CompFilters>;
-      setFilters({ ...DEFAULT_COMP_FILTERS, ...parsed });
+      return {
+        ...DEFAULT_COMP_FILTERS,
+        ...parsed,
+        amenities: {
+          ...DEFAULT_COMP_FILTERS.amenities,
+          ...(parsed.amenities ?? {}),
+        },
+      };
     } catch {
-      /* ignore */
+      return DEFAULT_COMP_FILTERS;
     }
-  }, []);
+  });
 
   const update = (next: CompFilters) => {
-    setFilters(next);
+    const normalized: CompFilters = {
+      ...DEFAULT_COMP_FILTERS,
+      ...next,
+      amenities: next.amenities ?? {},
+    };
+    setFilters(normalized);
     try {
-      sessionStorage.setItem(COMP_FILTERS_STORAGE_KEY, JSON.stringify(next));
+      sessionStorage.setItem(COMP_FILTERS_STORAGE_KEY, JSON.stringify(normalized));
     } catch {
       /* ignore */
     }
@@ -338,6 +472,69 @@ export function CompFiltersBar({
             .replace("{total}", String(totalCount))}
         </p>
       ) : null}
+    </div>
+  );
+}
+
+export function AmenityFiltersPanel({
+  filters,
+  onChange,
+  t,
+  showMatchHint,
+}: {
+  filters: CompFilters;
+  onChange: (next: CompFilters) => void;
+  t: (k: AdminMessageKey) => string;
+  /** Extra tip on unit page about defaults from inventory. */
+  showMatchHint?: boolean;
+}) {
+  const setMode = (key: AmenityFilterKey, mode: "" | "with" | "without") => {
+    const next = { ...(filters.amenities ?? {}) };
+    if (mode === "") delete next[key];
+    else next[key] = mode;
+    onChange({ ...filters, amenities: next });
+  };
+
+  return (
+    <div className={`${adminUi.card} px-4 py-3`}>
+      <p className="text-sm font-semibold text-[var(--ml-ink)]">
+        {t("insightsAmenityFilters")}
+      </p>
+      <p className="mt-0.5 text-[10px] text-[var(--ml-steel)]">
+        {t("insightsAmenityFiltersHint")}
+      </p>
+      {showMatchHint ? (
+        <p className="mt-1 text-[10px] text-[var(--ml-steel)]">
+          {t("insightsAmenityFiltersUnitHint")}
+        </p>
+      ) : null}
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        {AMENITY_FILTER_KEYS.map((key) => {
+          const mode = filters.amenities?.[key] ?? "";
+          return (
+            <label
+              key={key}
+              className="flex items-center justify-between gap-2 rounded-md border border-[var(--ml-line)] bg-[var(--ml-paper)] px-2.5 py-2 text-sm text-[var(--ml-ink)]"
+            >
+              <span className="min-w-0 truncate font-medium">
+                {t(AMENITY_FILTER_LABEL[key])}
+              </span>
+              <select
+                className={adminUi.input + " w-[8.5rem] shrink-0 text-xs"}
+                value={mode}
+                onChange={(e) => {
+                  const v = e.target.value as "" | "with" | "without";
+                  setMode(key, v);
+                }}
+              >
+                <option value="">{t("insightsAmenityAny")}</option>
+                <option value="with">{t("insightsAmenityWith")}</option>
+                <option value="without">{t("insightsAmenityWithout")}</option>
+              </select>
+            </label>
+          );
+        })}
+      </div>
     </div>
   );
 }
