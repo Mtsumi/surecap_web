@@ -136,10 +136,10 @@ export default function BuildingDetailPage() {
                 {data.run_count > 0 && ` · ${data.run_count} ${t("insightsRuns")}`}
               </p>
             </div>
-            {data.top_comps.length > 0 && (
+            {(filtered?.comps.length ?? 0) > 0 && (
               <button
                 type="button"
-                onClick={() => downloadCsv(filtered?.comps ?? data.top_comps, data.display_name)}
+                onClick={() => downloadCsv(filtered!.comps, data.display_name)}
                 className={`${adminUi.btnPrimary} shrink-0 text-sm`}
               >
                 {t("insightsDownloadCsv")}
