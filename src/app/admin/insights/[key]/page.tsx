@@ -15,11 +15,9 @@ import {
 import {
   ASK_BAND,
   AmenityChip,
-  AmenityFiltersPanel,
   AmenitySplitChips,
   CompFiltersBar,
   CompPhotos,
-  ScrapeRadiusNote,
   TrendBadge,
   bedsLabel,
   downloadCsv,
@@ -148,16 +146,15 @@ export default function BuildingDetailPage() {
             )}
           </div>
 
-          <div className="mb-6 space-y-3">
-            <ScrapeRadiusNote t={t} />
+          <div className="mb-6 space-y-2">
             <CompFiltersBar
               filters={filters}
               onChange={setFilters}
               t={t}
+              sticky
               resultCount={filtered?.comps.length}
               totalCount={data.top_comps.length}
             />
-            <AmenityFiltersPanel filters={filters} onChange={setFilters} t={t} />
             {filtered?.narrowed ? (
               <p className="text-[11px] text-[var(--ml-steel)]">
                 {t("insightsFilterNarrowed")}

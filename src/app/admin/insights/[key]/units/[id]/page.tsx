@@ -10,11 +10,9 @@ import { listBuildingsAdmin, listUnitsAdmin, type UnitAdmin } from "@/lib/adminA
 import {
   ASK_BAND,
   AmenityChip,
-  AmenityFiltersPanel,
   AmenitySplitChips,
   CompFiltersBar,
   CompPhotos,
-  ScrapeRadiusNote,
   amenitiesFromUnit,
   bedsLabel,
   insightWithFilters,
@@ -177,12 +175,13 @@ export default function UnitInsightPage() {
             )}
           </div>
 
-          <div className="mb-6 space-y-3">
-            <ScrapeRadiusNote t={t} />
+          <div className="mb-6 space-y-2">
             <CompFiltersBar
               filters={filters}
               onChange={setFilters}
               t={t}
+              sticky
+              showUnitMatchHint
               resultCount={comps.length}
               totalCount={
                 data.top_comps.filter((c) => {
@@ -190,12 +189,6 @@ export default function UnitInsightPage() {
                   return c.beds === beds;
                 }).length
               }
-            />
-            <AmenityFiltersPanel
-              filters={filters}
-              onChange={setFilters}
-              t={t}
-              showMatchHint
             />
             {filtered?.narrowed ? (
               <p className="text-[11px] text-[var(--ml-steel)]">

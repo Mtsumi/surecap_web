@@ -111,28 +111,24 @@ export const adminMessages = {
     insightsUnitNotFound: "Logement introuvable.",
     insightsScrapeRadiusBadge: "Rayon de collecte",
     insightsScrapeRadiusNote:
-      "Les annonces de la collecte quotidienne sont dans un rayon de {km} km pour le moment. Les filtres ci-dessous ne peuvent que resserrer ce jeu.",
+      "Collecte quotidienne dans un rayon de {km} km. Les filtres ne font que resserrer ce jeu.",
     insightsFilterMaxDistance: "Distance max",
     insightsFilterDistanceAll: "Tout (collecte {km} km)",
     insightsFilterDistanceKm: "{km} km",
     insightsFilterMinSqft: "pi² min",
     insightsFilterMaxSqft: "pi² max",
     insightsFilterAny: "Tous",
-    insightsFilterRequireSqft: "Avec superficie seulement",
+    insightsFilterRequireSqft: "Annonces avec pi² seulement",
     insightsFilterReset: "Réinitialiser",
     insightsFilterShowing: "{shown} sur {total} comps",
     insightsFilterNarrowed:
       "Médianes recalculées sur les comps filtrés (tendance masquée).",
     insightsFilterNoMatch:
       "Aucun comparable ne correspond aux filtres. Élargissez la distance ou la superficie.",
+    insightsFilterChipRemove: "Retirer ce filtre",
     insightsAmenityFilters: "Commodités",
-    insightsAmenityFiltersHint:
-      "Tout = pas de filtre. Avec = doit avoir. Sans = ne doit pas avoir (annonce sans mention = sans).",
-    insightsAmenityFiltersUnitHint:
-      "Prérempli depuis les commodités de ce logement. Changez une ligne pour comparer autrement.",
-    insightsAmenityAny: "Tout",
-    insightsAmenityWith: "Avec",
-    insightsAmenityWithout: "Sans",
+    insightsAmenityFiltersClear: "Tout effacer",
+    insightsAmenityFiltersUnitHint: "Correspond aux commodités de ce logement.",
     loginTitle: "Montreal Living",
     loginSubtitle: "Connexion administrateur",
     loginEmail: "Courriel",
@@ -326,7 +322,7 @@ export const adminMessages = {
     insightsUnitNotFound: "Unit not found.",
     insightsScrapeRadiusBadge: "Scrape radius",
     insightsScrapeRadiusNote:
-      "Daily scrape listings are within {km} km for now. Filters below can only narrow that set.",
+      "Daily scrape is within {km} km. Filters can only narrow that set.",
     insightsFilterMaxDistance: "Max distance",
     insightsFilterDistanceAll: "All (scrape {km} km)",
     insightsFilterDistanceKm: "{km} km",
@@ -340,14 +336,10 @@ export const adminMessages = {
       "Medians recalculated from filtered comps (trend hidden).",
     insightsFilterNoMatch:
       "No comps match these filters. Widen distance or square footage.",
+    insightsFilterChipRemove: "Remove this filter",
     insightsAmenityFilters: "Amenities",
-    insightsAmenityFiltersHint:
-      "Any = no filter. With = must have. Without = must not have (missing counts as without).",
-    insightsAmenityFiltersUnitHint:
-      "Pre-filled from this unit's amenities. Change a row to compare differently.",
-    insightsAmenityAny: "Any",
-    insightsAmenityWith: "With",
-    insightsAmenityWithout: "Without",
+    insightsAmenityFiltersClear: "Clear all",
+    insightsAmenityFiltersUnitHint: "Matched to this unit's amenities.",
     loginTitle: "Montreal Living",
     loginSubtitle: "Administrator sign-in",
     loginEmail: "Email",

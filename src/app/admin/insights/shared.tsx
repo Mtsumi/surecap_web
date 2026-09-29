@@ -149,6 +149,18 @@ export const DEFAULT_COMP_FILTERS: CompFilters = {
   amenities: {},
 };
 
+/** UI only exposes "with"; drop legacy "without" from sessionStorage. */
+function withOnlyAmenities(
+  amenities: CompFilters["amenities"] | undefined
+): CompFilters["amenities"] {
+  const next: CompFilters["amenities"] = {};
+  if (!amenities) return next;
+  for (const [key, mode] of Object.entries(amenities)) {
+    if (mode === "with") next[key as AmenityFilterKey] = "with";
+  }
+  return next;
+}
+
 function amenityModesActive(
   amenities: CompFilters["amenities"] | undefined
 ): boolean {
@@ -329,10 +341,7 @@ export function useCompFilters(): [
       return {
         ...DEFAULT_COMP_FILTERS,
         ...parsed,
-        amenities: {
-          ...DEFAULT_COMP_FILTERS.amenities,
-          ...(parsed.amenities ?? {}),
-        },
+        amenities: withOnlyAmenities(parsed.amenities),
       };
     } catch {
       return DEFAULT_COMP_FILTERS;
@@ -343,7 +352,7 @@ export function useCompFilters(): [
     const normalized: CompFilters = {
       ...DEFAULT_COMP_FILTERS,
       ...next,
-      amenities: next.amenities ?? {},
+      amenities: withOnlyAmenities(next.amenities),
     };
     setFilters(normalized);
     try {
@@ -364,10 +373,7 @@ export function ScrapeRadiusNote({
   t: (k: AdminMessageKey) => string;
 }) {
   return (
-    <p className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] px-3 py-2 text-xs text-[var(--ml-ink)]">
-      <span className="font-semibold text-[var(--ml-pine)]">
-        {t("insightsScrapeRadiusBadge")}
-      </span>{" "}
+    <p className="text-xs text-[var(--ml-steel)]">
       {t("insightsScrapeRadiusNote").replace(
         "{km}",
         String(DEFAULT_SCRAPE_RADIUS_KM)
@@ -376,22 +382,104 @@ export function ScrapeRadiusNote({
   );
 }
 
+type ActiveChip = {
+  id: string;
+  label: string;
+  clear: (current: CompFilters) => CompFilters;
+};
+
+function activeFilterChips(
+  filters: CompFilters,
+  t: (k: AdminMessageKey) => string
+): ActiveChip[] {
+  const chips: ActiveChip[] = [];
+  if (filters.maxKm != null) {
+    chips.push({
+      id: "maxKm",
+      label: t("insightsFilterDistanceKm").replace(
+        "{km}",
+        String(filters.maxKm)
+      ),
+      clear: (f) => ({ ...f, maxKm: null }),
+    });
+  }
+  if (filters.minSqft.trim()) {
+    chips.push({
+      id: "minSqft",
+      label: `≥ ${filters.minSqft} ${t("insightsSqft")}`,
+      clear: (f) => ({ ...f, minSqft: "" }),
+    });
+  }
+  if (filters.maxSqft.trim()) {
+    chips.push({
+      id: "maxSqft",
+      label: `≤ ${filters.maxSqft} ${t("insightsSqft")}`,
+      clear: (f) => ({ ...f, maxSqft: "" }),
+    });
+  }
+  if (filters.requireSqft) {
+    chips.push({
+      id: "requireSqft",
+      label: t("insightsFilterRequireSqft"),
+      clear: (f) => ({ ...f, requireSqft: false }),
+    });
+  }
+  for (const key of AMENITY_FILTER_KEYS) {
+    if (filters.amenities?.[key] !== "with") continue;
+    chips.push({
+      id: `amenity-${key}`,
+      label: t(AMENITY_FILTER_LABEL[key]),
+      clear: (f) => {
+        const amenities = { ...(f.amenities ?? {}) };
+        delete amenities[key];
+        return { ...f, amenities };
+      },
+    });
+  }
+  return chips;
+}
+
 export function CompFiltersBar({
   filters,
   onChange,
   t,
   resultCount,
   totalCount,
+  sticky = false,
+  showUnitMatchHint = false,
 }: {
   filters: CompFilters;
   onChange: (next: CompFilters) => void;
   t: (k: AdminMessageKey) => string;
   resultCount?: number;
   totalCount?: number;
+  /** Keep the strip visible while scrolling comps (building / unit pages). */
+  sticky?: boolean;
+  /** Short note when amenities were pre-filled from inventory. */
+  showUnitMatchHint?: boolean;
 }) {
   const active = filtersAreActive(filters);
+  const amenityOn = amenityModesActive(filters.amenities);
+  const [amenitiesOpen, setAmenitiesOpen] = useState(amenityOn);
+  const chips = activeFilterChips(filters, t);
+
+  useEffect(() => {
+    if (amenityOn) setAmenitiesOpen(true);
+  }, [amenityOn]);
+
+  const setAmenityChecked = (key: AmenityFilterKey, checked: boolean) => {
+    const amenities = { ...(filters.amenities ?? {}) };
+    if (checked) amenities[key] = "with";
+    else delete amenities[key];
+    onChange({ ...filters, amenities });
+  };
+
+  const shell = sticky
+    ? "sticky top-0 z-20 border-b border-[var(--ml-line)] bg-[var(--ml-card)]/95 shadow-sm backdrop-blur-sm"
+    : adminUi.card;
+
   return (
-    <div className={`${adminUi.card} px-4 py-3`}>
+    <div className={`${shell} px-4 py-3`}>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex min-w-[7.5rem] flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ml-steel)]">
           {t("insightsFilterMaxDistance")}
@@ -465,6 +553,97 @@ export function CompFiltersBar({
           </button>
         ) : null}
       </div>
+
+      <div className="mt-3 border-t border-[var(--ml-line)] pt-2.5">
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold text-[var(--ml-ink)] hover:text-[var(--ml-pine)]"
+            aria-expanded={amenitiesOpen}
+            onClick={() => setAmenitiesOpen((o) => !o)}
+          >
+            <span
+              className={`inline-block text-[10px] text-[var(--ml-steel)] transition-transform ${
+                amenitiesOpen ? "rotate-90" : ""
+              }`}
+              aria-hidden
+            >
+              ▸
+            </span>
+            {t("insightsAmenityFilters")}
+            {amenityOn ? (
+              <span className="rounded-full bg-[var(--ml-pine)]/15 px-1.5 py-0.5 text-[10px] font-medium text-[var(--ml-pine)]">
+                {
+                  AMENITY_FILTER_KEYS.filter(
+                    (k) => filters.amenities?.[k] === "with"
+                  ).length
+                }
+              </span>
+            ) : null}
+          </button>
+          {amenityOn ? (
+            <button
+              type="button"
+              className="text-xs text-[var(--ml-steel)] underline hover:text-[var(--ml-ink)]"
+              onClick={() => onChange({ ...filters, amenities: {} })}
+            >
+              {t("insightsAmenityFiltersClear")}
+            </button>
+          ) : null}
+          {showUnitMatchHint && amenityOn ? (
+            <span className="text-[11px] text-[var(--ml-steel)]">
+              {t("insightsAmenityFiltersUnitHint")}
+            </span>
+          ) : null}
+        </div>
+        {amenitiesOpen ? (
+          <div className="mt-2.5 grid grid-cols-2 gap-x-3 gap-y-1.5 sm:grid-cols-3 lg:grid-cols-4">
+            {AMENITY_FILTER_KEYS.map((key) => {
+              const checked = filters.amenities?.[key] === "with";
+              return (
+                <label
+                  key={key}
+                  className={`flex cursor-pointer items-center gap-2 rounded-md px-1.5 py-1 text-sm transition-colors ${
+                    checked
+                      ? "bg-[var(--ml-pine)]/10 text-[var(--ml-ink)]"
+                      : "text-[var(--ml-ink)] hover:bg-[var(--ml-paper)]"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 shrink-0 accent-[var(--ml-pine)]"
+                    checked={checked}
+                    onChange={(e) => setAmenityChecked(key, e.target.checked)}
+                  />
+                  <span className="min-w-0 truncate">
+                    {t(AMENITY_FILTER_LABEL[key])}
+                  </span>
+                </label>
+              );
+            })}
+          </div>
+        ) : null}
+      </div>
+
+      {chips.length > 0 ? (
+        <div className="mt-2.5 flex flex-wrap gap-1.5">
+          {chips.map((chip) => (
+            <button
+              key={chip.id}
+              type="button"
+              className="inline-flex items-center gap-1 rounded-full border border-[var(--ml-line)] bg-[var(--ml-paper)] px-2 py-0.5 text-[11px] text-[var(--ml-ink)] hover:border-[var(--ml-pine)] hover:text-[var(--ml-pine)]"
+              onClick={() => onChange(chip.clear(filters))}
+              title={t("insightsFilterChipRemove")}
+            >
+              {chip.label}
+              <span aria-hidden className="text-[var(--ml-steel)]">
+                ×
+              </span>
+            </button>
+          ))}
+        </div>
+      ) : null}
+
       {typeof resultCount === "number" && typeof totalCount === "number" ? (
         <p className="mt-2 text-[11px] text-[var(--ml-steel)]">
           {t("insightsFilterShowing")
@@ -472,69 +651,6 @@ export function CompFiltersBar({
             .replace("{total}", String(totalCount))}
         </p>
       ) : null}
-    </div>
-  );
-}
-
-export function AmenityFiltersPanel({
-  filters,
-  onChange,
-  t,
-  showMatchHint,
-}: {
-  filters: CompFilters;
-  onChange: (next: CompFilters) => void;
-  t: (k: AdminMessageKey) => string;
-  /** Extra tip on unit page about defaults from inventory. */
-  showMatchHint?: boolean;
-}) {
-  const setMode = (key: AmenityFilterKey, mode: "" | "with" | "without") => {
-    const next = { ...(filters.amenities ?? {}) };
-    if (mode === "") delete next[key];
-    else next[key] = mode;
-    onChange({ ...filters, amenities: next });
-  };
-
-  return (
-    <div className={`${adminUi.card} px-4 py-3`}>
-      <p className="text-sm font-semibold text-[var(--ml-ink)]">
-        {t("insightsAmenityFilters")}
-      </p>
-      <p className="mt-0.5 text-[10px] text-[var(--ml-steel)]">
-        {t("insightsAmenityFiltersHint")}
-      </p>
-      {showMatchHint ? (
-        <p className="mt-1 text-[10px] text-[var(--ml-steel)]">
-          {t("insightsAmenityFiltersUnitHint")}
-        </p>
-      ) : null}
-      <div className="mt-3 grid gap-2 sm:grid-cols-2">
-        {AMENITY_FILTER_KEYS.map((key) => {
-          const mode = filters.amenities?.[key] ?? "";
-          return (
-            <label
-              key={key}
-              className="flex items-center justify-between gap-2 rounded-md border border-[var(--ml-line)] bg-[var(--ml-paper)] px-2.5 py-2 text-sm text-[var(--ml-ink)]"
-            >
-              <span className="min-w-0 truncate font-medium">
-                {t(AMENITY_FILTER_LABEL[key])}
-              </span>
-              <select
-                className={adminUi.input + " w-[8.5rem] shrink-0 text-xs"}
-                value={mode}
-                onChange={(e) => {
-                  const v = e.target.value as "" | "with" | "without";
-                  setMode(key, v);
-                }}
-              >
-                <option value="">{t("insightsAmenityAny")}</option>
-                <option value="with">{t("insightsAmenityWith")}</option>
-                <option value="without">{t("insightsAmenityWithout")}</option>
-              </select>
-            </label>
-          );
-        })}
-      </div>
     </div>
   );
 }
