@@ -178,6 +178,14 @@ export function insightWithFilters(
     };
   }
   const comps = filterComps(source, filters);
+  // Only leave server rollups when every loaded comp already passes the filters.
+  if (comps.length === source.length) {
+    return {
+      comps: source,
+      by_bedrooms: data.by_bedrooms,
+      narrowed: false,
+    };
+  }
   return {
     comps,
     by_bedrooms: bedroomSummariesFromComps(comps, data.by_bedrooms),
