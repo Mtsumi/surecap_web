@@ -15,6 +15,7 @@ import {
 import {
   ASK_BAND,
   AmenityChip,
+  AmenityFiltersPanel,
   AmenitySplitChips,
   CompFiltersBar,
   CompPhotos,
@@ -156,6 +157,7 @@ export default function BuildingDetailPage() {
               resultCount={filtered?.comps.length}
               totalCount={data.top_comps.length}
             />
+            <AmenityFiltersPanel filters={filters} onChange={setFilters} t={t} />
             {filtered?.narrowed ? (
               <p className="text-[11px] text-[var(--ml-steel)]">
                 {t("insightsFilterNarrowed")}

@@ -10,10 +10,12 @@ import { listBuildingsAdmin, listUnitsAdmin, type UnitAdmin } from "@/lib/adminA
 import {
   ASK_BAND,
   AmenityChip,
+  AmenityFiltersPanel,
   AmenitySplitChips,
   CompFiltersBar,
   CompPhotos,
   ScrapeRadiusNote,
+  amenitiesFromUnit,
   bedsLabel,
   insightWithFilters,
   matchInventoryBuilding,
@@ -22,6 +24,8 @@ import {
   useCompFilters,
   type BuildingInsight,
 } from "../../../shared";
+
+const AMENITY_DEFAULTS_UNIT_KEY = "insightsAmenityDefaultsForUnit";
 
 export default function UnitInsightPage() {
   const { key, id } = useParams<{ key: string; id: string }>();
@@ -78,6 +82,27 @@ export default function UnitInsightPage() {
       cancelled = true;
     };
   }, [data, unitId, t]);
+
+  // Once per unit per session: pre-fill amenity With/Without from inventory.
+  // Persist the unit id in sessionStorage so remount / navigation back does not
+  // overwrite filters the user already customized for this unit.
+  useEffect(() => {
+    if (!unit) return;
+    try {
+      if (sessionStorage.getItem(AMENITY_DEFAULTS_UNIT_KEY) === String(unit.id)) {
+        return;
+      }
+      sessionStorage.setItem(AMENITY_DEFAULTS_UNIT_KEY, String(unit.id));
+    } catch {
+      /* ignore */
+    }
+    setFilters({
+      ...filters,
+      amenities: amenitiesFromUnit(unit),
+    });
+    // Intentionally only when unit identity changes; ignore live filters deps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [unit?.id]);
 
   const filtered = data ? insightWithFilters(data, filters) : null;
   const beds = unit ? unitBedsKey(unit) : null;
@@ -165,6 +190,12 @@ export default function UnitInsightPage() {
                   return c.beds === beds;
                 }).length
               }
+            />
+            <AmenityFiltersPanel
+              filters={filters}
+              onChange={setFilters}
+              t={t}
+              showMatchHint
             />
             {filtered?.narrowed ? (
               <p className="text-[11px] text-[var(--ml-steel)]">
