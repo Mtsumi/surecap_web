@@ -6,7 +6,16 @@ import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 import { getAdminToken } from "@/lib/adminAuth";
-import { TrendBadge, bedsLabel, type BuildingInsight } from "./shared";
+import {
+  CompFiltersBar,
+  ScrapeRadiusNote,
+  TrendBadge,
+  bedsLabel,
+  insightWithFilters,
+  useCompFilters,
+  type BedroomSummary,
+  type BuildingInsight,
+} from "./shared";
 
 type InsightsData = Record<string, BuildingInsight>;
 
@@ -54,13 +63,15 @@ function isStale(lastScraped: string | null): boolean {
 function BuildingCard({
   bkey,
   data,
+  byBedrooms,
   t,
 }: {
   bkey: string;
   data: BuildingInsight;
+  byBedrooms: Record<string, BedroomSummary>;
   t: (k: AdminMessageKey) => string;
 }) {
-  const bedKeys = Object.keys(data.by_bedrooms)
+  const bedKeys = Object.keys(byBedrooms)
     .filter((k) => k !== "?")
     .sort((a, b) => {
       if (a === "studio") return -1;
@@ -112,7 +123,7 @@ function BuildingCard({
             </thead>
             <tbody>
               {bedKeys.map((k) => {
-                const s = data.by_bedrooms[k];
+                const s = byBedrooms[k];
                 return (
                   <tr key={k} className="border-t border-[var(--ml-line)]">
                     <td className="px-4 py-2.5 font-medium text-[var(--ml-ink)]">
@@ -124,10 +135,10 @@ function BuildingCard({
                       ${s.median.toLocaleString()}
                     </td>
                     <td className="px-4 py-2.5 text-right text-xs text-[var(--ml-steel)]">
-                      ${s.min.toLocaleString()} – ${s.max.toLocaleString()}
+                      ${s.min.toLocaleString()} - ${s.max.toLocaleString()}
                     </td>
                     <td className="px-4 py-2.5 text-right text-xs text-[var(--ml-pine)]">
-                      ${s.suggested_min.toLocaleString()} – ${s.suggested_max.toLocaleString()}
+                      ${s.suggested_min.toLocaleString()} - ${s.suggested_max.toLocaleString()}
                     </td>
                   </tr>
                 );
@@ -154,6 +165,7 @@ export default function InsightsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [toastIsError, setToastIsError] = useState(false);
   const [nextRun, setNextRun] = useState(nextSixAmMontreal);
+  const [filters, setFilters] = useCompFilters();
 
   // Persistent in-progress flag — survives page refresh for up to 35 min
   const SCRAPE_KEY = "scrapeQueuedAt";
@@ -326,6 +338,11 @@ export default function InsightsPage() {
         </div>
       )}
 
+      <div className="mt-4 space-y-3">
+        <ScrapeRadiusNote t={t} />
+        <CompFiltersBar filters={filters} onChange={setFilters} t={t} />
+      </div>
+
       {!data && !error && (
         <p className={`${adminUi.empty} mt-8`}>{t("insightsLoading")}</p>
       )}
@@ -360,14 +377,18 @@ export default function InsightsPage() {
 
       {data && Object.keys(data).length > 0 && (
         <div className="mt-6 grid gap-4 sm:grid-cols-1 lg:grid-cols-2">
-          {Object.entries(data).map(([bkey, bdata]) => (
-            <BuildingCard
-              key={bkey}
-              bkey={bkey}
-              data={bdata}
-              t={t}
-            />
-          ))}
+          {Object.entries(data).map(([bkey, bdata]) => {
+            const { by_bedrooms } = insightWithFilters(bdata, filters);
+            return (
+              <BuildingCard
+                key={bkey}
+                bkey={bkey}
+                data={bdata}
+                byBedrooms={by_bedrooms}
+                t={t}
+              />
+            );
+          })}
         </div>
       )}
 
