@@ -525,7 +525,11 @@ export default function BuildingDetailPage() {
             </div>
           ) : (
             <div className={`${adminUi.empty} mt-4`}>
-              <p>{t("insightsNoData")}</p>
+              <p>
+                {filtered?.narrowed && (data.top_comps?.length ?? 0) > 0
+                  ? t("insightsFilterNoMatch")
+                  : t("insightsNoData")}
+              </p>
             </div>
           )}
         </>
