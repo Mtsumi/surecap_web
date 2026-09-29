@@ -89,6 +89,11 @@ export default function UnitInsightPage() {
       if (!beds || beds === "?") return true;
       return c.beds === beds;
     }) ?? [];
+  const bedMatchedBeforeFilter =
+    data?.top_comps.filter((c) => {
+      if (!beds || beds === "?") return true;
+      return c.beds === beds;
+    }) ?? [];
   const near =
     ask != null
       ? comps.filter((c) => Math.abs(c.price - ask) <= ASK_BAND).length
@@ -345,7 +350,7 @@ export default function UnitInsightPage() {
           ) : (
             <div className={`${adminUi.empty} mt-4`}>
               <p>
-                {filtered?.narrowed && (data.top_comps?.length ?? 0) > 0
+                {filtered?.narrowed && bedMatchedBeforeFilter.length > 0
                   ? t("insightsFilterNoMatch")
                   : t("insightsNoData")}
               </p>
