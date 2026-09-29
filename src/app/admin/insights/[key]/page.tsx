@@ -314,7 +314,9 @@ export default function BuildingDetailPage() {
                         <tr key={k} className="border-t border-[var(--ml-line)]">
                           <td className="px-4 py-2.5 font-medium text-[var(--ml-ink)]">
                             {bedsLabel(k, t("insightsStudio"))}
-                            <TrendBadge summary={s} t={t} />
+                            {!filtered?.narrowed ? (
+                              <TrendBadge summary={s} t={t} />
+                            ) : null}
                           </td>
                           <td className="px-4 py-2.5 text-right text-[var(--ml-steel)]">
                             {s.count}

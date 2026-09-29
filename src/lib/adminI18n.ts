@@ -123,6 +123,8 @@ export const adminMessages = {
     insightsFilterShowing: "{shown} sur {total} comps",
     insightsFilterNarrowed:
       "Médianes recalculées sur les comps filtrés (tendance masquée).",
+    insightsFilterNoMatch:
+      "Aucun comparable ne correspond aux filtres. Élargissez la distance ou la superficie.",
     loginTitle: "Montreal Living",
     loginSubtitle: "Connexion administrateur",
     loginEmail: "Courriel",
@@ -328,6 +330,8 @@ export const adminMessages = {
     insightsFilterShowing: "Showing {shown} of {total} comps",
     insightsFilterNarrowed:
       "Medians recalculated from filtered comps (trend hidden).",
+    insightsFilterNoMatch:
+      "No comps match these filters. Widen distance or square footage.",
     loginTitle: "Montreal Living",
     loginSubtitle: "Administrator sign-in",
     loginEmail: "Email",
