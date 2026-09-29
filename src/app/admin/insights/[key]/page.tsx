@@ -16,13 +16,17 @@ import {
   ASK_BAND,
   AmenityChip,
   AmenitySplitChips,
+  CompFiltersBar,
   CompPhotos,
+  ScrapeRadiusNote,
   TrendBadge,
   bedsLabel,
   downloadCsv,
+  insightWithFilters,
   matchInventoryBuilding,
   photoUrls,
   unitBedsKey,
+  useCompFilters,
   type BuildingInsight,
 } from "../shared";
 
@@ -39,6 +43,7 @@ export default function BuildingDetailPage() {
   const [data, setData] = useState<BuildingInsight | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [inventory, setInventory] = useState<InventoryState>({ status: "loading" });
+  const [filters, setFilters] = useCompFilters();
 
   useEffect(() => {
     const token = getAdminToken();
@@ -90,8 +95,9 @@ export default function BuildingDetailPage() {
     };
   }, [data]);
 
-  const bedKeys = data
-    ? Object.keys(data.by_bedrooms)
+  const filtered = data ? insightWithFilters(data, filters) : null;
+  const bedKeys = filtered
+    ? Object.keys(filtered.by_bedrooms)
         .filter((k) => k !== "?")
         .sort((a, b) => {
           if (a === "studio") return -1;
@@ -130,15 +136,31 @@ export default function BuildingDetailPage() {
                 {data.run_count > 0 && ` · ${data.run_count} ${t("insightsRuns")}`}
               </p>
             </div>
-            {data.top_comps.length > 0 && (
+            {(filtered?.comps.length ?? 0) > 0 && (
               <button
                 type="button"
-                onClick={() => downloadCsv(data.top_comps, data.display_name)}
+                onClick={() => downloadCsv(filtered!.comps, data.display_name)}
                 className={`${adminUi.btnPrimary} shrink-0 text-sm`}
               >
                 {t("insightsDownloadCsv")}
               </button>
             )}
+          </div>
+
+          <div className="mb-6 space-y-3">
+            <ScrapeRadiusNote t={t} />
+            <CompFiltersBar
+              filters={filters}
+              onChange={setFilters}
+              t={t}
+              resultCount={filtered?.comps.length}
+              totalCount={data.top_comps.length}
+            />
+            {filtered?.narrowed ? (
+              <p className="text-[11px] text-[var(--ml-steel)]">
+                {t("insightsFilterNarrowed")}
+              </p>
+            ) : null}
           </div>
 
           <div className={`${adminUi.card} mb-6`}>
@@ -193,13 +215,14 @@ export default function BuildingDetailPage() {
                     <tbody>
                       {inventory.units.map((unit) => {
                         const beds = unitBedsKey(unit);
-                        const market = beds !== "?" ? data.by_bedrooms[beds] : undefined;
+                        const market =
+                          beds !== "?" ? filtered?.by_bedrooms[beds] : undefined;
                         const ask = unit.rent;
                         const vs =
                           ask != null && market ? ask - market.median : null;
                         const near =
                           ask != null
-                            ? data.top_comps.filter(
+                            ? (filtered?.comps ?? []).filter(
                                 (c) =>
                                   (beds === "?" || c.beds === beds) &&
                                   Math.abs(c.price - ask) <= ASK_BAND
@@ -238,7 +261,7 @@ export default function BuildingDetailPage() {
                                 : t("insightsNoAsking")}
                             </td>
                             <td className="px-4 py-2.5 text-right text-[var(--ml-steel)]">
-                              {market ? `$${market.median.toLocaleString()}` : "—"}
+                              {market ? `$${market.median.toLocaleString()}` : "-"}
                             </td>
                             <td
                               className={`px-4 py-2.5 text-right text-xs ${
@@ -252,11 +275,11 @@ export default function BuildingDetailPage() {
                               }`}
                             >
                               {vs == null
-                                ? "—"
+                                ? "-"
                                 : `${vs > 0 ? "+" : ""}$${vs.toLocaleString()}`}
                             </td>
                             <td className="px-4 py-2.5 text-right text-[var(--ml-steel)]">
-                              {ask != null ? near : "—"}
+                              {ask != null ? near : "-"}
                             </td>
                           </tr>
                         );
@@ -286,12 +309,14 @@ export default function BuildingDetailPage() {
                   </thead>
                   <tbody>
                     {bedKeys.map((k) => {
-                      const s = data.by_bedrooms[k];
+                      const s = filtered!.by_bedrooms[k];
                       return (
                         <tr key={k} className="border-t border-[var(--ml-line)]">
                           <td className="px-4 py-2.5 font-medium text-[var(--ml-ink)]">
                             {bedsLabel(k, t("insightsStudio"))}
-                            <TrendBadge summary={s} t={t} />
+                            {!filtered?.narrowed ? (
+                              <TrendBadge summary={s} t={t} />
+                            ) : null}
                           </td>
                           <td className="px-4 py-2.5 text-right text-[var(--ml-steel)]">
                             {s.count}
@@ -300,10 +325,10 @@ export default function BuildingDetailPage() {
                             ${s.median.toLocaleString()}
                           </td>
                           <td className="px-4 py-2.5 text-right text-xs text-[var(--ml-steel)]">
-                            ${s.min.toLocaleString()} – ${s.max.toLocaleString()}
+                            ${s.min.toLocaleString()} - ${s.max.toLocaleString()}
                           </td>
                           <td className="px-4 py-2.5 text-right text-xs text-[var(--ml-pine)]">
-                            ${s.suggested_min.toLocaleString()} – $
+                            ${s.suggested_min.toLocaleString()} - $
                             {s.suggested_max.toLocaleString()}
                           </td>
                         </tr>
@@ -312,8 +337,9 @@ export default function BuildingDetailPage() {
                   </tbody>
                 </table>
               </div>
-              {bedKeys.some(
-                (k) => (data.by_bedrooms[k].amenity_splits?.length ?? 0) > 0
+              {!filtered?.narrowed &&
+                bedKeys.some(
+                (k) => (filtered?.by_bedrooms[k].amenity_splits?.length ?? 0) > 0
               ) && (
                 <div className="border-t border-[var(--ml-line)] px-4 py-3">
                   <p className="text-xs font-semibold text-[var(--ml-ink)]">
@@ -325,7 +351,7 @@ export default function BuildingDetailPage() {
                   {bedKeys.map((k) => (
                     <AmenitySplitChips
                       key={k}
-                      splits={data.by_bedrooms[k].amenity_splits}
+                      splits={filtered?.by_bedrooms[k].amenity_splits}
                       t={t}
                       heading={bedsLabel(k, t("insightsStudio"))}
                       compact
@@ -336,10 +362,10 @@ export default function BuildingDetailPage() {
             </div>
           )}
 
-          {data.top_comps.length > 0 ? (
+          {(filtered?.comps.length ?? 0) > 0 ? (
             <div className={adminUi.card}>
               <p className="px-4 py-3 text-sm font-semibold text-[var(--ml-ink)]">
-                {`${t("insightsAllComps")} (${data.top_comps.length})`}
+                {`${t("insightsAllComps")} (${filtered!.comps.length})`}
               </p>
               <div className="overflow-x-auto border-t border-[var(--ml-line)]">
                 <table className="w-full text-sm">
@@ -356,7 +382,7 @@ export default function BuildingDetailPage() {
                     </tr>
                   </thead>
                   <tbody>
-                    {data.top_comps.map((comp, i) => (
+                    {filtered!.comps.map((comp, i) => (
                       <tr
                         key={i}
                         className="border-t border-[var(--ml-line)] hover:bg-[var(--ml-paper)]"
@@ -385,7 +411,7 @@ export default function BuildingDetailPage() {
                         <td className="px-4 py-2.5 text-right text-xs text-[var(--ml-steel)]">
                           {comp.square_feet
                             ? `${comp.square_feet.toLocaleString()}`
-                            : "—"}
+                            : "-"}
                         </td>
                         <td className="px-4 py-2.5">
                           <span className="inline-flex rounded bg-[var(--ml-paper)] px-1.5 py-0.5 text-[10px] text-[var(--ml-steel)]">
@@ -404,7 +430,7 @@ export default function BuildingDetailPage() {
                             </a>
                           ) : (
                             <span className="truncate text-sm text-[var(--ml-steel)]">
-                              {comp.title || comp.address || "—"}
+                              {comp.title || comp.address || "-"}
                             </span>
                           )}
                           {comp.address && comp.title && (
@@ -499,7 +525,11 @@ export default function BuildingDetailPage() {
             </div>
           ) : (
             <div className={`${adminUi.empty} mt-4`}>
-              <p>{t("insightsNoData")}</p>
+              <p>
+                {filtered?.narrowed && (data.top_comps?.length ?? 0) > 0
+                  ? t("insightsFilterNoMatch")
+                  : t("insightsNoData")}
+              </p>
             </div>
           )}
         </>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 import type { BuildingAdmin, UnitAdmin } from "@/lib/adminApi";
 import { getAdminToken } from "@/lib/adminAuth";
+import { adminUi } from "@/lib/adminUi";
 import { compPhotoProxyPath } from "@/lib/compPhotoHosts";
 
 export type AmenitySplit = {
@@ -64,6 +65,282 @@ export type BuildingInsight = {
 };
 
 export const ASK_BAND = 100;
+
+/** Daily Celery scrape radius (km). Filters can only narrow within this set. */
+export const DEFAULT_SCRAPE_RADIUS_KM = 2;
+
+const COMP_FILTERS_STORAGE_KEY = "insightsCompFilters";
+
+export type CompFilters = {
+  /** null = all comps from the scrape (already ~2 km). */
+  maxKm: number | null;
+  minSqft: string;
+  maxSqft: string;
+  requireSqft: boolean;
+};
+
+export const DEFAULT_COMP_FILTERS: CompFilters = {
+  maxKm: null,
+  minSqft: "",
+  maxSqft: "",
+  requireSqft: false,
+};
+
+export function filtersAreActive(f: CompFilters): boolean {
+  return (
+    f.maxKm != null ||
+    f.requireSqft ||
+    f.minSqft.trim() !== "" ||
+    f.maxSqft.trim() !== ""
+  );
+}
+
+export function filterComps(comps: Comp[], f: CompFilters): Comp[] {
+  const minS = f.minSqft.trim() === "" ? null : Number(f.minSqft);
+  const maxS = f.maxSqft.trim() === "" ? null : Number(f.maxSqft);
+  return comps.filter((c) => {
+    if (f.maxKm != null) {
+      const d = Number(c.distance_km);
+      if (Number.isNaN(d) || d > f.maxKm) return false;
+    }
+    const sq = c.square_feet;
+    if (f.requireSqft && (sq == null || sq <= 0)) return false;
+    if (minS != null && !Number.isNaN(minS) && (sq == null || sq < minS)) {
+      return false;
+    }
+    if (maxS != null && !Number.isNaN(maxS) && (sq == null || sq > maxS)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+function medianPrice(prices: number[]): number {
+  const sorted = [...prices].sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1] + sorted[mid]) / 2
+    : sorted[mid];
+}
+
+/** Rebuild bedroom rollups from a filtered comps list (trends/amenity splits omitted). */
+export function bedroomSummariesFromComps(
+  comps: Comp[],
+  baseline?: Record<string, BedroomSummary>
+): Record<string, BedroomSummary> {
+  const groups = new Map<string, number[]>();
+  for (const c of comps) {
+    const key = c.beds || "?";
+    if (key === "?") continue;
+    if (typeof c.price !== "number" || Number.isNaN(c.price)) continue;
+    const list = groups.get(key) ?? [];
+    list.push(c.price);
+    groups.set(key, list);
+  }
+  const out: Record<string, BedroomSummary> = {};
+  for (const [key, prices] of Array.from(groups.entries())) {
+    if (!prices.length) continue;
+    const med = medianPrice(prices);
+    const base = baseline?.[key];
+    const spreadLow = base
+      ? Math.max(0, base.median - base.suggested_min)
+      : Math.round(med * 0.05);
+    const spreadHigh = base
+      ? Math.max(0, base.suggested_max - base.median)
+      : Math.round(med * 0.05);
+    out[key] = {
+      count: prices.length,
+      median: Math.round(med),
+      min: Math.min(...prices),
+      max: Math.max(...prices),
+      suggested_min: Math.round(med - spreadLow),
+      suggested_max: Math.round(med + spreadHigh),
+      trend_pct: null,
+    };
+  }
+  return out;
+}
+
+export function insightWithFilters(
+  data: BuildingInsight,
+  filters: CompFilters
+): {
+  comps: Comp[];
+  by_bedrooms: Record<string, BedroomSummary>;
+  narrowed: boolean;
+} {
+  const source = data.top_comps ?? [];
+  if (!filtersAreActive(filters) || source.length === 0) {
+    return {
+      comps: source,
+      by_bedrooms: data.by_bedrooms,
+      narrowed: false,
+    };
+  }
+  const comps = filterComps(source, filters);
+  // Only leave server rollups when every loaded comp already passes the filters.
+  if (comps.length === source.length) {
+    return {
+      comps: source,
+      by_bedrooms: data.by_bedrooms,
+      narrowed: false,
+    };
+  }
+  return {
+    comps,
+    by_bedrooms: bedroomSummariesFromComps(comps, data.by_bedrooms),
+    narrowed: true,
+  };
+}
+
+export function useCompFilters(): [
+  CompFilters,
+  (next: CompFilters) => void,
+] {
+  const [filters, setFilters] = useState<CompFilters>(DEFAULT_COMP_FILTERS);
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(COMP_FILTERS_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<CompFilters>;
+      setFilters({ ...DEFAULT_COMP_FILTERS, ...parsed });
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const update = (next: CompFilters) => {
+    setFilters(next);
+    try {
+      sessionStorage.setItem(COMP_FILTERS_STORAGE_KEY, JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  return [filters, update];
+}
+
+const DISTANCE_OPTIONS_KM: (number | null)[] = [null, 0.5, 1, 1.5, 2];
+
+export function ScrapeRadiusNote({
+  t,
+}: {
+  t: (k: AdminMessageKey) => string;
+}) {
+  return (
+    <p className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] px-3 py-2 text-xs text-[var(--ml-ink)]">
+      <span className="font-semibold text-[var(--ml-pine)]">
+        {t("insightsScrapeRadiusBadge")}
+      </span>{" "}
+      {t("insightsScrapeRadiusNote").replace(
+        "{km}",
+        String(DEFAULT_SCRAPE_RADIUS_KM)
+      )}
+    </p>
+  );
+}
+
+export function CompFiltersBar({
+  filters,
+  onChange,
+  t,
+  resultCount,
+  totalCount,
+}: {
+  filters: CompFilters;
+  onChange: (next: CompFilters) => void;
+  t: (k: AdminMessageKey) => string;
+  resultCount?: number;
+  totalCount?: number;
+}) {
+  const active = filtersAreActive(filters);
+  return (
+    <div className={`${adminUi.card} px-4 py-3`}>
+      <div className="flex flex-wrap items-end gap-3">
+        <label className="flex min-w-[7.5rem] flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ml-steel)]">
+          {t("insightsFilterMaxDistance")}
+          <select
+            className={adminUi.input + " text-sm"}
+            value={filters.maxKm == null ? "" : String(filters.maxKm)}
+            onChange={(e) => {
+              const v = e.target.value;
+              onChange({
+                ...filters,
+                maxKm: v === "" ? null : Number(v),
+              });
+            }}
+          >
+            {DISTANCE_OPTIONS_KM.map((km) => (
+              <option key={km == null ? "all" : km} value={km == null ? "" : km}>
+                {km == null
+                  ? t("insightsFilterDistanceAll").replace(
+                      "{km}",
+                      String(DEFAULT_SCRAPE_RADIUS_KM)
+                    )
+                  : t("insightsFilterDistanceKm").replace("{km}", String(km))}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex w-24 flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ml-steel)]">
+          {t("insightsFilterMinSqft")}
+          <input
+            type="number"
+            min={0}
+            step={50}
+            inputMode="numeric"
+            placeholder={t("insightsFilterAny")}
+            className={adminUi.input + " text-sm"}
+            value={filters.minSqft}
+            onChange={(e) => onChange({ ...filters, minSqft: e.target.value })}
+          />
+        </label>
+        <label className="flex w-24 flex-col gap-1 text-[10px] font-semibold uppercase tracking-wide text-[var(--ml-steel)]">
+          {t("insightsFilterMaxSqft")}
+          <input
+            type="number"
+            min={0}
+            step={50}
+            inputMode="numeric"
+            placeholder={t("insightsFilterAny")}
+            className={adminUi.input + " text-sm"}
+            value={filters.maxSqft}
+            onChange={(e) => onChange({ ...filters, maxSqft: e.target.value })}
+          />
+        </label>
+        <label className="mb-1 flex cursor-pointer items-center gap-2 text-sm text-[var(--ml-ink)]">
+          <input
+            type="checkbox"
+            className="h-4 w-4 accent-[var(--ml-pine)]"
+            checked={filters.requireSqft}
+            onChange={(e) =>
+              onChange({ ...filters, requireSqft: e.target.checked })
+            }
+          />
+          {t("insightsFilterRequireSqft")}
+        </label>
+        {active ? (
+          <button
+            type="button"
+            className={`${adminUi.btnGhost} mb-0.5 text-sm`}
+            onClick={() => onChange(DEFAULT_COMP_FILTERS)}
+          >
+            {t("insightsFilterReset")}
+          </button>
+        ) : null}
+      </div>
+      {typeof resultCount === "number" && typeof totalCount === "number" ? (
+        <p className="mt-2 text-[11px] text-[var(--ml-steel)]">
+          {t("insightsFilterShowing")
+            .replace("{shown}", String(resultCount))
+            .replace("{total}", String(totalCount))}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 export function bedsLabel(key: string, studioLabel: string): string {
   if (key === "studio") return studioLabel;

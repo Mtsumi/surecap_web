@@ -11,11 +11,15 @@ import {
   ASK_BAND,
   AmenityChip,
   AmenitySplitChips,
+  CompFiltersBar,
   CompPhotos,
+  ScrapeRadiusNote,
   bedsLabel,
+  insightWithFilters,
   matchInventoryBuilding,
   photoUrls,
   unitBedsKey,
+  useCompFilters,
   type BuildingInsight,
 } from "../../../shared";
 
@@ -26,6 +30,7 @@ export default function UnitInsightPage() {
   const [data, setData] = useState<BuildingInsight | null>(null);
   const [unit, setUnit] = useState<UnitAdmin | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
+  const [filters, setFilters] = useCompFilters();
 
   useEffect(() => {
     const token = getAdminToken();
@@ -74,10 +79,17 @@ export default function UnitInsightPage() {
     };
   }, [data, unitId, t]);
 
+  const filtered = data ? insightWithFilters(data, filters) : null;
   const beds = unit ? unitBedsKey(unit) : null;
-  const market = beds && beds !== "?" ? data?.by_bedrooms[beds] : undefined;
+  const market =
+    beds && beds !== "?" ? filtered?.by_bedrooms[beds] : undefined;
   const ask = unit?.rent ?? null;
   const comps =
+    filtered?.comps.filter((c) => {
+      if (!beds || beds === "?") return true;
+      return c.beds === beds;
+    }) ?? [];
+  const bedMatchedBeforeFilter =
     data?.top_comps.filter((c) => {
       if (!beds || beds === "?") return true;
       return c.beds === beds;
@@ -116,7 +128,7 @@ export default function UnitInsightPage() {
             <p className="mt-3 text-sm text-[var(--ml-ink)]">
               {t("insightsUnitSentence")
                 .replace("{beds}", bedsLabel(beds || "?", t("insightsStudio")))
-                .replace("{median}", market ? market.median.toLocaleString() : "—")}
+                .replace("{median}", market ? market.median.toLocaleString() : "-")}
               {ask != null && (
                 <>
                   {" "}
@@ -131,18 +143,41 @@ export default function UnitInsightPage() {
             )}
             {market && (
               <p className="mt-1 text-xs text-[var(--ml-pine)]">
-                {t("insightsSuggested")}: ${market.suggested_min.toLocaleString()} – $
+                {t("insightsSuggested")}: ${market.suggested_min.toLocaleString()} - $
                 {market.suggested_max.toLocaleString()}
               </p>
             )}
-            <AmenitySplitChips splits={market?.amenity_splits} t={t} />
+            {!filtered?.narrowed && (
+              <AmenitySplitChips splits={market?.amenity_splits} t={t} />
+            )}
+          </div>
+
+          <div className="mb-6 space-y-3">
+            <ScrapeRadiusNote t={t} />
+            <CompFiltersBar
+              filters={filters}
+              onChange={setFilters}
+              t={t}
+              resultCount={comps.length}
+              totalCount={
+                data.top_comps.filter((c) => {
+                  if (!beds || beds === "?") return true;
+                  return c.beds === beds;
+                }).length
+              }
+            />
+            {filtered?.narrowed ? (
+              <p className="text-[11px] text-[var(--ml-steel)]">
+                {t("insightsFilterNarrowed")}
+              </p>
+            ) : null}
           </div>
 
           {comps.length > 0 ? (
             <div className={adminUi.card}>
               <p className="px-4 py-3 text-sm font-semibold text-[var(--ml-ink)]">
                 {beds
-                  ? `${bedsLabel(beds, t("insightsStudio"))} — ${comps.length}`
+                  ? `${bedsLabel(beds, t("insightsStudio"))}: ${comps.length}`
                   : `${t("insightsAllComps")} (${comps.length})`}
                 {ask != null && (
                   <span className="ml-2 text-xs font-normal text-[var(--ml-steel)]">
@@ -199,7 +234,7 @@ export default function UnitInsightPage() {
                           <td className="px-4 py-2.5 text-right text-xs text-[var(--ml-steel)]">
                             {comp.square_feet
                               ? `${comp.square_feet.toLocaleString()}`
-                              : "—"}
+                              : "-"}
                           </td>
                           <td className="px-4 py-2.5">
                             <span className="inline-flex rounded bg-[var(--ml-paper)] px-1.5 py-0.5 text-[10px] text-[var(--ml-steel)]">
@@ -218,7 +253,7 @@ export default function UnitInsightPage() {
                               </a>
                             ) : (
                               <span className="truncate text-sm text-[var(--ml-steel)]">
-                                {comp.title || comp.address || "—"}
+                                {comp.title || comp.address || "-"}
                               </span>
                             )}
                             {comp.address && comp.title && (
@@ -314,7 +349,11 @@ export default function UnitInsightPage() {
             </div>
           ) : (
             <div className={`${adminUi.empty} mt-4`}>
-              <p>{t("insightsNoData")}</p>
+              <p>
+                {filtered?.narrowed && bedMatchedBeforeFilter.length > 0
+                  ? t("insightsFilterNoMatch")
+                  : t("insightsNoData")}
+              </p>
             </div>
           )}
         </>

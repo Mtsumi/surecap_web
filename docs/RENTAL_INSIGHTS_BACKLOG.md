@@ -93,6 +93,7 @@ Living product backlog for **admin Rental Insights** (`/admin/insights`) and the
 
 - [x] **S8** Field map (this doc) — Annonces ↔ `units.amenities` ↔ Insights comps
 - [x] **S9** Remove Pepinière from scrape `buildings.json` (9 buildings left), `buildings_w*.csv` / `.xlsx`, API `data/buildings.csv` copies, scraper docs — **still verify** live Postgres has no Pepinière building (deactivate/delete if present) and Insights cards after next deploy/sync
+- [x] **S2** Radius + sq ft filters on Insights index / building / unit (client-side; daily scrape stays 2 km; UI note)
 
 ### Follow-ups noticed in S8 audit
 
@@ -101,7 +102,6 @@ Living product backlog for **admin Rental Insights** (`/admin/insights`) and the
 
 ### Next (Insights UX)
 
-- [ ] **S2** Radius + sq ft filters on Insights main / building / unit pages (client-side on loaded comps first; respect stored `distance_km` + `square_feet`)
 - [ ] **S3** Amenity sidebar (Kijiji-like): require / don’t care / “without” (missing counts as without); unit page defaults from `unit.amenities`
 
 ### Scrape / data quality
@@ -123,12 +123,13 @@ Living product backlog for **admin Rental Insights** (`/admin/insights`) and the
 
 ## Suggested build order
 
-1. **S9** (ops cleanup) ← starting now  
-2. **S2** then **S3** on Insights (Steve’s main ask)  
-3. **S7** (cheap data quality)  
-4. **S1b** (FB coverage without increasing radius)  
-5. **S5 / S10 / S6** (harder)  
-6. **S4** after Steve answers  
+1. **S9** (ops cleanup) ← done  
+2. **S2** (radius + sq ft filters) ← done  
+3. **S3** on Insights (amenity sidebar)  
+4. **S7** (cheap data quality)  
+5. **S1b** (FB coverage without increasing radius)  
+6. **S5 / S10 / S6** (harder)  
+7. **S4** after Steve answers  
 
 ---
 
