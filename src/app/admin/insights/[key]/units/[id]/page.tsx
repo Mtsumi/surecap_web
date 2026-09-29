@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { useAdminLocaleContext } from "../../../../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
@@ -25,6 +25,8 @@ import {
   type BuildingInsight,
 } from "../../../shared";
 
+const AMENITY_DEFAULTS_UNIT_KEY = "insightsAmenityDefaultsForUnit";
+
 export default function UnitInsightPage() {
   const { key, id } = useParams<{ key: string; id: string }>();
   const { t } = useAdminLocaleContext();
@@ -33,7 +35,6 @@ export default function UnitInsightPage() {
   const [unit, setUnit] = useState<UnitAdmin | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useCompFilters();
-  const unitDefaultsApplied = useRef<number | null>(null);
 
   useEffect(() => {
     const token = getAdminToken();
@@ -82,10 +83,19 @@ export default function UnitInsightPage() {
     };
   }, [data, unitId, t]);
 
-  // Once per unit: pre-fill amenity With/Without from inventory amenities.
+  // Once per unit per session: pre-fill amenity With/Without from inventory.
+  // Persist the unit id in sessionStorage so remount / navigation back does not
+  // overwrite filters the user already customized for this unit.
   useEffect(() => {
-    if (!unit || unitDefaultsApplied.current === unit.id) return;
-    unitDefaultsApplied.current = unit.id;
+    if (!unit) return;
+    try {
+      if (sessionStorage.getItem(AMENITY_DEFAULTS_UNIT_KEY) === String(unit.id)) {
+        return;
+      }
+      sessionStorage.setItem(AMENITY_DEFAULTS_UNIT_KEY, String(unit.id));
+    } catch {
+      /* ignore */
+    }
     setFilters({
       ...filters,
       amenities: amenitiesFromUnit(unit),
