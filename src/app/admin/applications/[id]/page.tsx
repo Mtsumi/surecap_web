@@ -29,6 +29,7 @@ import {
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import { facebookLink } from "@/lib/facebookSearch";
 import SteveCreditDecision from "../../components/SteveCreditDecision";
+import ScreeningAcceptBanner from "./ScreeningAcceptBanner";
 
 function formatLivedDates(
   from: string | null | undefined,
@@ -251,6 +252,7 @@ export default function ApplicationDetailPage() {
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [jobs, setJobs] = useState<ApplicationJob[]>([]);
   const [reason, setReason] = useState("");
+  const [acceptNote, setAcceptNote] = useState("");
   const [showRefuse, setShowRefuse] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -344,8 +346,9 @@ export default function ApplicationDetailPage() {
     setBusy(true);
     setError(null);
     try {
-      const updated = await acceptApplication(id);
+      const updated = await acceptApplication(id, acceptNote);
       setApp(updated);
+      setAcceptNote("");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -407,6 +410,10 @@ export default function ApplicationDetailPage() {
     sortedMembers.reduce((count, member) => count + (member.documents?.length ?? 0), 0) +
     (app.summary_pdf_available ? 1 : 0);
   const talJobCount = jobs.filter((job) => job.job_type === "tal_screening").length;
+  const screeningConcerns = app.screening_concerns ?? [];
+  const screeningReviews = app.screening_reviews ?? [];
+  const hasScreeningFlags =
+    screeningConcerns.length > 0 || screeningReviews.length > 0;
 
   return (
     <>
@@ -431,30 +438,52 @@ export default function ApplicationDetailPage() {
 
           {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
 
+          {app.status === "accepted" && app.accept_note ? (
+            <p className={`${adminUi.pageSubtitle} mt-4`}>
+              Note d&apos;acceptation: {app.accept_note}
+            </p>
+          ) : null}
+
           {app.status === "awaiting_credit_check" ? (
-            <SteveCreditDecision
-              embedded
-              hasGuarantor={Boolean(app.has_guarantor)}
-              offerSentAt={app.guarantor_offer_sent_at}
-              submitting={busy}
-              reason={reason}
-              showRefuse={showRefuse}
-              onApprove={() => void onAccept()}
-              onOfferGuarantor={() => void onOfferGuarantor()}
-              onShowRefuse={() => setShowRefuse(true)}
-              onCancelRefuse={() => setShowRefuse(false)}
-              onReasonChange={setReason}
-              onConfirmRefuse={(event) => {
-                event.preventDefault();
-                void onReject();
-              }}
-            />
+            <>
+              <ScreeningAcceptBanner
+                concerns={screeningConcerns}
+                reviews={screeningReviews}
+                acceptNote={acceptNote}
+                onAcceptNoteChange={setAcceptNote}
+                showNoteField={hasScreeningFlags}
+              />
+              <SteveCreditDecision
+                embedded
+                hasGuarantor={Boolean(app.has_guarantor)}
+                offerSentAt={app.guarantor_offer_sent_at}
+                submitting={busy}
+                reason={reason}
+                showRefuse={showRefuse}
+                onApprove={() => void onAccept()}
+                onOfferGuarantor={() => void onOfferGuarantor()}
+                onShowRefuse={() => setShowRefuse(true)}
+                onCancelRefuse={() => setShowRefuse(false)}
+                onReasonChange={setReason}
+                onConfirmRefuse={(event) => {
+                  event.preventDefault();
+                  void onReject();
+                }}
+              />
+            </>
           ) : null}
 
           {app.status !== "accepted" &&
           app.status !== "rejected" &&
           app.status !== "awaiting_credit_check" ? (
             <div className="mt-5 space-y-4 border-t border-[var(--ml-line)] pt-5">
+              <ScreeningAcceptBanner
+                concerns={screeningConcerns}
+                reviews={screeningReviews}
+                acceptNote={acceptNote}
+                onAcceptNoteChange={setAcceptNote}
+                showNoteField={hasScreeningFlags}
+              />
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"

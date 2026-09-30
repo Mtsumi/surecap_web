@@ -124,6 +124,7 @@ export type ApplicationDetail = {
   facebook_url: string | null;
   linkedin_url: string | null;
   rejection_reason: string | null;
+  accept_note?: string | null;
   created_at: string;
   updated_at: string;
   unit_number: string;
@@ -140,6 +141,9 @@ export type ApplicationDetail = {
   unit_amenities?: Record<string, boolean | number | string> | null;
   household_affordability?: HouseholdAffordability | null;
   guarantor_offer_sent_at?: string | null;
+  /** E-U3: TAL/SOQUIJ flags that should be visible before Accept. */
+  screening_concerns?: string[];
+  screening_reviews?: string[];
 };
 
 export type ApplicationList = {
@@ -330,9 +334,14 @@ export function regenerateApplicationSummary(id: number) {
   );
 }
 
-export function acceptApplication(id: number) {
+export function acceptApplication(id: number, acceptNote?: string | null) {
+  const body =
+    acceptNote && acceptNote.trim()
+      ? { accept_note: acceptNote.trim() }
+      : {};
   return adminFetch<ApplicationDetail>(`/admin/applications/${id}/accept`, {
     method: "POST",
+    body: JSON.stringify(body),
   });
 }
 
