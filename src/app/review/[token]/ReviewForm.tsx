@@ -22,6 +22,7 @@ import RejectionEmailComposer, {
 import SteveCreditDecision from "@/app/admin/components/SteveCreditDecision";
 import MemberIdentityPanel, {
   IdentityGateBanner,
+  IdentityUnlockStrip,
 } from "@/app/admin/components/MemberIdentityPanel";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
@@ -206,16 +207,9 @@ function MemberCard({
         </h2>
       </div>
       <dl className={`${adminUi.cardPad} grid gap-3 sm:grid-cols-2`}>
-        <ContactRow label="Locateur" value={member.landlord_name} />
-        <ContactRow label="Téléphone locateur" value={member.landlord_phone} />
-        <ContactRow label="Locateur précédent" value={member.previous_landlord_name} />
-        <ContactRow label="Téléphone locateur précédent" value={member.previous_landlord_phone} />
-        <ContactRow label="Employeur" value={member.employer_name} />
-        <ContactRow label="RH" value={member.hr_name} />
-        <ContactRow label="Téléphone RH" value={member.hr_phone} />
-        <FacebookRow member={member} />
-        <ContactRow label="LinkedIn" value={member.linkedin_url} />
         <MemberIdentityPanel
+          memberId={member.id}
+          memberName={member.name}
           identity={member.identity}
           disabled={disabled}
           submitting={submitting || identityBusy}
@@ -244,6 +238,15 @@ function MemberCard({
             )}
           </div>
         ) : null}
+        <ContactRow label="Locateur" value={member.landlord_name} />
+        <ContactRow label="Téléphone locateur" value={member.landlord_phone} />
+        <ContactRow label="Locateur précédent" value={member.previous_landlord_name} />
+        <ContactRow label="Téléphone locateur précédent" value={member.previous_landlord_phone} />
+        <ContactRow label="Employeur" value={member.employer_name} />
+        <ContactRow label="RH" value={member.hr_name} />
+        <ContactRow label="Téléphone RH" value={member.hr_phone} />
+        <FacebookRow member={member} />
+        <ContactRow label="LinkedIn" value={member.linkedin_url} />
         {member.credit_consent_document_id ? (
           <CreditConsentPreview token={token} documentId={member.credit_consent_document_id} />
         ) : (
@@ -266,6 +269,16 @@ export default function ReviewForm({ token }: { token: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [showRefuse, setShowRefuse] = useState(false);
   const [checklist, setChecklist] = useState<JanitorReviewChecklist>(EMPTY_CHECKLIST);
+  const [stripBusy, setStripBusy] = useState(false);
+  const [stripIdPreviewUrl, setStripIdPreviewUrl] = useState<string | null>(null);
+  const [stripIdIsPdf, setStripIdIsPdf] = useState(false);
+  const [stripIdError, setStripIdError] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (stripIdPreviewUrl) URL.revokeObjectURL(stripIdPreviewUrl);
+    };
+  }, [stripIdPreviewUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -294,6 +307,44 @@ export default function ReviewForm({ token }: { token: string }) {
       checklist.called_landlord && checklist.called_employer && checklist.checked_social,
     [checklist]
   );
+
+  async function openStripId(member: JanitorReviewMember) {
+    const docId = member.identity?.id_document_id;
+    if (!docId) return;
+    setStripIdError(null);
+    setStripBusy(true);
+    try {
+      const blob = await fetchReviewDocumentBlob(token, docId, "inline");
+      if (stripIdPreviewUrl) URL.revokeObjectURL(stripIdPreviewUrl);
+      setStripIdIsPdf(
+        blob.type.includes("pdf") || blob.type === "application/octet-stream"
+      );
+      setStripIdPreviewUrl(URL.createObjectURL(blob));
+      const refreshed = await fetchJanitorReview(token);
+      setReview(refreshed);
+    } catch (err: unknown) {
+      setStripIdError(
+        err instanceof Error ? err.message : "Impossible d'ouvrir la pièce d'identité"
+      );
+    } finally {
+      setStripBusy(false);
+    }
+  }
+
+  async function confirmStrip(memberId: number, met: boolean) {
+    setStripBusy(true);
+    setStripIdError(null);
+    try {
+      const updated = await confirmReviewMemberIdentity(token, memberId, met);
+      setReview(updated);
+    } catch (err: unknown) {
+      setStripIdError(
+        err instanceof Error ? err.message : "Échec de la confirmation"
+      );
+    } finally {
+      setStripBusy(false);
+    }
+  }
 
   async function runAction(
     action: "request_credit_check" | "accept" | "reject" | "offer_guarantor",
@@ -384,6 +435,45 @@ export default function ReviewForm({ token }: { token: string }) {
             blockers={review.identity?.blockers}
             matchFlags={review.identity?.match_flags}
           />
+          <IdentityUnlockStrip
+            disabled={false}
+            submitting={submitting || stripBusy}
+            items={review.members
+              .filter(
+                (m) =>
+                  m.identity?.applies &&
+                  m.identity.ready_for_accept === false
+              )
+              .map((m) => ({
+                memberId: m.id,
+                name: m.name,
+                identity: m.identity!,
+                onOpenId: () => openStripId(m),
+                onConfirmMet: () => confirmStrip(m.id, true),
+                onConfirmNotMet: () => confirmStrip(m.id, false),
+              }))}
+          />
+          {stripIdError ? (
+            <p className={`${adminUi.alertError} mt-2`}>{stripIdError}</p>
+          ) : null}
+          {stripIdPreviewUrl ? (
+            <div className="mt-3">
+              {stripIdIsPdf ? (
+                <iframe
+                  title="Pièce d'identité"
+                  src={stripIdPreviewUrl}
+                  className="h-80 w-full rounded border border-[var(--ml-line)] bg-white"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={stripIdPreviewUrl}
+                  alt="Pièce d'identité"
+                  className="max-h-96 w-full rounded border border-[var(--ml-line)] object-contain bg-white"
+                />
+              )}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -498,7 +588,7 @@ export default function ReviewForm({ token }: { token: string }) {
           acceptDisabled={review.identity?.ready_for_accept === false}
           acceptDisabledReason={
             review.identity?.ready_for_accept === false
-              ? "Identité incomplète pour un ou plusieurs locataires (rencontre ou selfie)."
+              ? "Identité incomplète: ouvrez la pièce d'identité puis confirmez rencontre ou selfie."
               : null
           }
           loadRejectionDraft={({ locale, reason: draftReason }) =>

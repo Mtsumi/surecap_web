@@ -37,6 +37,7 @@ import SteveCreditDecision from "../../components/SteveCreditDecision";
 import ScreeningAcceptBanner from "./ScreeningAcceptBanner";
 import MemberIdentityPanel, {
   IdentityGateBanner,
+  IdentityUnlockStrip,
 } from "../../components/MemberIdentityPanel";
 
 function formatLivedDates(
@@ -91,6 +92,18 @@ function MemberCard({
       bodyClassName="!pt-0"
     >
       <dl className="grid gap-4 sm:grid-cols-2">
+        {onConfirmIdentity ? (
+          <MemberIdentityPanel
+            memberId={member.id}
+            memberName={memberDisplayName(member)}
+            identity={member.identity}
+            disabled={disabled}
+            submitting={submitting}
+            onOpenId={onOpenId}
+            onConfirmMet={() => onConfirmIdentity(true)}
+            onConfirmNotMet={() => onConfirmIdentity(false)}
+          />
+        ) : null}
         <AdminField label="Courriel" value={email} />
         <AdminField label="Téléphone" value={member.phone} />
         <AdminField label="Date de naissance" value={member.date_of_birth} />
@@ -260,16 +273,6 @@ function MemberCard({
             value={member.referral_source}
           />
         )}
-        {onConfirmIdentity ? (
-          <MemberIdentityPanel
-            identity={member.identity}
-            disabled={disabled}
-            submitting={submitting}
-            onOpenId={onOpenId}
-            onConfirmMet={() => onConfirmIdentity(true)}
-            onConfirmNotMet={() => onConfirmIdentity(false)}
-          />
-        ) : null}
       </dl>
     </AdminCollapsible>
   );
@@ -373,6 +376,7 @@ export default function ApplicationDetailPage() {
             m.identity?.ready_for_accept === false
         )
         .map((m) => ({
+          member_id: m.id,
           name: memberDisplayName(m),
           reason: m.identity?.blocking_reason || "identity_unconfirmed",
         })),
@@ -383,6 +387,7 @@ export default function ApplicationDetailPage() {
       members
         .filter((m) => m.identity?.match_status === "fail")
         .map((m) => ({
+          member_id: m.id,
           name: memberDisplayName(m),
           match_status: "fail",
           notes: m.identity?.match_notes,
@@ -526,6 +531,33 @@ export default function ApplicationDetailPage() {
                 blockers={identityBlockers}
                 matchFlags={identityMatchFlags}
               />
+              <IdentityUnlockStrip
+                disabled={app.status === "accepted" || app.status === "rejected"}
+                submitting={busy}
+                items={sortedMembers
+                  .filter(
+                    (m) =>
+                      m.identity?.applies &&
+                      m.identity.ready_for_accept === false
+                  )
+                  .map((m) => ({
+                    memberId: m.id,
+                    name: memberDisplayName(m),
+                    identity: m.identity!,
+                    onOpenId: () => {
+                      setReviewRequest({
+                        memberId: m.id,
+                        documentTypes: ID_REVIEW_DOCUMENT_TYPES,
+                        nonce: Date.now(),
+                      });
+                      document
+                        .getElementById("documents-section")
+                        ?.scrollIntoView({ behavior: "smooth" });
+                    },
+                    onConfirmMet: () => onConfirmIdentity(m.id, true),
+                    onConfirmNotMet: () => onConfirmIdentity(m.id, false),
+                  }))}
+              />
             </div>
           ) : null}
 
@@ -553,7 +585,7 @@ export default function ApplicationDetailPage() {
                 acceptDisabled={!identityReady}
                 acceptDisabledReason={
                   !identityReady
-                    ? "Identité incomplète pour un ou plusieurs locataires (rencontre ou selfie)."
+                    ? "Identité incomplète: ouvrez la pièce d'identité puis confirmez rencontre ou selfie."
                     : null
                 }
                 loadRejectionDraft={({ locale, reason: draftReason }) =>
