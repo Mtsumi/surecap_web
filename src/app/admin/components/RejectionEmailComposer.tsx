@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { adminUi } from "@/lib/adminUi";
 import type { RejectionEmailDraft } from "@/lib/adminApi";
 
@@ -39,6 +39,9 @@ export default function RejectionEmailComposer({
   const [janitorEmail, setJanitorEmail] = useState<string | null>(null);
   const [loadingDraft, setLoadingDraft] = useState(true);
   const [draftError, setDraftError] = useState<string | null>(null);
+  // Keep latest loader without putting it in effect deps (parents pass inline arrows).
+  const loadDraftRef = useRef(loadDraft);
+  loadDraftRef.current = loadDraft;
 
   const applyDraft = useCallback((draft: RejectionEmailDraft) => {
     setLocale(draft.locale);
@@ -53,7 +56,10 @@ export default function RejectionEmailComposer({
       setLoadingDraft(true);
       setDraftError(null);
       try {
-        const draft = await loadDraft({ locale: nextLocale, reason: nextReason });
+        const draft = await loadDraftRef.current({
+          locale: nextLocale,
+          reason: nextReason,
+        });
         applyDraft(draft);
       } catch (e) {
         setDraftError(
@@ -63,7 +69,7 @@ export default function RejectionEmailComposer({
         setLoadingDraft(false);
       }
     },
-    [applyDraft, loadDraft]
+    [applyDraft]
   );
 
   useEffect(() => {
@@ -72,7 +78,7 @@ export default function RejectionEmailComposer({
       setLoadingDraft(true);
       setDraftError(null);
       try {
-        const draft = await loadDraft({ reason: initialReason });
+        const draft = await loadDraftRef.current({ reason: initialReason });
         if (!cancelled) applyDraft(draft);
       } catch (e) {
         if (!cancelled) {
@@ -87,7 +93,7 @@ export default function RejectionEmailComposer({
     return () => {
       cancelled = true;
     };
-  }, [applyDraft, initialReason, loadDraft]);
+  }, [applyDraft, initialReason]);
 
   const onLocaleChange = async (next: "fr" | "en") => {
     setLocale(next);
