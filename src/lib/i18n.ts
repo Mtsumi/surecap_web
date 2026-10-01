@@ -152,6 +152,8 @@ export const messages = {
       "Camera access was blocked. You can still take a photo with your device camera.",
     idCameraUseDevice: "Use device camera",
     idCameraCaptureFailed: "Could not capture photo. Try again.",
+    selfieCameraTitle: "Selfie",
+    selfieCameraAlignHint: "Center your face in the frame",
     idBlurryWarning:
       "This photo looks blurry. You can still continue, but a clearer photo helps verification.",
     draftRestoredBanner:
@@ -434,6 +436,8 @@ export const messages = {
       "L'accès à la caméra a été refusé. Vous pouvez quand même prendre une photo avec l'appareil.",
     idCameraUseDevice: "Utiliser la caméra de l'appareil",
     idCameraCaptureFailed: "Impossible de capturer la photo. Réessayez.",
+    selfieCameraTitle: "Selfie",
+    selfieCameraAlignHint: "Placez votre visage au centre du cadre",
     idBlurryWarning:
       "Cette photo semble floue. Vous pouvez continuer, mais une photo plus nette facilite la vérification.",
     draftRestoredBanner:

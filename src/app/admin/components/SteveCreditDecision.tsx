@@ -12,6 +12,8 @@ export default function SteveCreditDecision({
   submitting,
   showRefuse,
   embedded = false,
+  acceptDisabled = false,
+  acceptDisabledReason,
   loadRejectionDraft,
   onApprove,
   onOfferGuarantor,
@@ -24,6 +26,8 @@ export default function SteveCreditDecision({
   submitting: boolean;
   showRefuse: boolean;
   embedded?: boolean;
+  acceptDisabled?: boolean;
+  acceptDisabledReason?: string | null;
   loadRejectionDraft: (opts: {
     locale?: "fr" | "en";
     reason: string;
@@ -50,11 +54,14 @@ export default function SteveCreditDecision({
           Sinon, refusez. Approuver enregistre la décision et lance la préparation
           du bail.
         </p>
+        {acceptDisabled && acceptDisabledReason ? (
+          <p className="mt-2 text-sm text-[#7f1d1d]">{acceptDisabledReason}</p>
+        ) : null}
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <button
           type="button"
-          disabled={submitting}
+          disabled={submitting || acceptDisabled}
           className={`${adminUi.btnPrimary} disabled:opacity-50`}
           onClick={onApprove}
         >
