@@ -249,6 +249,11 @@ export default function ReviewForm({ token }: { token: string }) {
       setError("Le message du courriel est obligatoire.");
       return;
     }
+    if (review?.stage === "janitor" && !allChecked) {
+      setError("Cochez les trois vérifications avant de refuser.");
+      setShowRefuse(false);
+      return;
+    }
     void runAction("reject", values);
   }
 
@@ -361,7 +366,7 @@ export default function ReviewForm({ token }: { token: string }) {
                   type="checkbox"
                   className="mt-0.5"
                   checked={checklist[key]}
-                  disabled={review.stage !== "janitor" || submitting}
+                  disabled={review.stage !== "janitor" || submitting || showRefuse}
                   onChange={(event) =>
                     setChecklist((current) => ({ ...current, [key]: event.target.checked }))
                   }
