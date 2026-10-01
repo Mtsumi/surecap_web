@@ -448,6 +448,15 @@ export default function ApplicationDetailPage() {
 
           {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
 
+          {app.draft_nudge_sent_at ? (
+            <p className={`${adminUi.pageSubtitle} mt-4`}>
+              Relance concierge envoyée le{" "}
+              {new Date(app.draft_nudge_sent_at).toLocaleString(
+                locale === "en" ? "en-CA" : "fr-CA"
+              )}
+            </p>
+          ) : null}
+
           {app.status === "accepted" && app.accept_note ? (
             <p className={`${adminUi.pageSubtitle} mt-4`}>
               Note d&apos;acceptation: {app.accept_note}

@@ -145,6 +145,8 @@ export type ApplicationDetail = {
   unit_amenities?: Record<string, boolean | number | string> | null;
   household_affordability?: HouseholdAffordability | null;
   guarantor_offer_sent_at?: string | null;
+  /** E-N2: when the incomplete-draft ops nudge was emailed. */
+  draft_nudge_sent_at?: string | null;
   /** E-U3: TAL/SOQUIJ flags that should be visible before Accept. */
   screening_concerns?: string[];
   screening_reviews?: string[];
