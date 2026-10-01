@@ -16,6 +16,8 @@ type Props = {
   frame?: GuidedCaptureFrame;
   titleKey?: MessageKey;
   alignHintKey?: MessageKey;
+  /** Front camera for selfies; rear for ID/docs. */
+  facingMode?: "user" | "environment";
   onCapture: (file: File) => void;
   onCancel: () => void;
   /** When getUserMedia fails — parent opens native file/camera picker. */
@@ -31,12 +33,18 @@ export default function IdCameraCapture({
   frame = "id",
   titleKey = "idCameraTitle",
   alignHintKey = "idCameraAlignHint",
+  facingMode = "environment",
   onCapture,
   onCancel,
   onUseDeviceCamera,
 }: Props) {
   const aspect = guidedCaptureAspect(frame);
-  const filePrefix = frame === "a4" ? "payslip-capture" : "id-capture";
+  const filePrefix =
+    frame === "a4"
+      ? "payslip-capture"
+      : facingMode === "user"
+        ? "selfie-capture"
+        : "id-capture";
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -70,7 +78,7 @@ export default function IdCameraCapture({
         const stream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: {
-            facingMode: { ideal: "environment" },
+            facingMode: { ideal: facingMode },
             width: { ideal: 1920 },
             height: { ideal: 1080 },
           },
@@ -101,7 +109,7 @@ export default function IdCameraCapture({
       stopStream(streamRef.current);
       streamRef.current = null;
     };
-  }, [locale]);
+  }, [locale, facingMode]);
 
   useEffect(() => {
     return () => {

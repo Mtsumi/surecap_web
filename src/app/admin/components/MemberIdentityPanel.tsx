@@ -24,7 +24,11 @@ function statusLabel(identity: MemberIdentityStatus): string {
     if (identity.match_status === "pending") return "Selfie reçu - analyse en cours";
     return "Selfie reçu";
   }
-  if (identity.met_in_person === false) return "Selfie demandé - en attente";
+  if (identity.met_in_person === false) {
+    return identity.selfie_uploaded
+      ? "Selfie reçu"
+      : "Selfie demandé - courriel envoyé au demandeur";
+  }
   if (!identity.id_document_id) return "Pièce d'identité manquante";
   if (!identity.id_viewed) return "Ouvrir la pièce d'identité d'abord";
   return "En attente de confirmation";

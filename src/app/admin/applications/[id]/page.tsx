@@ -290,6 +290,7 @@ export default function ApplicationDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reviewRequest, setReviewRequest] = useState<DocumentReviewRequest | null>(null);
+  const [identityFlash, setIdentityFlash] = useState<string | null>(null);
   const [isSuperAdmin, setIsSuperAdmin] = useState(false);
   /** Keep polling after Re-run until CORPIQ reaches a terminal status (avoids stale failed UI). */
   const [corpiqWatchUntil, setCorpiqWatchUntil] = useState(0);
@@ -398,9 +399,25 @@ export default function ApplicationDetailPage() {
   const onConfirmIdentity = async (memberId: number, met: boolean) => {
     setBusy(true);
     setError(null);
+    setIdentityFlash(null);
     try {
       const updated = await confirmMemberIdentity(id, memberId, met);
       setApp(updated);
+      setReviewRequest(null);
+      const member = updated.members?.find((m) => m.id === memberId);
+      const name = member ? memberDisplayName(member) : "le locataire";
+      const email = member?.email || member?.invited_email;
+      if (met) {
+        setIdentityFlash(`Rencontre confirmée pour ${name}.`);
+      } else if (email) {
+        setIdentityFlash(
+          `Selfie demandé: courriel envoyé à ${email} avec le lien de vérification.`
+        );
+      } else {
+        setIdentityFlash(
+          `Selfie demandé pour ${name}, mais aucun courriel n'est disponible sur le dossier.`
+        );
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -523,6 +540,9 @@ export default function ApplicationDetailPage() {
           </div>
 
           {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
+          {identityFlash ? (
+            <p className={`${adminUi.alertSuccess} mt-4`}>{identityFlash}</p>
+          ) : null}
 
           {app.status !== "accepted" && app.status !== "rejected" ? (
             <div className="mt-4">

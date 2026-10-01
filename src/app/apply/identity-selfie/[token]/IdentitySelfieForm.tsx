@@ -7,6 +7,8 @@ import {
   uploadIdentitySelfie,
 } from "@/lib/api";
 import { ACCEPTED_ID_UPLOAD_TYPES } from "@/lib/documentUpload";
+import IdCameraCapture from "@/app/apply/IdCameraCapture";
+import type { Locale } from "@/lib/i18n";
 
 export default function IdentitySelfieForm({ token }: { token: string }) {
   const [ctx, setCtx] = useState<IdentitySelfieContext | null>(null);
@@ -15,7 +17,8 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
-  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [showCamera, setShowCamera] = useState(false);
+  const galleryInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +49,7 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
     };
   }, [previewUrl]);
 
-  const locale = ctx?.locale === "en" ? "en" : "fr";
+  const locale: Locale = ctx?.locale === "en" ? "en" : "fr";
   const copy =
     locale === "en"
       ? {
@@ -54,34 +57,38 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
           intro:
             "Take a clear selfie so we can match it to the ID you already uploaded. This photo is used only for identity verification for your Montreal Living application.",
           take: "Take selfie",
-          choose: "Choose photo",
+          choose: "Choose from gallery",
           submit: "Send selfie",
-          done: "Thank you — your selfie was received. Our team will continue reviewing your application.",
+          done: "Thank you - your selfie was received. Our team will continue reviewing your application.",
           closed: "This application is closed. Selfie upload is no longer available.",
           loading: "Loading…",
+          needPhoto: "Please take or choose a photo.",
         }
       : {
           title: "Vérifiez votre identité",
           intro:
             "Prenez un selfie clair pour le comparer à la pièce d'identité déjà téléversée. Cette photo sert uniquement à la vérification d'identité pour votre demande Montreal Living.",
           take: "Prendre un selfie",
-          choose: "Choisir une photo",
+          choose: "Choisir dans la galerie",
           submit: "Envoyer le selfie",
-          done: "Merci — votre selfie a bien été reçu. Notre équipe poursuivra l'étude de votre demande.",
+          done: "Merci - votre selfie a bien été reçu. Notre équipe poursuivra l'étude de votre demande.",
           closed: "Cette demande est fermée. L'envoi du selfie n'est plus disponible.",
           loading: "Chargement…",
+          needPhoto: "Prenez ou choisissez une photo.",
         };
 
   function onPick(next: File | null) {
-    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl((prev) => {
+      if (prev) URL.revokeObjectURL(prev);
+      return next ? URL.createObjectURL(next) : null;
+    });
     setFile(next);
-    setPreviewUrl(next ? URL.createObjectURL(next) : null);
   }
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
     if (!file) {
-      setError(locale === "en" ? "Please take or choose a photo." : "Prenez ou choisissez une photo.");
+      setError(copy.needPhoto);
       return;
     }
     setSubmitting(true);
@@ -98,7 +105,7 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
   }
 
   if (loading) {
-    return <p className="text-sm text-[var(--ml-steel)]">{copy.loading}</p>;
+    return <p className="text-sm text-[#78716c]">{copy.loading}</p>;
   }
 
   if (error && !ctx) {
@@ -108,53 +115,67 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
   if (!ctx) return null;
 
   if (ctx.application_closed) {
-    return <p className="text-sm text-[var(--ml-ink)]">{copy.closed}</p>;
+    return <p className="text-sm text-[#292524]">{copy.closed}</p>;
   }
 
   if (ctx.selfie_uploaded) {
     return (
       <div className="space-y-2">
-        <h1 className="text-xl font-semibold text-[var(--ml-ink)]">{copy.title}</h1>
-        <p className="text-sm text-[var(--ml-ink)]">{copy.done}</p>
+        <h1 className="text-xl font-semibold text-[#292524]">{copy.title}</h1>
+        <p className="text-sm text-[#292524]">{copy.done}</p>
       </div>
+    );
+  }
+
+  if (showCamera) {
+    return (
+      <IdCameraCapture
+        locale={locale}
+        facingMode="user"
+        titleKey="selfieCameraTitle"
+        alignHintKey="selfieCameraAlignHint"
+        onCapture={(captured) => {
+          onPick(captured);
+          setShowCamera(false);
+        }}
+        onCancel={() => setShowCamera(false)}
+        onUseDeviceCamera={() => {
+          setShowCamera(false);
+          window.setTimeout(() => galleryInputRef.current?.click(), 0);
+        }}
+      />
     );
   }
 
   return (
     <form onSubmit={(e) => void onSubmit(e)} className="space-y-4">
       <div>
-        <h1 className="text-xl font-semibold text-[var(--ml-ink)]">{copy.title}</h1>
-        <p className="mt-2 text-sm text-[var(--ml-steel)]">
-          {ctx.member_name} — {copy.intro}
+        <h1 className="text-xl font-semibold text-[#292524]">{copy.title}</h1>
+        <p className="mt-2 text-sm text-[#57534e]">
+          {ctx.member_name} - {copy.intro}
         </p>
       </div>
       <input
-        ref={inputRef}
+        ref={galleryInputRef}
         type="file"
         accept={ACCEPTED_ID_UPLOAD_TYPES}
-        capture="user"
         className="hidden"
         onChange={(e) => onPick(e.target.files?.[0] ?? null)}
       />
       <div className="flex flex-col gap-2 sm:flex-row">
         <button
           type="button"
-          className="rounded bg-[var(--ml-forest)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
           disabled={submitting}
-          onClick={() => inputRef.current?.click()}
+          onClick={() => setShowCamera(true)}
         >
           {copy.take}
         </button>
         <button
           type="button"
-          className="rounded border border-[var(--ml-line)] px-4 py-2 text-sm text-[var(--ml-ink)] disabled:opacity-50"
+          className="rounded border border-[#d6d3d1] bg-white px-4 py-2.5 text-sm font-medium text-[#292524] disabled:opacity-50"
           disabled={submitting}
-          onClick={() => {
-            if (!inputRef.current) return;
-            inputRef.current.removeAttribute("capture");
-            inputRef.current.click();
-            inputRef.current.setAttribute("capture", "user");
-          }}
+          onClick={() => galleryInputRef.current?.click()}
         >
           {copy.choose}
         </button>
@@ -164,14 +185,14 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
         <img
           src={previewUrl}
           alt="Selfie preview"
-          className="max-h-80 w-full rounded border border-[var(--ml-line)] object-contain bg-white"
+          className="max-h-80 w-full rounded border border-[#d6d3d1] object-contain bg-white"
         />
       ) : null}
       {error ? <p className="text-sm text-[#7f1d1d]">{error}</p> : null}
       <button
         type="submit"
         disabled={!file || submitting}
-        className="rounded bg-[var(--ml-forest)] px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+        className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
       >
         {copy.submit}
       </button>

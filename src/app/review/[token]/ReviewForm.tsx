@@ -150,12 +150,14 @@ function MemberCard({
   disabled,
   submitting,
   onIdentityUpdated,
+  onIdentityFlash,
 }: {
   member: JanitorReviewMember;
   token: string;
   disabled?: boolean;
   submitting?: boolean;
   onIdentityUpdated: (review: JanitorReview) => void;
+  onIdentityFlash?: (message: string) => void;
 }) {
   const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
   const [idIsPdf, setIdIsPdf] = useState(false);
@@ -191,6 +193,13 @@ function MemberCard({
     try {
       const updated = await confirmReviewMemberIdentity(token, member.id, met);
       onIdentityUpdated(updated);
+      if (met) {
+        onIdentityFlash?.(`Rencontre confirmée pour ${member.name}.`);
+      } else {
+        onIdentityFlash?.(
+          `Selfie demandé pour ${member.name}: un courriel avec le lien de vérification a été envoyé au demandeur.`
+        );
+      }
     } catch (err: unknown) {
       setIdError(err instanceof Error ? err.message : "Échec de la confirmation");
     } finally {
@@ -273,6 +282,7 @@ export default function ReviewForm({ token }: { token: string }) {
   const [stripIdPreviewUrl, setStripIdPreviewUrl] = useState<string | null>(null);
   const [stripIdIsPdf, setStripIdIsPdf] = useState(false);
   const [stripIdError, setStripIdError] = useState<string | null>(null);
+  const [identityFlash, setIdentityFlash] = useState<string | null>(null);
 
   useEffect(() => {
     return () => {
@@ -334,9 +344,19 @@ export default function ReviewForm({ token }: { token: string }) {
   async function confirmStrip(memberId: number, met: boolean) {
     setStripBusy(true);
     setStripIdError(null);
+    setIdentityFlash(null);
     try {
       const updated = await confirmReviewMemberIdentity(token, memberId, met);
       setReview(updated);
+      const member = updated.members.find((m) => m.id === memberId);
+      const name = member?.name || "le locataire";
+      if (met) {
+        setIdentityFlash(`Rencontre confirmée pour ${name}.`);
+      } else {
+        setIdentityFlash(
+          `Selfie demandé pour ${name}: un courriel avec le lien de vérification a été envoyé au demandeur.`
+        );
+      }
     } catch (err: unknown) {
       setStripIdError(
         err instanceof Error ? err.message : "Échec de la confirmation"
@@ -427,6 +447,9 @@ export default function ReviewForm({ token }: { token: string }) {
       </div>
 
       {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
+      {identityFlash ? (
+        <p className={`${adminUi.alertSuccess} mt-4`}>{identityFlash}</p>
+      ) : null}
 
       {review.stage !== "done" ? (
         <div className="mt-4">
@@ -527,6 +550,7 @@ export default function ReviewForm({ token }: { token: string }) {
             disabled={review.stage === "done"}
             submitting={submitting}
             onIdentityUpdated={setReview}
+            onIdentityFlash={setIdentityFlash}
           />
         ))}
       </div>

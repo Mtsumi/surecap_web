@@ -276,7 +276,9 @@ export default function ApplicationDocuments({
       }))
     );
     setPreviewIndex(0);
-  }, [members, reviewRequest]);
+    // Only when a new reviewRequest is issued (nonce), not when members refresh after Met/Not-met.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: members listed for read at request time
+  }, [reviewRequest]);
 
   if (!summaryPdfAvailable && !hasMemberDocs && !dropboxDossierReady) {
     return <p className={adminUi.empty}>Aucun document téléversé pour cette demande.</p>;
