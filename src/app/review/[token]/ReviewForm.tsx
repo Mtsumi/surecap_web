@@ -6,8 +6,10 @@ import {
   JanitorReview,
   JanitorReviewChecklist,
   JanitorReviewMember,
+  confirmReviewMemberIdentity,
   fetchJanitorReview,
   fetchReviewCreditConsentBlob,
+  fetchReviewDocumentBlob,
   fetchReviewRejectionEmailDraft,
   submitJanitorReview,
 } from "@/lib/api";
@@ -18,6 +20,9 @@ import RejectionEmailComposer, {
   type RejectionComposeValues,
 } from "@/app/admin/components/RejectionEmailComposer";
 import SteveCreditDecision from "@/app/admin/components/SteveCreditDecision";
+import MemberIdentityPanel, {
+  IdentityGateBanner,
+} from "@/app/admin/components/MemberIdentityPanel";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   called_landlord: false,
@@ -141,10 +146,57 @@ function CreditConsentPreview({
 function MemberCard({
   member,
   token,
+  disabled,
+  submitting,
+  onIdentityUpdated,
 }: {
   member: JanitorReviewMember;
   token: string;
+  disabled?: boolean;
+  submitting?: boolean;
+  onIdentityUpdated: (review: JanitorReview) => void;
 }) {
+  const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
+  const [idIsPdf, setIdIsPdf] = useState(false);
+  const [idError, setIdError] = useState<string | null>(null);
+  const [identityBusy, setIdentityBusy] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (idPreviewUrl) URL.revokeObjectURL(idPreviewUrl);
+    };
+  }, [idPreviewUrl]);
+
+  async function openId() {
+    const docId = member.identity?.id_document_id;
+    if (!docId) return;
+    setIdError(null);
+    try {
+      const blob = await fetchReviewDocumentBlob(token, docId, "inline");
+      if (idPreviewUrl) URL.revokeObjectURL(idPreviewUrl);
+      setIdIsPdf(
+        blob.type.includes("pdf") || blob.type === "application/octet-stream"
+      );
+      setIdPreviewUrl(URL.createObjectURL(blob));
+      const refreshed = await fetchJanitorReview(token);
+      onIdentityUpdated(refreshed);
+    } catch (err: unknown) {
+      setIdError(err instanceof Error ? err.message : "Impossible d'ouvrir la pièce d'identité");
+    }
+  }
+
+  async function confirm(met: boolean) {
+    setIdentityBusy(true);
+    try {
+      const updated = await confirmReviewMemberIdentity(token, member.id, met);
+      onIdentityUpdated(updated);
+    } catch (err: unknown) {
+      setIdError(err instanceof Error ? err.message : "Échec de la confirmation");
+    } finally {
+      setIdentityBusy(false);
+    }
+  }
+
   return (
     <section className={adminUi.card}>
       <div className={adminUi.cardHeader}>
@@ -163,6 +215,35 @@ function MemberCard({
         <ContactRow label="Téléphone RH" value={member.hr_phone} />
         <FacebookRow member={member} />
         <ContactRow label="LinkedIn" value={member.linkedin_url} />
+        <MemberIdentityPanel
+          identity={member.identity}
+          disabled={disabled}
+          submitting={submitting || identityBusy}
+          onOpenId={openId}
+          onConfirmMet={() => confirm(true)}
+          onConfirmNotMet={() => confirm(false)}
+        />
+        {idError ? (
+          <div className="sm:col-span-2 text-sm text-[#7f1d1d]">{idError}</div>
+        ) : null}
+        {idPreviewUrl ? (
+          <div className="sm:col-span-2">
+            {idIsPdf ? (
+              <iframe
+                title="Pièce d'identité"
+                src={idPreviewUrl}
+                className="mt-1 h-80 w-full rounded border border-[var(--ml-line)] bg-white"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={idPreviewUrl}
+                alt="Pièce d'identité"
+                className="mt-1 max-h-96 w-full rounded border border-[var(--ml-line)] object-contain bg-white"
+              />
+            )}
+          </div>
+        ) : null}
         {member.credit_consent_document_id ? (
           <CreditConsentPreview token={token} documentId={member.credit_consent_document_id} />
         ) : (
@@ -296,6 +377,16 @@ export default function ReviewForm({ token }: { token: string }) {
 
       {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
 
+      {review.stage !== "done" ? (
+        <div className="mt-4">
+          <IdentityGateBanner
+            ready={review.identity?.ready_for_accept !== false}
+            blockers={review.identity?.blockers}
+            matchFlags={review.identity?.match_flags}
+          />
+        </div>
+      ) : null}
+
       {review.stage === "done" ? (
         <section className={`${adminUi.cardPad} ${adminUi.card} mt-6`}>
           <p className="text-sm text-[var(--ml-ink)]">
@@ -339,7 +430,14 @@ export default function ReviewForm({ token }: { token: string }) {
 
       <div className={`${adminUi.sectionGap} mt-6`}>
         {review.members.map((member) => (
-          <MemberCard key={member.id} member={member} token={token} />
+          <MemberCard
+            key={member.id}
+            member={member}
+            token={token}
+            disabled={review.stage === "done"}
+            submitting={submitting}
+            onIdentityUpdated={setReview}
+          />
         ))}
       </div>
 
@@ -397,6 +495,12 @@ export default function ReviewForm({ token }: { token: string }) {
           offerSentAt={review.guarantor_offer_sent_at}
           submitting={submitting}
           showRefuse={showRefuse}
+          acceptDisabled={review.identity?.ready_for_accept === false}
+          acceptDisabledReason={
+            review.identity?.ready_for_accept === false
+              ? "Identité incomplète pour un ou plusieurs locataires (rencontre ou selfie)."
+              : null
+          }
           loadRejectionDraft={({ locale, reason: draftReason }) =>
             fetchReviewRejectionEmailDraft(token, {
               locale,

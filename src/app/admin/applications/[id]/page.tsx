@@ -11,6 +11,7 @@ import {
   ApplicationMember,
   acceptApplication,
   adminMe,
+  confirmMemberIdentity,
   fetchRejectionEmailDraft,
   getApplication,
   getApplicationJobs,
@@ -34,6 +35,9 @@ import RejectionEmailComposer, {
 } from "../../components/RejectionEmailComposer";
 import SteveCreditDecision from "../../components/SteveCreditDecision";
 import ScreeningAcceptBanner from "./ScreeningAcceptBanner";
+import MemberIdentityPanel, {
+  IdentityGateBanner,
+} from "../../components/MemberIdentityPanel";
 
 function formatLivedDates(
   from: string | null | undefined,
@@ -61,7 +65,19 @@ function memberDisplayName(member: ApplicationMember): string {
   return legal || member.invited_name || "—";
 }
 
-function MemberCard({ member }: { member: ApplicationMember }) {
+function MemberCard({
+  member,
+  disabled,
+  submitting,
+  onOpenId,
+  onConfirmIdentity,
+}: {
+  member: ApplicationMember;
+  disabled?: boolean;
+  submitting?: boolean;
+  onOpenId?: () => void;
+  onConfirmIdentity?: (met: boolean) => void | Promise<void>;
+}) {
   const { t, locale } = useAdminLocaleContext();
   const email = member.email || member.invited_email;
   const defaultOpen = member.role === "primary";
@@ -244,6 +260,16 @@ function MemberCard({ member }: { member: ApplicationMember }) {
             value={member.referral_source}
           />
         )}
+        {onConfirmIdentity ? (
+          <MemberIdentityPanel
+            identity={member.identity}
+            disabled={disabled}
+            submitting={submitting}
+            onOpenId={onOpenId}
+            onConfirmMet={() => onConfirmIdentity(true)}
+            onConfirmNotMet={() => onConfirmIdentity(false)}
+          />
+        ) : null}
       </dl>
     </AdminCollapsible>
   );
@@ -331,6 +357,51 @@ export default function ApplicationDetailPage() {
   };
 
   const members = app?.members ?? [];
+  const identityReady = useMemo(() => {
+    const tenants = members.filter(
+      (m) => m.role === "primary" || m.role === "roommate"
+    );
+    if (tenants.length === 0) return true;
+    return tenants.every((m) => m.identity?.ready_for_accept !== false);
+  }, [members]);
+  const identityBlockers = useMemo(
+    () =>
+      members
+        .filter(
+          (m) =>
+            (m.role === "primary" || m.role === "roommate") &&
+            m.identity?.ready_for_accept === false
+        )
+        .map((m) => ({
+          name: memberDisplayName(m),
+          reason: m.identity?.blocking_reason || "identity_unconfirmed",
+        })),
+    [members]
+  );
+  const identityMatchFlags = useMemo(
+    () =>
+      members
+        .filter((m) => m.identity?.match_status === "fail")
+        .map((m) => ({
+          name: memberDisplayName(m),
+          match_status: "fail",
+          notes: m.identity?.match_notes,
+        })),
+    [members]
+  );
+
+  const onConfirmIdentity = async (memberId: number, met: boolean) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await confirmMemberIdentity(id, memberId, met);
+      setApp(updated);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(false);
+    }
+  };
   const sortedMembers = useMemo(() => {
     const order = { primary: 0, roommate: 1, guarantor: 2 };
     return [...members].sort(
@@ -448,6 +519,16 @@ export default function ApplicationDetailPage() {
 
           {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
 
+          {app.status !== "accepted" && app.status !== "rejected" ? (
+            <div className="mt-4">
+              <IdentityGateBanner
+                ready={identityReady}
+                blockers={identityBlockers}
+                matchFlags={identityMatchFlags}
+              />
+            </div>
+          ) : null}
+
           {app.status === "accepted" && app.accept_note ? (
             <p className={`${adminUi.pageSubtitle} mt-4`}>
               Note d&apos;acceptation: {app.accept_note}
@@ -469,6 +550,12 @@ export default function ApplicationDetailPage() {
                 offerSentAt={app.guarantor_offer_sent_at}
                 submitting={busy}
                 showRefuse={showRefuse}
+                acceptDisabled={!identityReady}
+                acceptDisabledReason={
+                  !identityReady
+                    ? "Identité incomplète pour un ou plusieurs locataires (rencontre ou selfie)."
+                    : null
+                }
                 loadRejectionDraft={({ locale, reason: draftReason }) =>
                   fetchRejectionEmailDraft(id, { locale, reason: draftReason })
                 }
@@ -495,9 +582,9 @@ export default function ApplicationDetailPage() {
               <div className="flex flex-col gap-3 sm:flex-row">
                 <button
                   type="button"
-                  disabled={busy}
+                  disabled={busy || !identityReady}
                   onClick={onAccept}
-                  className={adminUi.btnPrimary}
+                  className={`${adminUi.btnPrimary} disabled:opacity-50`}
                 >
                   Accepter
                 </button>
@@ -568,7 +655,23 @@ export default function ApplicationDetailPage() {
           {sortedMembers.length > 0 ? (
             <div className="space-y-3">
               {sortedMembers.map((member) => (
-                <MemberCard key={member.id} member={member} />
+                <MemberCard
+                  key={member.id}
+                  member={member}
+                  disabled={app.status === "accepted" || app.status === "rejected"}
+                  submitting={busy}
+                  onOpenId={() => {
+                    setReviewRequest({
+                      memberId: member.id,
+                      documentTypes: ID_REVIEW_DOCUMENT_TYPES,
+                      nonce: Date.now(),
+                    });
+                    document
+                      .getElementById("documents-section")
+                      ?.scrollIntoView({ behavior: "smooth" });
+                  }}
+                  onConfirmIdentity={(met) => onConfirmIdentity(member.id, met)}
+                />
               ))}
             </div>
           ) : (
@@ -626,6 +729,9 @@ export default function ApplicationDetailPage() {
               memberDisplayName={memberDisplayName}
               onSummaryRegenerated={load}
               reviewRequest={reviewRequest}
+              onMemberDocumentPreviewed={() => {
+                void getApplication(id).then(setApp).catch(() => undefined);
+              }}
             />
           </AdminCollapsible>
         </div>
