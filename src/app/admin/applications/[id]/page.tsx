@@ -11,6 +11,7 @@ import {
   ApplicationMember,
   acceptApplication,
   adminMe,
+  fetchRejectionEmailDraft,
   getApplication,
   getApplicationJobs,
   offerGuarantor,
@@ -28,6 +29,9 @@ import {
 } from "@/lib/adminDocuments";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import { facebookLink } from "@/lib/facebookSearch";
+import RejectionEmailComposer, {
+  type RejectionComposeValues,
+} from "../../components/RejectionEmailComposer";
 import SteveCreditDecision from "../../components/SteveCreditDecision";
 import ScreeningAcceptBanner from "./ScreeningAcceptBanner";
 
@@ -356,17 +360,23 @@ export default function ApplicationDetailPage() {
     }
   };
 
-  const onReject = async () => {
-    if (!reason.trim()) {
-      setError("Veuillez entrer une raison.");
+  const onReject = async (values: RejectionComposeValues) => {
+    if (!values.email_body.trim()) {
+      setError("Le message du courriel est obligatoire.");
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const updated = await rejectApplication(id, reason.trim());
+      const updated = await rejectApplication(id, {
+        reason: values.reason,
+        locale: values.locale,
+        email_subject: values.email_subject,
+        email_body: values.email_body,
+      });
       setApp(updated);
       setShowRefuse(false);
+      setReason(values.reason);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -458,17 +468,15 @@ export default function ApplicationDetailPage() {
                 hasGuarantor={Boolean(app.has_guarantor)}
                 offerSentAt={app.guarantor_offer_sent_at}
                 submitting={busy}
-                reason={reason}
                 showRefuse={showRefuse}
+                loadRejectionDraft={({ locale, reason: draftReason }) =>
+                  fetchRejectionEmailDraft(id, { locale, reason: draftReason })
+                }
                 onApprove={() => void onAccept()}
                 onOfferGuarantor={() => void onOfferGuarantor()}
                 onShowRefuse={() => setShowRefuse(true)}
                 onCancelRefuse={() => setShowRefuse(false)}
-                onReasonChange={setReason}
-                onConfirmRefuse={(event) => {
-                  event.preventDefault();
-                  void onReject();
-                }}
+                onConfirmRefuse={(values) => onReject(values)}
               />
             </>
           ) : null}
@@ -503,57 +511,46 @@ export default function ApplicationDetailPage() {
                 </button>
               </div>
               {showRefuse ? (
-                <div className="space-y-3">
-                  <label className="block text-sm text-[var(--ml-steel)]">
-                    Raison du refus
-                    <textarea
-                      value={reason}
-                      onChange={(e) => setReason(e.target.value)}
-                      rows={2}
-                      className={adminUi.textarea}
-                    />
-                  </label>
-                  <div className="flex flex-col gap-3 sm:flex-row">
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={onReject}
-                      className={adminUi.btnDanger}
-                    >
-                      Confirmer le refus
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={() => setShowRefuse(false)}
-                      className={adminUi.btnGhost}
-                    >
-                      Annuler
-                    </button>
-                  </div>
-                </div>
+                <RejectionEmailComposer
+                  loadDraft={({ locale, reason: draftReason }) =>
+                    fetchRejectionEmailDraft(id, { locale, reason: draftReason })
+                  }
+                  submitting={busy}
+                  onCancel={() => setShowRefuse(false)}
+                  onConfirm={(values) => onReject(values)}
+                  initialReason={reason}
+                />
               ) : null}
             </div>
           ) : null}
 
           {app.status === "rejected" ? (
-            <div className="mt-4 rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] p-4">
-              <label className="block text-sm text-[var(--ml-steel)]">
-                Raison du refus
-                <textarea
-                  value={reason}
-                  onChange={(e) => setReason(e.target.value)}
-                  rows={2}
-                  disabled
-                  className={adminUi.textarea}
-                />
-              </label>
-            </div>
-          ) : null}
-
-          {app.rejection_reason ? (
-            <div className="mt-4 border-t border-[var(--ml-line)] pt-4">
-              <AdminField label="Raison du refus" value={app.rejection_reason} />
+            <div className="mt-4 space-y-3 rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] p-4">
+              {app.rejection_reason ? (
+                <AdminField label="Raison du refus" value={app.rejection_reason} />
+              ) : null}
+              {app.rejection_email_subject || app.rejection_email_body ? (
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium text-[var(--ml-ink)]">
+                    Voir le courriel envoyé
+                    {app.rejection_email_locale
+                      ? ` (${app.rejection_email_locale.toUpperCase()})`
+                      : ""}
+                  </summary>
+                  <div className="mt-2 space-y-2">
+                    {app.rejection_email_subject ? (
+                      <p className="text-[var(--ml-steel)]">
+                        Objet : {app.rejection_email_subject}
+                      </p>
+                    ) : null}
+                    {app.rejection_email_body ? (
+                      <pre className="whitespace-pre-wrap rounded border border-[var(--ml-line)] bg-white p-3 text-xs text-[var(--ml-ink)]">
+                        {app.rejection_email_body}
+                      </pre>
+                    ) : null}
+                  </div>
+                </details>
+              ) : null}
             </div>
           ) : null}
         </div>

@@ -125,6 +125,10 @@ export type ApplicationDetail = {
   linkedin_url: string | null;
   rejection_reason: string | null;
   accept_note?: string | null;
+  rejection_email_locale?: string | null;
+  rejection_email_subject?: string | null;
+  rejection_email_body?: string | null;
+  rejection_email_sent_at?: string | null;
   created_at: string;
   updated_at: string;
   unit_number: string;
@@ -334,6 +338,38 @@ export function regenerateApplicationSummary(id: number) {
   );
 }
 
+export type RejectionEmailDraft = {
+  locale: "fr" | "en";
+  subject: string;
+  body: string;
+  applicant_name: string;
+  applicant_email: string | null;
+  janitor_email: string | null;
+  janitor_phone: string | null;
+  cc_janitor: boolean;
+  default_locale: "fr" | "en";
+};
+
+export type RejectApplicationPayload = {
+  reason?: string;
+  locale?: "fr" | "en";
+  email_subject?: string;
+  email_body?: string;
+};
+
+export function fetchRejectionEmailDraft(
+  id: number,
+  opts?: { locale?: "fr" | "en"; reason?: string }
+) {
+  const params = new URLSearchParams();
+  if (opts?.locale) params.set("locale", opts.locale);
+  if (opts?.reason) params.set("reason", opts.reason);
+  const q = params.toString();
+  return adminFetch<RejectionEmailDraft>(
+    `/admin/applications/${id}/rejection-email-draft${q ? `?${q}` : ""}`
+  );
+}
+
 export function acceptApplication(id: number, acceptNote?: string | null) {
   const body =
     acceptNote && acceptNote.trim()
@@ -345,10 +381,10 @@ export function acceptApplication(id: number, acceptNote?: string | null) {
   });
 }
 
-export function rejectApplication(id: number, reason: string) {
+export function rejectApplication(id: number, payload: RejectApplicationPayload) {
   return adminFetch<ApplicationDetail>(`/admin/applications/${id}/reject`, {
     method: "POST",
-    body: JSON.stringify({ reason }),
+    body: JSON.stringify(payload),
   });
 }
 
