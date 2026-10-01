@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import {
   JanitorReview,
@@ -8,11 +8,15 @@ import {
   JanitorReviewMember,
   fetchJanitorReview,
   fetchReviewCreditConsentBlob,
+  fetchReviewRejectionEmailDraft,
   submitJanitorReview,
 } from "@/lib/api";
 import { applicationStatusLabel } from "@/lib/adminStatus";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
 import { facebookLink } from "@/lib/facebookSearch";
+import RejectionEmailComposer, {
+  type RejectionComposeValues,
+} from "@/app/admin/components/RejectionEmailComposer";
 import SteveCreditDecision from "@/app/admin/components/SteveCreditDecision";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
@@ -179,7 +183,6 @@ export default function ReviewForm({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [reason, setReason] = useState("");
   const [showRefuse, setShowRefuse] = useState(false);
   const [checklist, setChecklist] = useState<JanitorReviewChecklist>(EMPTY_CHECKLIST);
 
@@ -212,7 +215,13 @@ export default function ReviewForm({ token }: { token: string }) {
   );
 
   async function runAction(
-    action: "request_credit_check" | "accept" | "reject" | "offer_guarantor"
+    action: "request_credit_check" | "accept" | "reject" | "offer_guarantor",
+    extra?: {
+      reason?: string;
+      locale?: "fr" | "en";
+      email_subject?: string;
+      email_body?: string;
+    }
   ): Promise<void> {
     setSubmitting(true);
     setError(null);
@@ -220,10 +229,14 @@ export default function ReviewForm({ token }: { token: string }) {
       const updated = await submitJanitorReview(token, {
         action,
         checklist: action === "request_credit_check" ? checklist : undefined,
-        reason: action === "reject" ? reason.trim() : undefined,
+        reason: action === "reject" ? extra?.reason : undefined,
+        locale: action === "reject" ? extra?.locale : undefined,
+        email_subject: action === "reject" ? extra?.email_subject : undefined,
+        email_body: action === "reject" ? extra?.email_body : undefined,
       });
       setReview(updated);
       if (updated.checklist) setChecklist(updated.checklist);
+      setShowRefuse(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "La mise à jour a échoué");
     } finally {
@@ -231,13 +244,12 @@ export default function ReviewForm({ token }: { token: string }) {
     }
   }
 
-  function onReject(e: FormEvent) {
-    e.preventDefault();
-    if (!reason.trim()) {
-      setError("Une raison de refus est obligatoire.");
+  function onRejectCompose(values: RejectionComposeValues) {
+    if (!values.email_body.trim()) {
+      setError("Le message du courriel est obligatoire.");
       return;
     }
-    void runAction("reject");
+    void runAction("reject", values);
   }
 
   if (loading) {
@@ -294,6 +306,14 @@ export default function ReviewForm({ token }: { token: string }) {
             <p className={`${adminUi.pageSubtitle} mt-2`}>
               Raison du refus : {review.rejection_reason}
             </p>
+          ) : null}
+          {review.rejection_email_body ? (
+            <pre className="mt-3 whitespace-pre-wrap rounded border border-[var(--ml-line)] bg-white p-3 text-xs text-[var(--ml-ink)]">
+              {review.rejection_email_subject
+                ? `Objet : ${review.rejection_email_subject}\n\n`
+                : ""}
+              {review.rejection_email_body}
+            </pre>
           ) : null}
         </section>
       ) : null}
@@ -357,8 +377,13 @@ export default function ReviewForm({ token }: { token: string }) {
           hasGuarantor={Boolean(review.has_guarantor)}
           offerSentAt={review.guarantor_offer_sent_at}
           submitting={submitting}
-          reason={reason}
           showRefuse={showRefuse}
+          loadRejectionDraft={({ locale, reason: draftReason }) =>
+            fetchReviewRejectionEmailDraft(token, {
+              locale,
+              reason: draftReason,
+            })
+          }
           onApprove={() => void runAction("accept")}
           onOfferGuarantor={() => {
             const resend = Boolean(review.guarantor_offer_sent_at);
@@ -371,31 +396,35 @@ export default function ReviewForm({ token }: { token: string }) {
           }}
           onShowRefuse={() => setShowRefuse(true)}
           onCancelRefuse={() => setShowRefuse(false)}
-          onReasonChange={setReason}
-          onConfirmRefuse={onReject}
+          onConfirmRefuse={onRejectCompose}
         />
       ) : null}
 
       {review.stage === "janitor" ? (
-        <form onSubmit={onReject} className={`${adminUi.cardPad} ${adminUi.card} mt-6 space-y-3`}>
-          <label className="block text-sm text-[var(--ml-steel)]">
-            Raison du refus
-            <textarea
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              className={`${adminUi.textarea} mt-1`}
-              rows={3}
-              required
+        <div className={`${adminUi.cardPad} ${adminUi.card} mt-6 space-y-3`}>
+          {!showRefuse ? (
+            <button
+              type="button"
+              disabled={submitting || !allChecked}
+              className={`${adminUi.btnDanger} disabled:opacity-50`}
+              onClick={() => setShowRefuse(true)}
+            >
+              Refuser
+            </button>
+          ) : (
+            <RejectionEmailComposer
+              loadDraft={({ locale, reason: draftReason }) =>
+                fetchReviewRejectionEmailDraft(token, {
+                  locale,
+                  reason: draftReason,
+                })
+              }
+              submitting={submitting}
+              onCancel={() => setShowRefuse(false)}
+              onConfirm={onRejectCompose}
             />
-          </label>
-          <button
-            type="submit"
-            disabled={submitting || !allChecked || !reason.trim()}
-            className={`${adminUi.btnDanger} disabled:opacity-50`}
-          >
-            Refuser
-          </button>
-        </form>
+          )}
+        </div>
       ) : null}
     </div>
   );

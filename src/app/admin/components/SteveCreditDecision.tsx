@@ -1,34 +1,38 @@
 "use client";
 
-import { FormEvent } from "react";
+import RejectionEmailComposer, {
+  type RejectionComposeValues,
+} from "./RejectionEmailComposer";
+import type { RejectionEmailDraft } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
 
 export default function SteveCreditDecision({
   hasGuarantor,
   offerSentAt,
   submitting,
-  reason,
   showRefuse,
   embedded = false,
+  loadRejectionDraft,
   onApprove,
   onOfferGuarantor,
   onShowRefuse,
   onCancelRefuse,
-  onReasonChange,
   onConfirmRefuse,
 }: {
   hasGuarantor: boolean;
   offerSentAt?: string | null;
   submitting: boolean;
-  reason: string;
   showRefuse: boolean;
   embedded?: boolean;
+  loadRejectionDraft: (opts: {
+    locale?: "fr" | "en";
+    reason: string;
+  }) => Promise<RejectionEmailDraft>;
   onApprove: () => void;
   onOfferGuarantor: () => void;
   onShowRefuse: () => void;
   onCancelRefuse: () => void;
-  onReasonChange: (value: string) => void;
-  onConfirmRefuse: (event: FormEvent) => void;
+  onConfirmRefuse: (values: RejectionComposeValues) => void | Promise<void>;
 }) {
   const offerSentLabel = offerSentAt
     ? new Date(offerSentAt).toLocaleString("fr-CA")
@@ -79,50 +83,19 @@ export default function SteveCreditDecision({
       </div>
       {!hasGuarantor ? (
         <p className="text-xs text-[var(--ml-steel)]">
-              Envoie un courriel au demandeur avec un lien pour ajouter un
-              garant à cette même demande. S'ils n'en ont pas, ils doivent
-              communiquer avec le concierge. Le dossier reste ouvert.
+          Envoie un courriel au demandeur avec un lien pour ajouter un garant à
+          cette même demande. S&apos;ils n&apos;en ont pas, ils doivent
+          communiquer avec le concierge. Le dossier reste ouvert.
           {offerSentLabel ? ` Dernier envoi : ${offerSentLabel}.` : ""}
         </p>
       ) : null}
       {showRefuse ? (
-        <form
-          onSubmit={onConfirmRefuse}
-          className="space-y-3 border-t border-[var(--ml-line)] pt-4"
-        >
-          <label className="block text-sm text-[var(--ml-steel)]">
-            Note interne (pourquoi refuser)
-            <textarea
-              value={reason}
-              onChange={(event) => onReasonChange(event.target.value)}
-              className={`${adminUi.textarea} mt-1`}
-              rows={3}
-              required
-              placeholder="Ex. crédit insuffisant"
-            />
-          </label>
-          <p className="text-xs text-[var(--ml-steel)]">
-            Enregistrée au dossier. Le courriel au demandeur n'est pas encore
-            envoyé; on le rédigera ensuite.
-          </p>
-          <div className="flex flex-col gap-3 sm:flex-row">
-            <button
-              type="submit"
-              disabled={submitting || !reason.trim()}
-              className={`${adminUi.btnDanger} disabled:opacity-50`}
-            >
-              Confirmer le refus
-            </button>
-            <button
-              type="button"
-              disabled={submitting}
-              className={adminUi.btnGhost}
-              onClick={onCancelRefuse}
-            >
-              Annuler
-            </button>
-          </div>
-        </form>
+        <RejectionEmailComposer
+          loadDraft={loadRejectionDraft}
+          submitting={submitting}
+          onCancel={onCancelRefuse}
+          onConfirm={onConfirmRefuse}
+        />
       ) : null}
     </div>
   );

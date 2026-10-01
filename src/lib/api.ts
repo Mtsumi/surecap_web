@@ -750,9 +750,25 @@ export type JanitorReview = {
   members: JanitorReviewMember[];
   checklist: JanitorReviewChecklist | null;
   rejection_reason?: string | null;
+  rejection_email_subject?: string | null;
+  rejection_email_body?: string | null;
+  rejection_email_locale?: string | null;
+  rejection_email_sent_at?: string | null;
   has_guarantor?: boolean;
   guarantor_offer_sent_at?: string | null;
   token_expired: boolean;
+};
+
+export type RejectionEmailDraft = {
+  locale: "fr" | "en";
+  subject: string;
+  body: string;
+  applicant_name: string;
+  applicant_email: string | null;
+  janitor_email: string | null;
+  janitor_phone: string | null;
+  cc_janitor: boolean;
+  default_locale: "fr" | "en";
 };
 
 export type JanitorReviewAction =
@@ -764,6 +780,21 @@ export type JanitorReviewAction =
 export function fetchJanitorReview(token: string): Promise<JanitorReview> {
   return apiFetch<JanitorReview>(
     `/admin/janitor-review/${encodeURIComponent(token)}`
+  );
+}
+
+export function fetchReviewRejectionEmailDraft(
+  token: string,
+  opts?: { locale?: "fr" | "en"; reason?: string }
+): Promise<RejectionEmailDraft> {
+  const params = new URLSearchParams();
+  if (opts?.locale) params.set("locale", opts.locale);
+  if (opts?.reason) params.set("reason", opts.reason);
+  const q = params.toString();
+  return apiFetch<RejectionEmailDraft>(
+    `/admin/janitor-review/${encodeURIComponent(token)}/rejection-email-draft${
+      q ? `?${q}` : ""
+    }`
   );
 }
 
@@ -802,6 +833,9 @@ export function submitJanitorReview(
     action: JanitorReviewAction;
     checklist?: JanitorReviewChecklist;
     reason?: string;
+    locale?: "fr" | "en";
+    email_subject?: string;
+    email_body?: string;
   }
 ): Promise<JanitorReview> {
   return apiFetch<JanitorReview>(
