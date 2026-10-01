@@ -307,13 +307,27 @@ export default function ReviewForm({ token }: { token: string }) {
               Raison du refus : {review.rejection_reason}
             </p>
           ) : null}
-          {review.rejection_email_body ? (
-            <pre className="mt-3 whitespace-pre-wrap rounded border border-[var(--ml-line)] bg-white p-3 text-xs text-[var(--ml-ink)]">
-              {review.rejection_email_subject
-                ? `Objet : ${review.rejection_email_subject}\n\n`
-                : ""}
-              {review.rejection_email_body}
-            </pre>
+          {review.rejection_email_body || review.rejection_email_subject ? (
+            <details className="mt-3 text-sm">
+              <summary className="cursor-pointer font-medium text-[var(--ml-ink)]">
+                Voir le courriel envoyé
+                {review.rejection_email_locale
+                  ? ` (${review.rejection_email_locale.toUpperCase()})`
+                  : ""}
+              </summary>
+              <div className="mt-2 space-y-2">
+                {review.rejection_email_subject ? (
+                  <p className="text-[var(--ml-steel)]">
+                    Objet : {review.rejection_email_subject}
+                  </p>
+                ) : null}
+                {review.rejection_email_body ? (
+                  <pre className="whitespace-pre-wrap rounded border border-[var(--ml-line)] bg-white p-3 text-xs text-[var(--ml-ink)]">
+                    {review.rejection_email_body}
+                  </pre>
+                ) : null}
+              </div>
+            </details>
           ) : null}
         </section>
       ) : null}

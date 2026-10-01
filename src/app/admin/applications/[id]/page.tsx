@@ -530,24 +530,26 @@ export default function ApplicationDetailPage() {
                 <AdminField label="Raison du refus" value={app.rejection_reason} />
               ) : null}
               {app.rejection_email_subject || app.rejection_email_body ? (
-                <div className="space-y-2 text-sm">
-                  <p className="font-medium text-[var(--ml-ink)]">
-                    Courriel envoyé au demandeur
+                <details className="text-sm">
+                  <summary className="cursor-pointer font-medium text-[var(--ml-ink)]">
+                    Voir le courriel envoyé
                     {app.rejection_email_locale
                       ? ` (${app.rejection_email_locale.toUpperCase()})`
                       : ""}
-                  </p>
-                  {app.rejection_email_subject ? (
-                    <p className="text-[var(--ml-steel)]">
-                      Objet : {app.rejection_email_subject}
-                    </p>
-                  ) : null}
-                  {app.rejection_email_body ? (
-                    <pre className="whitespace-pre-wrap rounded border border-[var(--ml-line)] bg-white p-3 text-xs text-[var(--ml-ink)]">
-                      {app.rejection_email_body}
-                    </pre>
-                  ) : null}
-                </div>
+                  </summary>
+                  <div className="mt-2 space-y-2">
+                    {app.rejection_email_subject ? (
+                      <p className="text-[var(--ml-steel)]">
+                        Objet : {app.rejection_email_subject}
+                      </p>
+                    ) : null}
+                    {app.rejection_email_body ? (
+                      <pre className="whitespace-pre-wrap rounded border border-[var(--ml-line)] bg-white p-3 text-xs text-[var(--ml-ink)]">
+                        {app.rejection_email_body}
+                      </pre>
+                    ) : null}
+                  </div>
+                </details>
               ) : null}
             </div>
           ) : null}
