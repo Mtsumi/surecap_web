@@ -266,8 +266,17 @@ function MemberCard({
         ) : null}
         <ContactRow label="Locateur" value={member.landlord_name} />
         <ContactRow label="Téléphone locateur" value={member.landlord_phone} />
-        <ContactRow label="Locateur précédent" value={member.previous_landlord_name} />
-        <ContactRow label="Téléphone locateur précédent" value={member.previous_landlord_phone} />
+        {member.no_previous_landlord_contact ? (
+          <ContactRow label="Locateur précédent" value="Aucun contact fourni" />
+        ) : (
+          <>
+            <ContactRow label="Locateur précédent" value={member.previous_landlord_name} />
+            <ContactRow
+              label="Téléphone locateur précédent"
+              value={member.previous_landlord_phone}
+            />
+          </>
+        )}
         <ContactRow label="Employeur" value={member.employer_name} />
         <ContactRow label="RH" value={member.hr_name} />
         <ContactRow label="Téléphone RH" value={member.hr_phone} />

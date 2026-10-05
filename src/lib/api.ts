@@ -75,6 +75,7 @@ export type Application = {
   employer_name: string | null;
   previous_landlord_phone: string | null;
   previous_landlord_name: string | null;
+  no_previous_landlord_contact?: boolean;
   landlord_email: string | null;
   hr_email: string | null;
   referral_source: string | null;
@@ -156,6 +157,7 @@ export type ApplicationUpdate = Partial<{
   employer_name?: string;
   previous_landlord_phone?: string | null;
   previous_landlord_name?: string | null;
+  no_previous_landlord_contact?: boolean;
   landlord_email?: string | null;
   hr_email?: string;
   referral_source: string;
@@ -519,6 +521,7 @@ export type InviteeSubmitPayload = {
   employer_name?: string;
   previous_landlord_phone?: string;
   previous_landlord_name?: string;
+  no_previous_landlord_contact?: boolean;
   referral_source?: string;
   facebook_url?: string;
   linkedin_url?: string;
@@ -753,6 +756,7 @@ export type JanitorReviewMember = {
   landlord_phone?: string | null;
   previous_landlord_name?: string | null;
   previous_landlord_phone?: string | null;
+  no_previous_landlord_contact?: boolean;
   hr_name?: string | null;
   hr_phone?: string | null;
   employer_name?: string | null;

@@ -32,6 +32,7 @@ function roommateFields(overrides: Partial<InviteeFormFields> = {}): InviteeForm
     landlord_phone: "5145550101",
     previous_landlord_name: "",
     previous_landlord_phone: "",
+    no_previous_landlord_contact: false,
     hr_name: "HR Dept",
     employer_name: "Acme Inc",
     hr_phone: "5145550102",
@@ -52,6 +53,7 @@ function guarantorFields(overrides: Partial<InviteeFormFields> = {}): InviteeFor
     landlord_phone: "",
     previous_landlord_name: "",
     previous_landlord_phone: "",
+    no_previous_landlord_contact: false,
     ...overrides,
   });
 }
@@ -77,7 +79,7 @@ describe("inviteeFieldErrors", () => {
     expect(errors.landlord_name).toBe("required");
   });
 
-  it("requires previous landlord when previous address is set for roommates", () => {
+  it("does not hard-require previous landlord when both contact fields are empty", () => {
     const errors = inviteeFieldErrors(
       "roommate",
       roommateFields({
@@ -87,7 +89,37 @@ describe("inviteeFieldErrors", () => {
       }),
       "roommate@example.com"
     );
-    expect(errors.previous_landlord_name).toBe("required");
+    expect(errors.previous_landlord_name).toBeUndefined();
+    expect(errors.previous_landlord_phone).toBeUndefined();
+  });
+
+  it("skips previous landlord when no_previous_landlord_contact is set", () => {
+    const errors = inviteeFieldErrors(
+      "roommate",
+      roommateFields({
+        previous_address: "10 Old St",
+        previous_address_lived_from: "2022-01-01",
+        previous_address_lived_to: "2024-01-01",
+        no_previous_landlord_contact: true,
+      }),
+      "roommate@example.com"
+    );
+    expect(errors.previous_landlord_name).toBeUndefined();
+    expect(errors.previous_landlord_phone).toBeUndefined();
+  });
+
+  it("requires both previous landlord fields when only one is filled", () => {
+    const errors = inviteeFieldErrors(
+      "roommate",
+      roommateFields({
+        previous_address: "10 Old St",
+        previous_address_lived_from: "2022-01-01",
+        previous_address_lived_to: "2024-01-01",
+        previous_landlord_name: "Old Landlord",
+        previous_landlord_phone: "",
+      }),
+      "roommate@example.com"
+    );
     expect(errors.previous_landlord_phone).toBe("required");
   });
 

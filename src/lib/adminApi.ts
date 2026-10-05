@@ -70,6 +70,7 @@ export type ApplicationMember = {
   employer_name: string | null;
   previous_landlord_phone: string | null;
   previous_landlord_name: string | null;
+  no_previous_landlord_contact?: boolean;
   referral_source: string | null;
   facebook_url: string | null;
   linkedin_url: string | null;
@@ -141,6 +142,7 @@ export type ApplicationDetail = {
   employer_name: string | null;
   previous_landlord_phone: string | null;
   previous_landlord_name: string | null;
+  no_previous_landlord_contact?: boolean;
   landlord_email: string | null;
   hr_email: string | null;
   referral_source: string | null;

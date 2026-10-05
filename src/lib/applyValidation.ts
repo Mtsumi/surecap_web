@@ -43,6 +43,8 @@ export type AddressDatesInput = {
   landlord_phone?: string;
   previous_landlord_name?: string;
   previous_landlord_phone?: string;
+  /** Applicant confirmed they have no previous landlord contact to give. */
+  no_previous_landlord_contact?: boolean;
   /** Primary + roommate collect landlords; guarantors pass false. Default true. */
   require_landlord?: boolean;
   /** Primary + roommate must pick Google (or postal). Guarantors pass false. Default true. */
@@ -67,6 +69,7 @@ export type ApplyValidationInput = {
   landlord_phone: string;
   previous_landlord_name: string;
   previous_landlord_phone: string;
+  no_previous_landlord_contact?: boolean;
   hr_name: string;
   employer_name: string;
   hr_phone: string;
@@ -409,18 +412,22 @@ export function addressFieldErrors(fields: AddressDatesInput): ApplyFieldErrors 
         errors.previous_address_lived_to = "address_dates_chain";
       }
     }
-    if (requireLandlord) {
+    if (requireLandlord && !fields.no_previous_landlord_contact) {
       const previousLandlordName = (fields.previous_landlord_name ?? "").trim();
       const previousLandlordPhone = (fields.previous_landlord_phone ?? "").trim();
-      if (!previousLandlordName) {
-        errors.previous_landlord_name = "required";
-      }
-      if (!previousLandlordPhone) {
-        errors.previous_landlord_phone = "required";
-      } else {
-        const previousLandlordFormat = validatePhoneFormat(previousLandlordPhone);
-        if (previousLandlordFormat) {
-          errors.previous_landlord_phone = previousLandlordFormat;
+      // Both empty: soft confirm in the form UI (not a hard field error).
+      // Partial fill still requires a complete contact.
+      if (previousLandlordName || previousLandlordPhone) {
+        if (!previousLandlordName) {
+          errors.previous_landlord_name = "required";
+        }
+        if (!previousLandlordPhone) {
+          errors.previous_landlord_phone = "required";
+        } else {
+          const previousLandlordFormat = validatePhoneFormat(previousLandlordPhone);
+          if (previousLandlordFormat) {
+            errors.previous_landlord_phone = previousLandlordFormat;
+          }
         }
       }
     }
@@ -439,6 +446,22 @@ export function validateAddressesStep(
   fields: AddressDatesInput
 ): ApplyValidationCode | null {
   return firstFieldErrorCode(addressFieldErrors(fields));
+}
+
+/** True when previous address is set but previous landlord contact is empty. */
+export function needsPreviousLandlordContactConfirm(
+  fields: AddressDatesInput
+): boolean {
+  const requireLandlord = fields.require_landlord !== false;
+  if (!requireLandlord || fields.no_previous_landlord_contact) {
+    return false;
+  }
+  if (!(fields.previous_address ?? "").trim()) {
+    return false;
+  }
+  const name = (fields.previous_landlord_name ?? "").trim();
+  const phone = (fields.previous_landlord_phone ?? "").trim();
+  return !name && !phone;
 }
 
 export function stepForValidationCode(code: ApplyValidationCode): ApplyFormStep {

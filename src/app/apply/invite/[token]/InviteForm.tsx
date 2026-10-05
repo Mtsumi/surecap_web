@@ -29,6 +29,7 @@ import {
   ApplyValidationCode,
   addressFieldErrors,
   adultMaxDateOfBirthString,
+  needsPreviousLandlordContactConfirm,
   validateDateOfBirth,
   validatePhoneFormat,
   validatePhones,
@@ -107,6 +108,7 @@ function emptyFields(): InviteeFormFields {
     landlord_phone: "",
     previous_landlord_name: "",
     previous_landlord_phone: "",
+    no_previous_landlord_contact: false,
     hr_name: "",
     employer_name: "",
     hr_phone: "",
@@ -163,8 +165,12 @@ function buildInviteePayload(
       payload.landlord_name = form.landlord_name.trim();
       payload.landlord_phone = form.landlord_phone.trim();
       if (form.previous_address.trim()) {
-        payload.previous_landlord_name = form.previous_landlord_name.trim();
-        payload.previous_landlord_phone = form.previous_landlord_phone.trim();
+        if (form.no_previous_landlord_contact) {
+          payload.no_previous_landlord_contact = true;
+        } else {
+          payload.previous_landlord_name = form.previous_landlord_name.trim();
+          payload.previous_landlord_phone = form.previous_landlord_phone.trim();
+        }
       }
     }
     if (employmentRequiresIncome(form.employment_type)) {
@@ -211,6 +217,10 @@ export default function InviteForm({ token }: Props) {
   const [consent, setConsent] = useState<CreditConsent | null>(null);
   const [consentSigning, setConsentSigning] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
+  const [previousLandlordConfirmOpen, setPreviousLandlordConfirmOpen] =
+    useState(false);
+  const [pendingAfterLandlordConfirm, setPendingAfterLandlordConfirm] =
+    useState<Step | null>(null);
   const signedIdentityRef = useRef<string | null>(null);
   const identityVoidedRef = useRef(false);
 
@@ -381,6 +391,29 @@ export default function InviteForm({ token }: Props) {
 
   const continueTo = (next: Step) => {
     if (!validateStep(step)) return;
+    if (
+      step === "addresses" &&
+      role === "roommate" &&
+      needsPreviousLandlordContactConfirm(addressFields())
+    ) {
+      setPendingAfterLandlordConfirm(next);
+      setPreviousLandlordConfirmOpen(true);
+      return;
+    }
+    setError(null);
+    setStep(next);
+  };
+
+  const confirmNoPreviousLandlordContact = () => {
+    setForm((prev) => ({
+      ...prev,
+      no_previous_landlord_contact: true,
+      previous_landlord_name: "",
+      previous_landlord_phone: "",
+    }));
+    setPreviousLandlordConfirmOpen(false);
+    const next = pendingAfterLandlordConfirm ?? "references";
+    setPendingAfterLandlordConfirm(null);
     setError(null);
     setStep(next);
   };
@@ -396,6 +429,16 @@ export default function InviteForm({ token }: Props) {
         const stepToValidate = steps[i];
         if (!validateStep(stepToValidate)) {
           setStep(stepToValidate);
+          return;
+        }
+        if (
+          stepToValidate === "addresses" &&
+          role === "roommate" &&
+          needsPreviousLandlordContactConfirm(addressFields())
+        ) {
+          setStep("addresses");
+          setPendingAfterLandlordConfirm(target);
+          setPreviousLandlordConfirmOpen(true);
           return;
         }
       }
@@ -873,6 +916,7 @@ export default function InviteForm({ token }: Props) {
                         landlord_phone: "",
                         previous_landlord_name: "",
                         previous_landlord_phone: "",
+                        no_previous_landlord_contact: false,
                       }));
                     }}
                   />
@@ -957,6 +1001,7 @@ export default function InviteForm({ token }: Props) {
                   previous_landlord_name: "",
                   previous_landlord_phone: "",
                   previous_place_id: "",
+                  no_previous_landlord_contact: false,
                 }));
               } else {
                 setField("previous_place_id", placeId ?? "");
@@ -998,12 +1043,28 @@ export default function InviteForm({ token }: Props) {
           form.housing_status === "renting" &&
           form.previous_address.trim() ? (
             <>
+              {form.no_previous_landlord_contact ? (
+                <p className="rounded border border-[#e7e0d5] bg-[#fffef9] px-3 py-2 text-sm text-[#57534e]">
+                  {t(locale, "previousLandlordNoneNoted")}
+                </p>
+              ) : null}
               <label className="block text-sm text-[#57534e]">
                 {t(locale, "previousLandlordName")}
                 <input
-                  required
                   value={form.previous_landlord_name}
-                  onChange={(e) => setField("previous_landlord_name", e.target.value)}
+                  onChange={(e) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      previous_landlord_name: e.target.value,
+                      no_previous_landlord_contact: false,
+                    }));
+                    setFieldErrors((prev) => {
+                      if (!("previous_landlord_name" in prev)) return prev;
+                      const next = { ...prev };
+                      delete next.previous_landlord_name;
+                      return next;
+                    });
+                  }}
                   className={inputClassFor("previous_landlord_name")}
                 />
                 {fieldHint("previous_landlord_name")}
@@ -1012,10 +1073,21 @@ export default function InviteForm({ token }: Props) {
                 <span className="block">{t(locale, "previousLandlordPhone")}</span>
                 <PhoneField
                   locale={locale}
-                  required
                   invalid={!!fieldErrors.previous_landlord_phone}
                   value={form.previous_landlord_phone}
-                  onChange={(value) => setField("previous_landlord_phone", value)}
+                  onChange={(value) => {
+                    setForm((prev) => ({
+                      ...prev,
+                      previous_landlord_phone: value,
+                      no_previous_landlord_contact: false,
+                    }));
+                    setFieldErrors((prev) => {
+                      if (!("previous_landlord_phone" in prev)) return prev;
+                      const next = { ...prev };
+                      delete next.previous_landlord_phone;
+                      return next;
+                    });
+                  }}
                 />
                 {fieldHint("previous_landlord_phone")}
               </div>
@@ -1224,22 +1296,31 @@ export default function InviteForm({ token }: Props) {
                     )}
                   </dd>
                 </div>
-                {role === "roommate" && form.housing_status === "renting" && (
-                  <>
+                {role === "roommate" &&
+                  form.housing_status === "renting" &&
+                  (form.no_previous_landlord_contact ? (
                     <div>
                       <dt className="text-xs uppercase text-[#a8a29e]">
                         {t(locale, "previousLandlordName")}
                       </dt>
-                      <dd>{form.previous_landlord_name}</dd>
+                      <dd>{t(locale, "previousLandlordNoneNoted")}</dd>
                     </div>
-                    <div>
-                      <dt className="text-xs uppercase text-[#a8a29e]">
-                        {t(locale, "previousLandlordPhone")}
-                      </dt>
-                      <dd>{form.previous_landlord_phone}</dd>
-                    </div>
-                  </>
-                )}
+                  ) : (
+                    <>
+                      <div>
+                        <dt className="text-xs uppercase text-[#a8a29e]">
+                          {t(locale, "previousLandlordName")}
+                        </dt>
+                        <dd>{form.previous_landlord_name}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs uppercase text-[#a8a29e]">
+                          {t(locale, "previousLandlordPhone")}
+                        </dt>
+                        <dd>{form.previous_landlord_phone}</dd>
+                      </div>
+                    </>
+                  ))}
               </>
             )}
           </dl>
@@ -1282,6 +1363,46 @@ export default function InviteForm({ token }: Props) {
           ) : null}
         </div>
       )}
+
+      {previousLandlordConfirmOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="invite-previous-landlord-confirm-title"
+        >
+          <div className="w-full max-w-md rounded-lg border border-[#e7e0d5] bg-white p-5 shadow-lg">
+            <h3
+              id="invite-previous-landlord-confirm-title"
+              className="text-base font-medium text-[#292524]"
+            >
+              {t(locale, "previousLandlordMissingTitle")}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-[#57534e]">
+              {t(locale, "previousLandlordMissingBody")}
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={confirmNoPreviousLandlordContact}
+                className="w-full rounded bg-[#3d5a45] py-3 text-sm font-medium text-white transition hover:bg-[#334d3a]"
+              >
+                {t(locale, "previousLandlordContinueNone")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviousLandlordConfirmOpen(false);
+                  setPendingAfterLandlordConfirm(null);
+                }}
+                className="w-full rounded border border-[#e7e0d5] py-3 text-sm font-medium text-[#292524] transition hover:bg-[#faf8f4]"
+              >
+                {t(locale, "previousLandlordGoBack")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
