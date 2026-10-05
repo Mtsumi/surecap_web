@@ -132,6 +132,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }[] = [
     { href: "/admin/applications", label: t("navApplications") },
     { href: "/admin/buildings", label: t("navBuildings") },
+    { href: "/admin/listings", label: t("navListingQr") },
     ...(user?.is_super_admin
       ? [
           { href: "/admin/team", label: t("navTeam") },
@@ -257,7 +258,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   return (
     <div className="admin-app flex min-h-screen bg-[var(--ml-paper)] text-[var(--ml-ink)]">
       <aside
-        className={`hidden shrink-0 flex-col bg-[var(--ml-ink)] p-4 transition-[width] duration-200 md:flex ${
+        className={`hidden shrink-0 flex-col bg-[var(--ml-ink)] p-4 transition-[width] duration-200 print:hidden md:flex ${
           sidebarCollapsed ? "w-[72px]" : "w-[220px]"
         }`}
       >
@@ -279,7 +280,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       )}
 
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-3 border-b border-[var(--ml-line)] bg-[var(--ml-card)] px-4 py-3 md:hidden">
+        <header className="flex items-center gap-3 border-b border-[var(--ml-line)] bg-[var(--ml-card)] px-4 py-3 print:hidden md:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
