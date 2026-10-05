@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ApplicationMember } from "@/lib/adminApi";
 import { regenerateApplicationSummary } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
@@ -68,6 +68,9 @@ function DocumentPreviewModal({
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const onPreviewedRef = useRef(onMemberDocumentPreviewed);
+  onPreviewedRef.current = onMemberDocumentPreviewed;
+  const notifiedDocIdRef = useRef<number | null>(null);
 
   const filename =
     target.kind === "member" ? target.document.original_filename : target.filename;
@@ -79,6 +82,8 @@ function DocumentPreviewModal({
     target.kind === "member"
       ? isPdfDocument(target.document)
       : isPdfContentType(target.contentType);
+  const memberDocumentId =
+    target.kind === "member" ? target.document.id : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -100,8 +105,12 @@ function DocumentPreviewModal({
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         setBlobUrl(objectUrl);
-        if (target.kind === "member") {
-          onMemberDocumentPreviewed?.(target.document);
+        if (
+          target.kind === "member" &&
+          notifiedDocIdRef.current !== target.document.id
+        ) {
+          notifiedDocIdRef.current = target.document.id;
+          onPreviewedRef.current?.(target.document);
         }
       } catch (e) {
         if (!cancelled) {
@@ -118,7 +127,7 @@ function DocumentPreviewModal({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [applicationId, fallbackContentType, onMemberDocumentPreviewed, target]);
+  }, [applicationId, fallbackContentType, memberDocumentId, target]);
 
   const onDownload = useCallback(async () => {
     try {

@@ -59,6 +59,7 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
           take: "Take selfie",
           choose: "Choose from gallery",
           submit: "Send selfie",
+          submitting: "Sending…",
           done: "Thank you - your selfie was received. Our team will continue reviewing your application.",
           closed: "This application is closed. Selfie upload is no longer available.",
           loading: "Loading…",
@@ -71,6 +72,7 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
           take: "Prendre un selfie",
           choose: "Choisir dans la galerie",
           submit: "Envoyer le selfie",
+          submitting: "Envoi…",
           done: "Merci - votre selfie a bien été reçu. Notre équipe poursuivra l'étude de votre demande.",
           closed: "Cette demande est fermée. L'envoi du selfie n'est plus disponible.",
           loading: "Chargement…",
@@ -185,8 +187,13 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
         <img
           src={previewUrl}
           alt="Selfie preview"
-          className="max-h-80 w-full rounded border border-[#d6d3d1] object-contain bg-white"
+          className={`max-h-80 w-full rounded border border-[#d6d3d1] object-contain bg-white ${
+            submitting ? "opacity-60" : ""
+          }`}
         />
+      ) : null}
+      {submitting ? (
+        <p className="text-sm text-[#57534e]">{copy.submitting}</p>
       ) : null}
       {error ? <p className="text-sm text-[#7f1d1d]">{error}</p> : null}
       <button
@@ -194,7 +201,7 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
         disabled={!file || submitting}
         className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white disabled:opacity-50"
       >
-        {copy.submit}
+        {submitting ? copy.submitting : copy.submit}
       </button>
     </form>
   );

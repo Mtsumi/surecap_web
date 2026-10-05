@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import AdminField from "../../components/AdminField";
 import AdminCollapsible from "../../components/AdminCollapsible";
 import {
   ApplicationDetail,
   ApplicationJob,
   ApplicationMember,
+  JanitorReviewChecklist,
   acceptApplication,
   adminMe,
   confirmMemberIdentity,
@@ -17,6 +18,7 @@ import {
   getApplicationJobs,
   offerGuarantor,
   rejectApplication,
+  requestCreditCheck,
 } from "@/lib/adminApi";
 import { formatAddressDateRange } from "@/lib/addressFormUtils";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
@@ -27,6 +29,7 @@ import ScreeningJobs from "./ScreeningJobs";
 import {
   ID_REVIEW_DOCUMENT_TYPES,
   INCOME_REVIEW_DOCUMENT_TYPES,
+  SELFIE_REVIEW_DOCUMENT_TYPES,
 } from "@/lib/adminDocuments";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import { facebookLink } from "@/lib/facebookSearch";
@@ -39,6 +42,21 @@ import MemberIdentityPanel, {
   IdentityGateBanner,
   IdentityUnlockStrip,
 } from "../../components/MemberIdentityPanel";
+
+const EMPTY_CHECKLIST: JanitorReviewChecklist = {
+  called_landlord: false,
+  called_employer: false,
+  checked_social: false,
+};
+
+const CHECKLIST_LABELS: Array<{
+  key: keyof JanitorReviewChecklist;
+  label: string;
+}> = [
+  { key: "called_landlord", label: "J’ai appelé le(s) locateur(s)" },
+  { key: "called_employer", label: "J’ai appelé l’employeur / les RH" },
+  { key: "checked_social", label: "J’ai vérifié Facebook" },
+];
 
 function formatLivedDates(
   from: string | null | undefined,
@@ -71,12 +89,14 @@ function MemberCard({
   disabled,
   submitting,
   onOpenId,
+  onOpenSelfie,
   onConfirmIdentity,
 }: {
   member: ApplicationMember;
   disabled?: boolean;
   submitting?: boolean;
   onOpenId?: () => void;
+  onOpenSelfie?: () => void;
   onConfirmIdentity?: (met: boolean) => void | Promise<void>;
 }) {
   const { t, locale } = useAdminLocaleContext();
@@ -100,6 +120,7 @@ function MemberCard({
             disabled={disabled}
             submitting={submitting}
             onOpenId={onOpenId}
+            onOpenSelfie={onOpenSelfie}
             onConfirmMet={() => onConfirmIdentity(true)}
             onConfirmNotMet={() => onConfirmIdentity(false)}
           />
@@ -286,6 +307,7 @@ export default function ApplicationDetailPage() {
   const [jobs, setJobs] = useState<ApplicationJob[]>([]);
   const [reason, setReason] = useState("");
   const [acceptNote, setAcceptNote] = useState("");
+  const [checklist, setChecklist] = useState<JanitorReviewChecklist>(EMPTY_CHECKLIST);
   const [showRefuse, setShowRefuse] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -303,6 +325,15 @@ export default function ApplicationDetailPage() {
       .then(([a, j]) => {
         setApp(a);
         setJobs(j);
+        if (a.janitor_review_checklist) {
+          setChecklist({
+            called_landlord: Boolean(a.janitor_review_checklist.called_landlord),
+            called_employer: Boolean(a.janitor_review_checklist.called_employer),
+            checked_social: Boolean(a.janitor_review_checklist.checked_social),
+          });
+        } else if (a.status === "submitted") {
+          setChecklist(EMPTY_CHECKLIST);
+        }
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Erreur"));
   };
@@ -386,7 +417,11 @@ export default function ApplicationDetailPage() {
   const identityMatchFlags = useMemo(
     () =>
       members
-        .filter((m) => m.identity?.match_status === "fail")
+        .filter(
+          (m) =>
+            m.identity?.match_status === "fail" &&
+            m.identity.met_in_person !== true
+        )
         .map((m) => ({
           member_id: m.id,
           name: memberDisplayName(m),
@@ -437,6 +472,27 @@ export default function ApplicationDetailPage() {
     const member = members.find((m) => m.id === memberId);
     if (!member) return `Membre #${memberId}`;
     return `${memberRoleLabel(member.role)} - ${memberDisplayName(member)}`;
+  };
+
+  const checklistComplete =
+    checklist.called_landlord &&
+    checklist.called_employer &&
+    checklist.checked_social;
+
+  const onRequestCreditCheck = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const updated = await requestCreditCheck(id, checklist);
+      setApp(updated);
+      setIdentityFlash(
+        "Vérification de crédit demandée: Steve a été notifié. Aucun dossier prospect créé."
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusy(false);
+    }
   };
 
   const onAccept = async () => {
@@ -497,6 +553,11 @@ export default function ApplicationDetailPage() {
     }
   };
 
+  const onMemberDocumentPreviewed = useCallback(() => {
+    // Refresh so identity Met/Not-met unlocks after ID open (id_viewed).
+    void getApplication(id).then(setApp).catch(() => undefined);
+  }, [id]);
+
   if (!app) {
     return <p className={adminUi.empty}>{error || "Chargement…"}</p>;
   }
@@ -517,6 +578,38 @@ export default function ApplicationDetailPage() {
   const screeningReviews = app.screening_reviews ?? [];
   const hasScreeningFlags =
     screeningConcerns.length > 0 || screeningReviews.length > 0;
+
+  const identityUnlockItems = sortedMembers
+    .filter(
+      (m) => m.identity?.applies && m.identity.ready_for_accept === false
+    )
+    .map((m) => ({
+      memberId: m.id,
+      name: memberDisplayName(m),
+      identity: m.identity!,
+      onOpenId: () => {
+        setReviewRequest({
+          memberId: m.id,
+          documentTypes: ID_REVIEW_DOCUMENT_TYPES,
+          nonce: Date.now(),
+        });
+        document
+          .getElementById("documents-section")
+          ?.scrollIntoView({ behavior: "smooth" });
+      },
+      onOpenSelfie: () => {
+        setReviewRequest({
+          memberId: m.id,
+          documentTypes: SELFIE_REVIEW_DOCUMENT_TYPES,
+          nonce: Date.now(),
+        });
+        document
+          .getElementById("documents-section")
+          ?.scrollIntoView({ behavior: "smooth" });
+      },
+      onConfirmMet: () => onConfirmIdentity(m.id, true),
+      onConfirmNotMet: () => onConfirmIdentity(m.id, false),
+    }));
 
   return (
     <>
@@ -551,33 +644,14 @@ export default function ApplicationDetailPage() {
                 blockers={identityBlockers}
                 matchFlags={identityMatchFlags}
               />
-              <IdentityUnlockStrip
-                disabled={app.status === "accepted" || app.status === "rejected"}
-                submitting={busy}
-                items={sortedMembers
-                  .filter(
-                    (m) =>
-                      m.identity?.applies &&
-                      m.identity.ready_for_accept === false
-                  )
-                  .map((m) => ({
-                    memberId: m.id,
-                    name: memberDisplayName(m),
-                    identity: m.identity!,
-                    onOpenId: () => {
-                      setReviewRequest({
-                        memberId: m.id,
-                        documentTypes: ID_REVIEW_DOCUMENT_TYPES,
-                        nonce: Date.now(),
-                      });
-                      document
-                        .getElementById("documents-section")
-                        ?.scrollIntoView({ behavior: "smooth" });
-                    },
-                    onConfirmMet: () => onConfirmIdentity(m.id, true),
-                    onConfirmNotMet: () => onConfirmIdentity(m.id, false),
-                  }))}
-              />
+              {/* On submitted, identity actions live inside Vérifications below. */}
+              {app.status !== "submitted" ? (
+                <IdentityUnlockStrip
+                  disabled={false}
+                  submitting={busy}
+                  items={identityUnlockItems}
+                />
+              ) : null}
             </div>
           ) : null}
 
@@ -589,6 +663,45 @@ export default function ApplicationDetailPage() {
 
           {app.status === "awaiting_credit_check" ? (
             <>
+              <section className={`${adminUi.card} mt-4`}>
+                <div className={adminUi.cardHeader}>
+                  <h2 className={adminUi.sectionTitle}>Vérifications du concierge</h2>
+                  <p className={adminUi.pageSubtitle}>
+                    Contrôles déjà faits avant la demande de crédit (appels,
+                    Facebook, identité).
+                  </p>
+                </div>
+                <div className={`${adminUi.cardPad} space-y-2`}>
+                  {CHECKLIST_LABELS.map(({ key, label }) => (
+                    <label
+                      key={key}
+                      className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={Boolean(checklist[key])}
+                        disabled
+                        readOnly
+                      />
+                      <span>{label}</span>
+                    </label>
+                  ))}
+                  <label className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5"
+                      checked={identityReady}
+                      disabled
+                      readOnly
+                    />
+                    <span>
+                      Identité confirmée (rencontre après ouverture de la pièce
+                      d&apos;identité / selfie)
+                    </span>
+                  </label>
+                </div>
+              </section>
               <ScreeningAcceptBanner
                 concerns={screeningConcerns}
                 reviews={screeningReviews}
@@ -605,7 +718,7 @@ export default function ApplicationDetailPage() {
                 acceptDisabled={!identityReady}
                 acceptDisabledReason={
                   !identityReady
-                    ? "Identité incomplète: ouvrez la pièce d'identité puis confirmez rencontre ou selfie."
+                    ? "Identité incomplète: la rencontre doit être confirmée pour chaque locataire."
                     : null
                 }
                 loadRejectionDraft={({ locale, reason: draftReason }) =>
@@ -620,9 +733,127 @@ export default function ApplicationDetailPage() {
             </>
           ) : null}
 
+          {app.status === "submitted" ? (
+            <div className="mt-5 space-y-4 border-t border-[var(--ml-line)] pt-5">
+              <ScreeningAcceptBanner
+                concerns={screeningConcerns}
+                reviews={screeningReviews}
+                acceptNote={acceptNote}
+                onAcceptNoteChange={setAcceptNote}
+                showNoteField={hasScreeningFlags}
+              />
+              <section className={adminUi.card} id="verifications-section">
+                <div className={adminUi.cardHeader}>
+                  <h2 className={adminUi.sectionTitle}>Vérifications</h2>
+                  <p className={adminUi.pageSubtitle}>
+                    Complétez identité et les trois appels/contrôles, puis
+                    envoyez le dossier à Steve pour la vérification de crédit.
+                    Cela ne crée pas de dossier prospect ni n&apos;approuve le
+                    bail.
+                  </p>
+                </div>
+                <div className={`${adminUi.cardPad} space-y-4`}>
+                  <div className="space-y-3">
+                    <label className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={identityReady}
+                        disabled
+                        readOnly
+                      />
+                      <span>
+                        Identité confirmée (rencontre après ouverture de la
+                        pièce d&apos;identité / selfie)
+                        {!identityReady ? (
+                          <span className="mt-0.5 block text-[var(--ml-steel)]">
+                            Ouvrez la pièce d&apos;identité, puis confirmez la
+                            rencontre ou demandez un selfie ci-dessous.
+                          </span>
+                        ) : null}
+                      </span>
+                    </label>
+                    {CHECKLIST_LABELS.map(({ key, label }) => (
+                      <label
+                        key={key}
+                        className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
+                      >
+                        <input
+                          type="checkbox"
+                          className="mt-0.5"
+                          checked={checklist[key]}
+                          disabled={busy}
+                          onChange={(event) =>
+                            setChecklist((current) => ({
+                              ...current,
+                              [key]: event.target.checked,
+                            }))
+                          }
+                        />
+                        <span>{label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  {!identityReady ? (
+                    <div className="space-y-3 border-t border-[var(--ml-line)] pt-3">
+                      <p className="text-sm font-medium text-[var(--ml-ink)]">
+                        Identité des locataires
+                      </p>
+                      {identityUnlockItems.map((item) => (
+                        <MemberIdentityPanel
+                          key={item.memberId}
+                          memberId={item.memberId}
+                          memberName={item.name}
+                          identity={item.identity}
+                          disabled={false}
+                          submitting={busy}
+                          anchor
+                          onOpenId={item.onOpenId}
+                          onOpenSelfie={item.onOpenSelfie}
+                          onConfirmMet={item.onConfirmMet}
+                          onConfirmNotMet={item.onConfirmNotMet}
+                        />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              </section>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <button
+                  type="button"
+                  disabled={busy || !identityReady || !checklistComplete}
+                  onClick={() => void onRequestCreditCheck()}
+                  className={`${adminUi.btnPrimary} disabled:opacity-50`}
+                >
+                  Prêt pour la vérification de crédit
+                </button>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setShowRefuse(true)}
+                  className={adminUi.btnDanger}
+                >
+                  Refuser la demande
+                </button>
+              </div>
+              {showRefuse ? (
+                <RejectionEmailComposer
+                  loadDraft={({ locale, reason: draftReason }) =>
+                    fetchRejectionEmailDraft(id, { locale, reason: draftReason })
+                  }
+                  submitting={busy}
+                  onCancel={() => setShowRefuse(false)}
+                  onConfirm={(values) => onReject(values)}
+                  initialReason={reason}
+                />
+              ) : null}
+            </div>
+          ) : null}
+
           {app.status !== "accepted" &&
           app.status !== "rejected" &&
-          app.status !== "awaiting_credit_check" ? (
+          app.status !== "awaiting_credit_check" &&
+          app.status !== "submitted" ? (
             <div className="mt-5 space-y-4 border-t border-[var(--ml-line)] pt-5">
               <ScreeningAcceptBanner
                 concerns={screeningConcerns}
@@ -632,14 +863,6 @@ export default function ApplicationDetailPage() {
                 showNoteField={hasScreeningFlags}
               />
               <div className="flex flex-col gap-3 sm:flex-row">
-                <button
-                  type="button"
-                  disabled={busy || !identityReady}
-                  onClick={onAccept}
-                  className={`${adminUi.btnPrimary} disabled:opacity-50`}
-                >
-                  Accepter
-                </button>
                 <button
                   type="button"
                   disabled={busy}
@@ -722,6 +945,16 @@ export default function ApplicationDetailPage() {
                       .getElementById("documents-section")
                       ?.scrollIntoView({ behavior: "smooth" });
                   }}
+                  onOpenSelfie={() => {
+                    setReviewRequest({
+                      memberId: member.id,
+                      documentTypes: SELFIE_REVIEW_DOCUMENT_TYPES,
+                      nonce: Date.now(),
+                    });
+                    document
+                      .getElementById("documents-section")
+                      ?.scrollIntoView({ behavior: "smooth" });
+                  }}
                   onConfirmIdentity={(met) => onConfirmIdentity(member.id, met)}
                 />
               ))}
@@ -781,9 +1014,7 @@ export default function ApplicationDetailPage() {
               memberDisplayName={memberDisplayName}
               onSummaryRegenerated={load}
               reviewRequest={reviewRequest}
-              onMemberDocumentPreviewed={() => {
-                void getApplication(id).then(setApp).catch(() => undefined);
-              }}
+              onMemberDocumentPreviewed={onMemberDocumentPreviewed}
             />
           </AdminCollapsible>
         </div>

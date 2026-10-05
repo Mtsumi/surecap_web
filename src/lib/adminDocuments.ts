@@ -41,6 +41,8 @@ export const ID_REVIEW_DOCUMENT_TYPES = [
   "id_passport",
 ];
 
+export const SELFIE_REVIEW_DOCUMENT_TYPES = ["selfie"];
+
 export const INCOME_REVIEW_DOCUMENT_TYPES = [
   "pay_slip_1",
   "pay_slip_2",

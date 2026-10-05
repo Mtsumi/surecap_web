@@ -722,6 +722,7 @@ export type MemberIdentityStatus = {
   applies: boolean;
   ready_for_accept: boolean;
   id_document_id?: number | null;
+  selfie_document_id?: number | null;
   id_viewed: boolean;
   met_in_person?: boolean | null;
   selfie_requested: boolean;
