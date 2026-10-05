@@ -6,6 +6,7 @@ import {
   listingAreaForBuildingName,
   listingAreaAbsoluteUrl,
   listingAreaPath,
+  listingBrowserPanels,
   listingMapPins,
   listingsForArea,
   parseListingView,
@@ -122,5 +123,49 @@ describe("listingAreas", () => {
     expect(listingAreaPath("cote-des-neiges", { building: 2, unit: 11 })).toBe(
       "/listings/cote-des-neiges?building=2&unit=11"
     );
+  });
+
+  it("hides the unit grid on an unknown area, including featured-unit links", () => {
+    expect(
+      listingBrowserPanels({
+        hasArea: false,
+        unknownArea: true,
+        view: "grid",
+        hasFeaturedUnit: true,
+        awaitingShareRedirect: false,
+      })
+    ).toEqual({
+      mapVisible: false,
+      showUnitGrid: false,
+      showAreaIndex: false,
+      redirectShare: false,
+    });
+    expect(
+      listingBrowserPanels({
+        hasArea: false,
+        unknownArea: true,
+        view: "map",
+        hasFeaturedUnit: false,
+        awaitingShareRedirect: false,
+      }).mapVisible
+    ).toBe(false);
+    expect(
+      listingBrowserPanels({
+        hasArea: true,
+        unknownArea: false,
+        view: "grid",
+        hasFeaturedUnit: false,
+        awaitingShareRedirect: false,
+      }).showUnitGrid
+    ).toBe(true);
+    expect(
+      listingBrowserPanels({
+        hasArea: false,
+        unknownArea: false,
+        view: "grid",
+        hasFeaturedUnit: true,
+        awaitingShareRedirect: true,
+      }).redirectShare
+    ).toBe(true);
   });
 });

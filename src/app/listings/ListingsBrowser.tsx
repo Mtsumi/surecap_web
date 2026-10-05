@@ -9,6 +9,7 @@ import {
   listingAreaBySlug,
   listingAreaForBuildingName,
   listingAreaPath,
+  listingBrowserPanels,
   listingMapPins,
   listingsForArea,
   parseListingView,
@@ -103,18 +104,19 @@ export default function ListingsBrowser({ areaSlug }: Props) {
     ? requestedBuildingId
     : null;
   const pins = useMemo(() => listingMapPins(listings, area), [listings, area]);
-  const shareRedirect =
-    !area &&
-    view !== "map" &&
+  const featuredMapsToArea =
     featuredUnitId != null &&
-    (loading ||
-      listings.some(
-        (listing) =>
-          listing.id === featuredUnitId && listingAreaForBuildingName(listing.building.name)
-      ));
-  const mapVisible = view === "map" && !unknownArea;
-  const showUnitGrid = Boolean(area) || (!area && featuredUnitId != null && !shareRedirect && view !== "map");
-  const showAreaIndex = !area && !unknownArea && !showUnitGrid && !shareRedirect;
+    listings.some(
+      (listing) =>
+        listing.id === featuredUnitId && listingAreaForBuildingName(listing.building.name)
+    );
+  const { mapVisible, showUnitGrid, showAreaIndex, redirectShare } = listingBrowserPanels({
+    hasArea: area != null,
+    unknownArea,
+    view,
+    hasFeaturedUnit: featuredUnitId != null,
+    awaitingShareRedirect: loading || featuredMapsToArea,
+  });
   const amenityOptions = useMemo(() => {
     return LISTING_FILTER_AMENITY_KEYS.filter((key) =>
       scopedListings.some((listing) => listingAmenityIsPresent(listing.amenities?.[key]))
@@ -132,19 +134,20 @@ export default function ListingsBrowser({ areaSlug }: Props) {
     return orderListingsWithFeatured(queried, featuredUnitId);
   }, [scopedListings, buildingId, featuredUnitId, bedrooms, amenityFilters, sort]);
   const featuredMissing =
+    !unknownArea &&
     featuredUnitId != null &&
     !loading &&
-    !shareRedirect &&
+    !redirectShare &&
     !scopedListings.some((listing) => listing.id === featuredUnitId);
 
   useEffect(() => {
-    if (area || view === "map" || featuredUnitId == null || loading) return;
+    if (unknownArea || area || view === "map" || featuredUnitId == null || loading) return;
     const match = listings.find((listing) => listing.id === featuredUnitId);
     if (!match) return;
     const matchArea = listingAreaForBuildingName(match.building.name);
     if (!matchArea) return;
     router.replace(listingAreaPath(matchArea.slug, { unit: featuredUnitId }));
-  }, [area, view, featuredUnitId, loading, listings, router]);
+  }, [unknownArea, area, view, featuredUnitId, loading, listings, router]);
 
   const replaceQuery = (updates: Record<string, string | null>) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -266,7 +269,7 @@ export default function ListingsBrowser({ areaSlug }: Props) {
         </div>
       )}
 
-      {shareRedirect ? (
+      {redirectShare ? (
         <p className="py-12 text-center text-sm text-[#78716c]">{t(locale, "loading")}</p>
       ) : null}
 

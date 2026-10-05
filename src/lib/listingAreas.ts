@@ -160,6 +160,34 @@ export function parseListingView(raw: string | null): "grid" | "map" {
   return raw === "map" ? "map" : "grid";
 }
 
+/** Which listings panels to mount for the current URL. */
+export function listingBrowserPanels(input: {
+  hasArea: boolean;
+  unknownArea: boolean;
+  view: "grid" | "map";
+  hasFeaturedUnit: boolean;
+  /** Index `/listings?unit=` links wait, then redirect onto that building's area. */
+  awaitingShareRedirect: boolean;
+}): {
+  mapVisible: boolean;
+  showUnitGrid: boolean;
+  showAreaIndex: boolean;
+  redirectShare: boolean;
+} {
+  const redirectShare =
+    !input.unknownArea &&
+    !input.hasArea &&
+    input.view !== "map" &&
+    input.hasFeaturedUnit &&
+    input.awaitingShareRedirect;
+  const mapVisible = input.view === "map" && !input.unknownArea;
+  const showUnitGrid =
+    !input.unknownArea &&
+    (input.hasArea || (input.hasFeaturedUnit && !redirectShare && input.view !== "map"));
+  const showAreaIndex = !input.hasArea && !input.unknownArea && !showUnitGrid && !redirectShare;
+  return { mapVisible, showUnitGrid, showAreaIndex, redirectShare };
+}
+
 export function listingAreaAbsoluteUrl(origin: string, slug: ListingAreaSlug): string {
   return `${origin.replace(/\/$/, "")}${listingAreaPath(slug)}`;
 }
