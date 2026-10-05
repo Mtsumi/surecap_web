@@ -41,6 +41,7 @@ describe("listingDisplay", () => {
   it("builds apply and share URLs", () => {
     expect(listingApplyHref(1, 10)).toBe("/apply?building=1&unit=10");
     expect(listingSharePath(10)).toBe("/listings?unit=10");
+    expect(listingSharePath(10, "lachine")).toBe("/listings/lachine?unit=10");
     expect(listingShareUrl(10, "https://montrealliving.info/")).toBe(
       "https://montrealliving.info/listings?unit=10"
     );

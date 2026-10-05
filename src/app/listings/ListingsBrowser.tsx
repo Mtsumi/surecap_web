@@ -2,9 +2,17 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchListings, type Listing } from "@/lib/api";
 import { detectLocale, t, type Locale } from "@/lib/i18n";
+import {
+  listingAreaBySlug,
+  listingAreaForBuildingName,
+  listingAreaPath,
+  listingMapPins,
+  listingsForArea,
+  parseListingView,
+} from "@/lib/listingAreas";
 import {
   formatListingRent,
   listingAddress,
@@ -24,7 +32,13 @@ import {
   type BedroomFilter,
   type ListingSort,
 } from "@/lib/listingDisplay";
+import ListingAreaGrid from "./ListingAreaGrid";
 import ListingPhotoCarousel from "./ListingPhotoCarousel";
+import ListingsMap from "./ListingsMap";
+
+type Props = {
+  areaSlug?: string;
+};
 
 function chipClass(active: boolean): string {
   return `shrink-0 rounded-full border px-3 py-2 text-sm transition ${
@@ -34,12 +48,17 @@ function chipClass(active: boolean): string {
   }`;
 }
 
-export default function ListingsBrowser() {
+export default function ListingsBrowser({ areaSlug }: Props) {
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
+  const area = listingAreaBySlug(areaSlug);
+  const unknownArea = Boolean(areaSlug) && area == null;
+  const view = parseListingView(searchParams.get("view"));
   const featuredUnitId = parseListingUnitId(searchParams.get("unit"));
+  const requestedBuildingId = parseListingUnitId(searchParams.get("building"));
   const [locale, setLocale] = useState<Locale>("fr");
   const [listings, setListings] = useState<Listing[]>([]);
-  const [buildingId, setBuildingId] = useState<number | null>(null);
   const [bedrooms, setBedrooms] = useState<BedroomFilter>("any");
   const [amenityFilters, setAmenityFilters] = useState<string[]>([]);
   const [sort, setSort] = useState<ListingSort>("default");
@@ -75,27 +94,75 @@ export default function ListingsBrowser() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const buildings = useMemo(() => uniqueListingBuildings(listings), [listings]);
+  const scopedListings = useMemo(
+    () => (area ? listingsForArea(listings, area) : listings),
+    [area, listings]
+  );
+  const buildings = useMemo(() => uniqueListingBuildings(scopedListings), [scopedListings]);
+  const buildingId = buildings.some((building) => building.id === requestedBuildingId)
+    ? requestedBuildingId
+    : null;
+  const pins = useMemo(() => listingMapPins(listings, area), [listings, area]);
+  const shareRedirect =
+    !area &&
+    view !== "map" &&
+    featuredUnitId != null &&
+    (loading ||
+      listings.some(
+        (listing) =>
+          listing.id === featuredUnitId && listingAreaForBuildingName(listing.building.name)
+      ));
+  const mapVisible = view === "map" && !unknownArea;
+  const showUnitGrid = Boolean(area) || (!area && featuredUnitId != null && !shareRedirect && view !== "map");
+  const showAreaIndex = !area && !unknownArea && !showUnitGrid && !shareRedirect;
   const amenityOptions = useMemo(() => {
     return LISTING_FILTER_AMENITY_KEYS.filter((key) =>
-      listings.some((listing) => listingAmenityIsPresent(listing.amenities?.[key]))
+      scopedListings.some((listing) => listingAmenityIsPresent(listing.amenities?.[key]))
     );
-  }, [listings]);
+  }, [scopedListings]);
   const extraFilterCount = (bedrooms !== "any" ? 1 : 0) + amenityFilters.length;
   const filtersActive = extraFilterCount > 0;
   const visible = useMemo(() => {
-    const filtered = listingsForBuilding(listings, buildingId);
+    const filtered = listingsForBuilding(scopedListings, buildingId);
     const queried = filterAndSortListings(filtered, {
       bedrooms,
       amenities: amenityFilters,
       sort,
     });
     return orderListingsWithFeatured(queried, featuredUnitId);
-  }, [listings, buildingId, featuredUnitId, bedrooms, amenityFilters, sort]);
+  }, [scopedListings, buildingId, featuredUnitId, bedrooms, amenityFilters, sort]);
   const featuredMissing =
     featuredUnitId != null &&
     !loading &&
-    !listings.some((listing) => listing.id === featuredUnitId);
+    !shareRedirect &&
+    !scopedListings.some((listing) => listing.id === featuredUnitId);
+
+  useEffect(() => {
+    if (area || view === "map" || featuredUnitId == null || loading) return;
+    const match = listings.find((listing) => listing.id === featuredUnitId);
+    if (!match) return;
+    const matchArea = listingAreaForBuildingName(match.building.name);
+    if (!matchArea) return;
+    router.replace(listingAreaPath(matchArea.slug, { unit: featuredUnitId }));
+  }, [area, view, featuredUnitId, loading, listings, router]);
+
+  const replaceQuery = (updates: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams.toString());
+    for (const [key, value] of Object.entries(updates)) {
+      if (value == null) params.delete(key);
+      else params.set(key, value);
+    }
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
+
+  const selectView = (next: "grid" | "map") => {
+    if (!area && next === "grid") {
+      replaceQuery({ view: "grid", unit: null, building: null });
+      return;
+    }
+    replaceQuery({ view: next });
+  };
 
   useEffect(() => {
     if (featuredUnitId == null || loading) return;
@@ -105,7 +172,7 @@ export default function ListingsBrowser() {
   }, [featuredUnitId, loading, visible]);
 
   const shareListing = async (unitId: number) => {
-    const url = listingShareUrl(unitId, window.location.origin);
+    const url = listingShareUrl(unitId, window.location.origin, area?.slug);
     setShareFallback(null);
     try {
       await navigator.clipboard.writeText(url);
@@ -125,11 +192,19 @@ export default function ListingsBrowser() {
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#78716c]">
               Montreal Living
             </p>
+            {area ? (
+              <Link
+                href="/listings"
+                className="mt-2 inline-block text-sm text-[#3d5a45] underline-offset-2 hover:underline"
+              >
+                {t(locale, "listingsAllAreas")}
+              </Link>
+            ) : null}
             <h1 className="mt-2 text-2xl font-semibold leading-tight text-[#292524] sm:text-[1.65rem]">
-              {t(locale, "listingsTitle")}
+              {area ? area.labels[locale] : t(locale, "listingsTitle")}
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-relaxed text-[#57534e] sm:text-[0.95rem]">
-              {t(locale, "listingsSubtitle")}
+              {area ? area.buildings.join(", ") : t(locale, "listingsSubtitle")}
             </p>
           </div>
           <button
@@ -158,11 +233,56 @@ export default function ListingsBrowser() {
         </p>
       )}
 
+      {unknownArea ? (
+        <p className="rounded border border-[#e7e0d5] bg-[#fffef9] px-4 py-6 text-sm leading-relaxed text-[#57534e]">
+          {t(locale, "listingsAreaNotFound")}
+        </p>
+      ) : (
+        <div
+          className="mb-6 inline-flex rounded-full border border-[#e7e0d5] bg-[#fffef9] p-1"
+          role="group"
+          aria-label={`${area ? t(locale, "listingsViewListings") : t(locale, "listingsViewAreas")} / ${t(locale, "listingsViewMap")}`}
+        >
+          <button
+            type="button"
+            aria-pressed={!mapVisible}
+            onClick={() => selectView("grid")}
+            className={`rounded-full px-4 py-2 text-sm ${
+              !mapVisible ? "bg-[#3d5a45] font-medium text-white" : "text-[#44403c]"
+            }`}
+          >
+            {area ? t(locale, "listingsViewListings") : t(locale, "listingsViewAreas")}
+          </button>
+          <button
+            type="button"
+            aria-pressed={mapVisible}
+            onClick={() => selectView("map")}
+            className={`rounded-full px-4 py-2 text-sm ${
+              mapVisible ? "bg-[#3d5a45] font-medium text-white" : "text-[#44403c]"
+            }`}
+          >
+            {t(locale, "listingsViewMap")}
+          </button>
+        </div>
+      )}
+
+      {shareRedirect ? (
+        <p className="py-12 text-center text-sm text-[#78716c]">{t(locale, "loading")}</p>
+      ) : null}
+
+      {showAreaIndex ? (
+        <div className={mapVisible ? "hidden" : ""}>
+          <ListingAreaGrid locale={locale} listings={listings} showCounts={!loading && !error} />
+        </div>
+      ) : null}
+
+      {showUnitGrid ? (
+      <div className={mapVisible ? "hidden" : ""}>
       {buildings.length > 1 && (
         <div className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1 sm:mx-0 sm:flex-wrap sm:overflow-visible sm:px-0">
           <button
             type="button"
-            onClick={() => setBuildingId(null)}
+            onClick={() => replaceQuery({ building: null })}
             className={chipClass(buildingId == null)}
           >
             {t(locale, "listingsAllBuildings")}
@@ -171,7 +291,7 @@ export default function ListingsBrowser() {
             <button
               key={building.id}
               type="button"
-              onClick={() => setBuildingId(building.id)}
+              onClick={() => replaceQuery({ building: String(building.id) })}
               className={chipClass(buildingId === building.id)}
             >
               {building.name}
@@ -180,7 +300,7 @@ export default function ListingsBrowser() {
         </div>
       )}
 
-      {!loading && listings.length > 0 && (
+      {!loading && scopedListings.length > 0 && (
         <div className="mb-5">
           <div className="flex flex-wrap items-center gap-2">
             <button
@@ -371,6 +491,30 @@ export default function ListingsBrowser() {
           );
         })}
       </ul>
+      </div>
+      ) : null}
+
+      {mapVisible && loading ? (
+        <p className="py-12 text-center text-sm text-[#78716c]">{t(locale, "loading")}</p>
+      ) : null}
+      {mapVisible && !loading && pins.length === 0 ? (
+        <p className="rounded border border-[#e7e0d5] bg-[#fffef9] px-4 py-6 text-sm leading-relaxed text-[#57534e]">
+          {t(locale, "listingsMapEmpty")}
+        </p>
+      ) : null}
+      {mapVisible && !loading && pins.length > 0 ? (
+        <ListingsMap
+          pins={pins}
+          unavailableLabel={t(locale, "listingsMapUnavailable")}
+          onSelect={(pin) => {
+            if (area) {
+              replaceQuery({ view: "grid", building: String(pin.id) });
+              return;
+            }
+            router.push(listingAreaPath(pin.areaSlug, { building: pin.id }));
+          }}
+        />
+      ) : null}
     </main>
   );
 }

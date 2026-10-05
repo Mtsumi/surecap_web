@@ -62,7 +62,8 @@ export function listingAddress(listing: Pick<Listing, "civic_number"> & { buildi
   return `${civic} · ${address}`;
 }
 
-export function listingSharePath(unitId: number): string {
+export function listingSharePath(unitId: number, areaSlug?: string | null): string {
+  if (areaSlug) return `/listings/${areaSlug}?unit=${unitId}`;
   return `/listings?unit=${unitId}`;
 }
 
@@ -70,8 +71,8 @@ export function listingApplyHref(buildingId: number, unitId: number): string {
   return `/apply?building=${buildingId}&unit=${unitId}`;
 }
 
-export function listingShareUrl(unitId: number, origin: string): string {
-  return `${origin.replace(/\/$/, "")}${listingSharePath(unitId)}`;
+export function listingShareUrl(unitId: number, origin: string, areaSlug?: string | null): string {
+  return `${origin.replace(/\/$/, "")}${listingSharePath(unitId, areaSlug)}`;
 }
 
 export function listingPhotoUrl(src: string): string {

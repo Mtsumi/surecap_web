@@ -10,6 +10,7 @@ export const adminMessages = {
     langToggle: "English",
     navApplications: "Demandes",
     navBuildings: "Immeubles",
+    navListingQr: "Codes QR",
     navTeam: "Équipe",
     navRentalInsights: "Aperçu locatif",
     navAccount: "Mon compte",
@@ -212,6 +213,14 @@ export const adminMessages = {
     applicationsEmpty: "Aucune demande pour le moment.",
     applicationsLoading: "Chargement…",
     applicationsError: "Erreur",
+    listingQrTitle: "Codes QR des secteurs",
+    listingQrSubtitle:
+      "Chaque code ouvre les logements disponibles de ce secteur. Imprimez-le pour les visites.",
+    listingQrCopy: "Copier le lien",
+    listingQrCopied: "Lien copié",
+    listingQrDownload: "Télécharger le code",
+    listingQrOpen: "Ouvrir la page",
+    listingQrPrint: "Imprimer",
   },
   en: {
     brand: "Montreal Living",
@@ -221,6 +230,7 @@ export const adminMessages = {
     langToggle: "Français",
     navApplications: "Applications",
     navBuildings: "Buildings",
+    navListingQr: "QR codes",
     navTeam: "Team",
     navRentalInsights: "Rental Insights",
     navAccount: "My account",
@@ -421,6 +431,14 @@ export const adminMessages = {
     applicationsEmpty: "No applications yet.",
     applicationsLoading: "Loading…",
     applicationsError: "Error",
+    listingQrTitle: "Area QR codes",
+    listingQrSubtitle:
+      "Each code opens the available units for that area. Print it for showings.",
+    listingQrCopy: "Copy link",
+    listingQrCopied: "Link copied",
+    listingQrDownload: "Download code",
+    listingQrOpen: "Open page",
+    listingQrPrint: "Print",
   },
 } as const;
 
