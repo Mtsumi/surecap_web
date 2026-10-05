@@ -83,6 +83,8 @@ export type Application = {
   linkedin_url: string | null;
   employment_type: string | null;
   monthly_net_income: number | null;
+  additional_income_kind?: string | null;
+  additional_monthly_net_income?: number | null;
   created_at: string;
   updated_at: string;
   primary_member_id?: number | null;
@@ -165,6 +167,8 @@ export type ApplicationUpdate = Partial<{
   linkedin_url: string;
   employment_type: "employed" | "self_employed" | "other" | "no_income";
   monthly_net_income: number;
+  additional_income_kind?: "government_benefits" | "other" | null;
+  additional_monthly_net_income?: number | null;
   preferred_locale?: "en" | "fr";
   roommates: RoommateContact[];
   guarantor: GuarantorContact | null;
@@ -527,6 +531,8 @@ export type InviteeSubmitPayload = {
   linkedin_url?: string;
   employment_type: "employed" | "self_employed" | "other" | "no_income";
   monthly_net_income: number;
+  additional_income_kind?: "government_benefits" | "other";
+  additional_monthly_net_income?: number;
   preferred_locale?: "en" | "fr";
 };
 

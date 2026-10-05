@@ -71,7 +71,7 @@ export const messages = {
       "Tell us about your employment and upload proof of income. We may also call the references below.",
     incomeDocumentsTitle: "Proof of income",
     incomeDocumentsHint:
-      "Take a photo of the full page (A4 frame) or upload a PDF. Employed: your most recent pay slip (up to two more optional). Self-employed: your two most recent CRA notices of assessment.",
+      "Take a photo of the full page (A4 frame) or upload a PDF. Employed: your most recent pay slip (up to two more optional), plus optional proof of additional income. Self-employed: your two most recent CRA notices of assessment.",
     incomeCameraTitle: "Payslip photo",
     incomeCameraAlignHint: "Fit the full payslip inside the page frame",
     employmentType: "Employment status",
@@ -87,6 +87,18 @@ export const messages = {
     incomeOptionalSuffix: "(optional)",
     monthlyNetIncome: "Monthly net income (after tax)",
     monthlyNetIncomeCad: "Canadian dollars (CAD)",
+    monthlyNetIncomeFromJob: "Monthly net from this job (after tax)",
+    additionalIncomeToggle: "I also have another source of income",
+    additionalIncomeHint:
+      "For example government benefits or another source, in addition to your job. A photo or PDF of proof is required.",
+    incomeAdditionalProofRequired:
+      "Upload proof of your additional income (photo or PDF) before continuing.",
+    incomeAdditionalProofUploadHint:
+      "Required: upload a photo or PDF under Proof of additional income in the documents above.",
+    additionalIncomeKind: "Additional income type",
+    additionalIncomeGovernment: "Government benefits",
+    additionalIncomeOther: "Other income",
+    additionalMonthlyNetIncome: "Additional monthly net income (after tax)",
     incomePaySlip: "Pay slip (last 6 months)",
     incomePaySlip1: "Pay slip 1 (most recent)",
     incomePaySlip2: "Pay slip 2",
@@ -95,6 +107,7 @@ export const messages = {
     incomeNoa1: "CRA notice of assessment (most recent year)",
     incomeNoa2: "CRA notice of assessment (previous year)",
     incomeProof: "Proof of income",
+    incomeProofAdditional: "Proof of additional income",
     incomeUploadComplete: "Income document saved.",
     incomeUploadRequired: "Please upload your proof of income before continuing.",
     incomeReferencesHeading: "Employer reference",
@@ -360,7 +373,7 @@ export const messages = {
       "Indiquez votre situation d'emploi et téléversez une preuve de revenu. Nous pourrions aussi appeler les références ci-dessous.",
     incomeDocumentsTitle: "Preuve de revenu",
     incomeDocumentsHint:
-      "Photographiez la page entière (cadre A4) ou téléversez un PDF. Salarié : votre talon de paie le plus récent (jusqu'à deux autres facultatifs). Travailleur autonome : vos deux avis de cotisation de l'ARC les plus récents.",
+      "Photographiez la page entière (cadre A4) ou téléversez un PDF. Salarié : votre talon de paie le plus récent (jusqu'à deux autres facultatifs), plus une preuve facultative de revenu additionnel. Travailleur autonome : vos deux avis de cotisation de l'ARC les plus récents.",
     incomeCameraTitle: "Photo du talon de paie",
     incomeCameraAlignHint: "Placez le talon de paie entier dans le cadre",
     employmentType: "Statut d'emploi",
@@ -376,6 +389,18 @@ export const messages = {
     incomeOptionalSuffix: "(facultatif)",
     monthlyNetIncome: "Revenu net mensuel (après impôts)",
     monthlyNetIncomeCad: "Dollars canadiens (CAD)",
+    monthlyNetIncomeFromJob: "Revenu net mensuel de cet emploi (après impôts)",
+    additionalIncomeToggle: "J'ai aussi une autre source de revenu",
+    additionalIncomeHint:
+      "Par exemple des prestations gouvernementales ou une autre source, en plus de votre emploi. Une photo ou un PDF de preuve est requis.",
+    incomeAdditionalProofRequired:
+      "Téléversez une preuve de votre revenu additionnel (photo ou PDF) avant de continuer.",
+    incomeAdditionalProofUploadHint:
+      "Obligatoire : téléversez une photo ou un PDF sous Preuve de revenu additionnel (documents ci-dessus).",
+    additionalIncomeKind: "Type de revenu additionnel",
+    additionalIncomeGovernment: "Prestations gouvernementales",
+    additionalIncomeOther: "Autre revenu",
+    additionalMonthlyNetIncome: "Revenu net mensuel additionnel (après impôts)",
     incomePaySlip: "Fiche de paie (6 derniers mois)",
     incomePaySlip1: "Talon de paie 1 (le plus récent)",
     incomePaySlip2: "Talon de paie 2",
@@ -384,6 +409,7 @@ export const messages = {
     incomeNoa1: "Avis de cotisation de l'ARC (année la plus récente)",
     incomeNoa2: "Avis de cotisation de l'ARC (année précédente)",
     incomeProof: "Preuve de revenu",
+    incomeProofAdditional: "Preuve de revenu additionnel",
     incomeUploadComplete: "Document de revenu enregistré.",
     incomeUploadRequired: "Veuillez téléverser votre preuve de revenu avant de continuer.",
     incomeReferencesHeading: "Référence employeur",

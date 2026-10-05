@@ -38,7 +38,9 @@ import {
 } from "@/lib/applyStorage";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
 import {
+  AdditionalIncomeKind,
   EmploymentType,
+  employmentAllowsAdditionalIncome,
   employmentRequiresIncome,
   employmentTypeMessageKey,
   incomeUploadComplete,
@@ -142,6 +144,9 @@ type FormFields = {
   hr_phone: string;
   employment_type: EmploymentType;
   monthly_net_income: string;
+  include_additional_income: boolean;
+  additional_income_kind: AdditionalIncomeKind | "";
+  additional_monthly_net_income: string;
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
@@ -179,6 +184,9 @@ const emptyForm: FormFields = {
   hr_phone: "",
   employment_type: "employed",
   monthly_net_income: "",
+  include_additional_income: false,
+  additional_income_kind: "",
+  additional_monthly_net_income: "",
   referral_source: "",
   facebook_url: "",
   linkedin_url: "",
@@ -277,6 +285,17 @@ function formPayload(
       fields.employment_type === "no_income"
         ? 0
         : parseMonthlyNetIncome(fields.monthly_net_income) ?? 0,
+    additional_income_kind:
+      employmentAllowsAdditionalIncome(fields.employment_type) &&
+      fields.include_additional_income &&
+      fields.additional_income_kind
+        ? fields.additional_income_kind
+        : null,
+    additional_monthly_net_income:
+      employmentAllowsAdditionalIncome(fields.employment_type) &&
+      fields.include_additional_income
+        ? parseMonthlyNetIncome(fields.additional_monthly_net_income)
+        : null,
     referral_source: fields.referral_source.trim(),
     facebook_url: fields.facebook_url.trim() || undefined,
     linkedin_url: fields.linkedin_url.trim() || undefined,
@@ -858,10 +877,18 @@ export default function ApplyForm() {
           FORM_STEPS[i] === "references" &&
           !incomeUploadComplete(
             form.employment_type,
-            incomeDocuments.map((doc) => doc.document_type)
+            incomeDocuments.map((doc) => doc.document_type),
+            { requireAdditionalProof: form.include_additional_income }
           )
         ) {
-          setError(t(locale, "incomeUploadRequired"));
+          setError(
+            t(
+              locale,
+              form.include_additional_income
+                ? "incomeAdditionalProofRequired"
+                : "incomeUploadRequired"
+            )
+          );
           setErrorStep("references");
           setStep("references");
           persistProgress("references");
@@ -997,6 +1024,9 @@ export default function ApplyForm() {
     employer_name: form.employer_name,
     employment_type: form.employment_type,
     monthly_net_income: form.monthly_net_income,
+    include_additional_income: form.include_additional_income,
+    additional_income_kind: form.additional_income_kind,
+    additional_monthly_net_income: form.additional_monthly_net_income,
     ...addressValidationFields(),
   });
 
@@ -1058,10 +1088,18 @@ export default function ApplyForm() {
     if (
       !incomeUploadComplete(
         form.employment_type,
-        incomeDocuments.map((doc) => doc.document_type)
+        incomeDocuments.map((doc) => doc.document_type),
+        { requireAdditionalProof: form.include_additional_income }
       )
     ) {
-      setError(t(locale, "incomeUploadRequired"));
+      setError(
+        t(
+          locale,
+          form.include_additional_income
+            ? "incomeAdditionalProofRequired"
+            : "incomeUploadRequired"
+        )
+      );
       setErrorStep("references");
       persistProgress("references");
       setStep("references");
@@ -2233,10 +2271,18 @@ export default function ApplyForm() {
               if (
                 !incomeUploadComplete(
                   form.employment_type,
-                  incomeDocuments.map((doc) => doc.document_type)
+                  incomeDocuments.map((doc) => doc.document_type),
+                  { requireAdditionalProof: form.include_additional_income }
                 )
               ) {
-                setError(t(locale, "incomeUploadRequired"));
+                setError(
+                  t(
+                    locale,
+                    form.include_additional_income
+                      ? "incomeAdditionalProofRequired"
+                      : "incomeUploadRequired"
+                  )
+                );
                 setErrorStep("references");
                 return;
               }
@@ -2253,14 +2299,32 @@ export default function ApplyForm() {
                 memberId={draftSession.memberId}
                 uploadToken={draftSession.uploadToken}
                 employmentType={form.employment_type}
-                onEmploymentTypeChange={(type) => setField("employment_type", type)}
+                requireAdditionalProof={form.include_additional_income}
+                onEmploymentTypeChange={(type) => {
+                  setForm((prev) => ({
+                    ...prev,
+                    employment_type: type,
+                    ...(employmentAllowsAdditionalIncome(type)
+                      ? {}
+                      : {
+                          include_additional_income: false,
+                          additional_income_kind: "",
+                          additional_monthly_net_income: "",
+                        }),
+                  }));
+                }}
                 onDocumentsChange={setIncomeDocuments}
               />
             )}
             {employmentRequiresIncome(form.employment_type) && (
             <div id="apply-field-monthly_net_income">
               <label className="block text-sm text-[#57534e]">
-                {t(locale, "monthlyNetIncome")}
+                {t(
+                  locale,
+                  employmentAllowsAdditionalIncome(form.employment_type)
+                    ? "monthlyNetIncomeFromJob"
+                    : "monthlyNetIncome"
+                )}
                 <span className="mt-0.5 block text-xs text-[#a8a29e]">
                   {t(locale, "monthlyNetIncomeCad")}
                 </span>
@@ -2282,6 +2346,99 @@ export default function ApplyForm() {
               {fieldHint("monthly_net_income")}
             </div>
             )}
+            {employmentAllowsAdditionalIncome(form.employment_type) ? (
+              <div className="space-y-3 rounded border border-[#e7e0d5] bg-[#fffef9] px-3 py-3">
+                <label className="flex items-start gap-2 text-sm text-[#292524]">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={form.include_additional_income}
+                    onChange={(e) => {
+                      const checked = e.target.checked;
+                      setForm((prev) => ({
+                        ...prev,
+                        include_additional_income: checked,
+                        ...(checked
+                          ? {
+                              additional_income_kind:
+                                prev.additional_income_kind || "government_benefits",
+                            }
+                          : {
+                              additional_income_kind: "",
+                              additional_monthly_net_income: "",
+                            }),
+                      }));
+                      clearFieldError("additional_income_kind");
+                      clearFieldError("additional_monthly_net_income");
+                    }}
+                  />
+                  <span>
+                    {t(locale, "additionalIncomeToggle")}
+                    <span className="mt-0.5 block text-xs text-[#a8a29e]">
+                      {t(locale, "additionalIncomeHint")}
+                    </span>
+                  </span>
+                </label>
+                {form.include_additional_income ? (
+                  <>
+                    <div id="apply-field-additional_income_kind">
+                      <label className="block text-sm text-[#57534e]">
+                        {t(locale, "additionalIncomeKind")}
+                        <select
+                          required
+                          value={form.additional_income_kind || "government_benefits"}
+                          onChange={(e) => {
+                            setField(
+                              "additional_income_kind",
+                              e.target.value as AdditionalIncomeKind
+                            );
+                            clearFieldError("additional_income_kind");
+                          }}
+                          className={inputClassFor("additional_income_kind")}
+                        >
+                          <option value="government_benefits">
+                            {t(locale, "additionalIncomeGovernment")}
+                          </option>
+                          <option value="other">
+                            {t(locale, "additionalIncomeOther")}
+                          </option>
+                        </select>
+                      </label>
+                      {fieldHint("additional_income_kind")}
+                    </div>
+                    <div id="apply-field-additional_monthly_net_income">
+                      <label className="block text-sm text-[#57534e]">
+                        {t(locale, "additionalMonthlyNetIncome")}
+                        <span className="mt-0.5 block text-xs text-[#a8a29e]">
+                          {t(locale, "monthlyNetIncomeCad")}
+                        </span>
+                        <div className="relative mt-1">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#78716c]">
+                            $
+                          </span>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            required
+                            value={form.additional_monthly_net_income}
+                            onChange={(e) => {
+                              setField("additional_monthly_net_income", e.target.value);
+                              clearFieldError("additional_monthly_net_income");
+                            }}
+                            className={`${inputClassFor("additional_monthly_net_income")} pl-7`}
+                            placeholder="650"
+                          />
+                        </div>
+                      </label>
+                      {fieldHint("additional_monthly_net_income")}
+                    </div>
+                    <p className="text-xs text-[#78716c]">
+                      {t(locale, "incomeAdditionalProofUploadHint")}
+                    </p>
+                  </>
+                ) : null}
+              </div>
+            ) : null}
             {employmentRequiresIncome(form.employment_type) && (
             <>
             <h3 className="pt-2 text-sm font-medium text-[#292524]">
@@ -2531,6 +2688,26 @@ export default function ApplyForm() {
               label={t(locale, "monthlyNetIncome")}
               value={formatMonthlyNetIncome(locale, form.monthly_net_income)}
             />
+            {form.include_additional_income && form.additional_income_kind ? (
+              <>
+                <ReviewRow
+                  label={t(locale, "additionalIncomeKind")}
+                  value={t(
+                    locale,
+                    form.additional_income_kind === "government_benefits"
+                      ? "additionalIncomeGovernment"
+                      : "additionalIncomeOther"
+                  )}
+                />
+                <ReviewRow
+                  label={t(locale, "additionalMonthlyNetIncome")}
+                  value={formatMonthlyNetIncome(
+                    locale,
+                    form.additional_monthly_net_income
+                  )}
+                />
+              </>
+            ) : null}
             <ReviewRow label={t(locale, "employerName")} value={form.employer_name} />
             <ReviewRow label={t(locale, "hrName")} value={form.hr_name} />
             <ReviewRow label={t(locale, "hrPhone")} value={form.hr_phone} />
