@@ -57,6 +57,13 @@ export const messages = {
     landlordName: "Current landlord name",
     previousLandlordPhone: "Previous landlord phone",
     previousLandlordName: "Previous landlord name",
+    previousLandlordMissingTitle:
+      "No previous landlord contact: forgot, or none to provide?",
+    previousLandlordMissingBody:
+      "Go back to enter a name and phone, or continue if you have none to provide.",
+    previousLandlordGoBack: "Go back and enter it",
+    previousLandlordContinueNone: "Continue without previous landlord contact",
+    previousLandlordNoneNoted: "No previous landlord contact provided",
     hrPhone: "HR contact phone",
     hrName: "HR contact name",
     employerName: "Employer (company name)",
@@ -339,6 +346,13 @@ export const messages = {
     landlordName: "Nom du locateur actuel",
     previousLandlordPhone: "Téléphone du locateur précédent",
     previousLandlordName: "Nom du locateur précédent",
+    previousLandlordMissingTitle:
+      "Aucun contact de locateur précédent : oublié, ou aucun à indiquer ?",
+    previousLandlordMissingBody:
+      "Revenez pour saisir un nom et un téléphone, ou continuez si vous n'en avez pas.",
+    previousLandlordGoBack: "Revenir et le saisir",
+    previousLandlordContinueNone: "Continuer sans contact de locateur précédent",
+    previousLandlordNoneNoted: "Aucun contact de locateur précédent fourni",
     hrPhone: "Téléphone du contact RH",
     hrName: "Nom du contact RH",
     employerName: "Employeur (nom de l'entreprise)",

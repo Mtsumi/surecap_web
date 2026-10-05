@@ -38,6 +38,7 @@ export type InviteeFormFields = {
   landlord_phone: string;
   previous_landlord_name: string;
   previous_landlord_phone: string;
+  no_previous_landlord_contact: boolean;
   hr_name: string;
   employer_name: string;
   hr_phone: string;

@@ -221,16 +221,23 @@ function MemberCard({
               </div>
             </div>
             {member.previous_address ? (
-              <>
+              member.no_previous_landlord_contact ? (
                 <AdminField
                   label="Locateur précédent"
-                  value={member.previous_landlord_name}
+                  value="Aucun contact fourni"
                 />
-                <AdminField
-                  label="Tél. locateur précédent"
-                  value={member.previous_landlord_phone}
-                />
-              </>
+              ) : (
+                <>
+                  <AdminField
+                    label="Locateur précédent"
+                    value={member.previous_landlord_name}
+                  />
+                  <AdminField
+                    label="Tél. locateur précédent"
+                    value={member.previous_landlord_phone}
+                  />
+                </>
+              )
             ) : null}
           </>
         )}
@@ -988,14 +995,23 @@ export default function ApplicationDetailPage() {
                 <>
                   <AdminField label="Locateur actuel" value={app.landlord_name} />
                   <AdminField label="Tél. locateur actuel" value={app.landlord_phone} />
-                  <AdminField
-                    label="Locateur précédent"
-                    value={app.previous_landlord_name}
-                  />
-                  <AdminField
-                    label="Tél. locateur précédent"
-                    value={app.previous_landlord_phone}
-                  />
+                  {app.no_previous_landlord_contact ? (
+                    <AdminField
+                      label="Locateur précédent"
+                      value="Aucun contact fourni"
+                    />
+                  ) : (
+                    <>
+                      <AdminField
+                        label="Locateur précédent"
+                        value={app.previous_landlord_name}
+                      />
+                      <AdminField
+                        label="Tél. locateur précédent"
+                        value={app.previous_landlord_phone}
+                      />
+                    </>
+                  )}
                 </>
               ) : null}
               <AdminField label="Employeur" value={app.employer_name} />

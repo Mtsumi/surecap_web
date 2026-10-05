@@ -62,6 +62,7 @@ import {
   personalFieldErrors,
   incomeFieldErrors,
   addressFieldErrors,
+  needsPreviousLandlordContactConfirm,
   validateEmailUniqueness,
   validatePhones,
   validatePhoneFormat,
@@ -135,6 +136,7 @@ type FormFields = {
   landlord_phone: string;
   previous_landlord_name: string;
   previous_landlord_phone: string;
+  no_previous_landlord_contact: boolean;
   hr_name: string;
   employer_name: string;
   hr_phone: string;
@@ -171,6 +173,7 @@ const emptyForm: FormFields = {
   landlord_phone: "",
   previous_landlord_name: "",
   previous_landlord_phone: "",
+  no_previous_landlord_contact: false,
   hr_name: "",
   employer_name: "",
   hr_phone: "",
@@ -248,13 +251,21 @@ function formPayload(
         ? null
         : fields.landlord_phone.trim() || undefined,
     previous_landlord_name:
-      fields.housing_status === "own_home" || !fields.previous_address.trim()
+      fields.housing_status === "own_home" ||
+      !fields.previous_address.trim() ||
+      fields.no_previous_landlord_contact
         ? null
-        : fields.previous_landlord_name.trim(),
+        : fields.previous_landlord_name.trim() || null,
     previous_landlord_phone:
-      fields.housing_status === "own_home" || !fields.previous_address.trim()
+      fields.housing_status === "own_home" ||
+      !fields.previous_address.trim() ||
+      fields.no_previous_landlord_contact
         ? null
-        : fields.previous_landlord_phone.trim(),
+        : fields.previous_landlord_phone.trim() || null,
+    no_previous_landlord_contact:
+      fields.housing_status === "own_home" || !fields.previous_address.trim()
+        ? false
+        : Boolean(fields.no_previous_landlord_contact),
     hr_name: fields.employment_type === "no_income" ? undefined : fields.hr_name.trim(),
     employer_name:
       fields.employment_type === "no_income"
@@ -322,6 +333,10 @@ export default function ApplyForm() {
     Partial<Record<string, ApplyValidationCode>>
   >({});
   const [showDraftBanner, setShowDraftBanner] = useState(false);
+  const [previousLandlordConfirmOpen, setPreviousLandlordConfirmOpen] =
+    useState(false);
+  const [pendingAfterLandlordConfirm, setPendingAfterLandlordConfirm] =
+    useState<Step | null>(null);
   const [consent, setConsent] = useState<CreditConsent | null>(null);
   const [consentSigning, setConsentSigning] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -783,6 +798,38 @@ export default function ApplyForm() {
     setStep(next);
   };
 
+  const askOrContinuePastAddresses = (next: Step) => {
+    if (blockWithFieldErrors(addressFieldErrors(addressValidationFields()))) {
+      return false;
+    }
+    if (needsPreviousLandlordContactConfirm(addressValidationFields())) {
+      setPendingAfterLandlordConfirm(next);
+      setPreviousLandlordConfirmOpen(true);
+      return false;
+    }
+    setError(null);
+    setErrorStep(null);
+    continueToStep(next);
+    return true;
+  };
+
+  const confirmNoPreviousLandlordContact = () => {
+    const nextForm: FormFields = {
+      ...formRef.current,
+      no_previous_landlord_contact: true,
+      previous_landlord_name: "",
+      previous_landlord_phone: "",
+    };
+    formRef.current = nextForm;
+    setForm(nextForm);
+    setPreviousLandlordConfirmOpen(false);
+    const next = pendingAfterLandlordConfirm ?? "housing";
+    setPendingAfterLandlordConfirm(null);
+    setError(null);
+    setErrorStep(null);
+    continueToStep(next);
+  };
+
   const goToFormStep = (target: (typeof FORM_STEPS)[number]) => {
     setError(null);
     const currentIdx = FORM_STEPS.indexOf(step as (typeof FORM_STEPS)[number]);
@@ -794,6 +841,17 @@ export default function ApplyForm() {
           setErrorStep(FORM_STEPS[i]);
           setStep(FORM_STEPS[i]);
           persistProgress(FORM_STEPS[i]);
+          return;
+        }
+        if (
+          FORM_STEPS[i] === "addresses" &&
+          needsPreviousLandlordContactConfirm(addressValidationFields())
+        ) {
+          setErrorStep("addresses");
+          setStep("addresses");
+          persistProgress("addresses");
+          setPendingAfterLandlordConfirm(target);
+          setPreviousLandlordConfirmOpen(true);
           return;
         }
         if (
@@ -933,6 +991,7 @@ export default function ApplyForm() {
     landlord_name: form.landlord_name,
     previous_landlord_phone: form.previous_landlord_phone,
     previous_landlord_name: form.previous_landlord_name,
+    no_previous_landlord_contact: form.no_previous_landlord_contact,
     hr_phone: form.hr_phone,
     hr_name: form.hr_name,
     employer_name: form.employer_name,
@@ -1556,11 +1615,7 @@ export default function ApplyForm() {
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              if (blockWithFieldErrors(addressFieldErrors(addressValidationFields()))) {
-                return;
-              }
-              setError(null);
-              continueToStep("housing");
+              askOrContinuePastAddresses("housing");
             }}
             className="space-y-4"
           >
@@ -1671,6 +1726,7 @@ export default function ApplyForm() {
                         landlord_phone: "",
                         previous_landlord_name: "",
                         previous_landlord_phone: "",
+                        no_previous_landlord_contact: false,
                       }));
                       clearFieldError("lease_in_name");
                       clearFieldError("landlord_name");
@@ -1778,6 +1834,7 @@ export default function ApplyForm() {
                     previous_landlord_name: "",
                     previous_landlord_phone: "",
                     previous_place_id: "",
+                    no_previous_landlord_contact: false,
                   }));
                 } else {
                   setField("previous_place_id", placeId ?? "");
@@ -1819,16 +1876,24 @@ export default function ApplyForm() {
             ) : null}
             {form.housing_status === "renting" && form.previous_address.trim() ? (
               <>
+                {form.no_previous_landlord_contact ? (
+                  <p className="rounded border border-[#e7e0d5] bg-[#fffef9] px-3 py-2 text-sm text-[#57534e]">
+                    {t(locale, "previousLandlordNoneNoted")}
+                  </p>
+                ) : null}
                 <div id="apply-field-previous_landlord_name">
                   <label className="block text-sm text-[#57534e]">
                     {t(locale, "previousLandlordName")}
                     <input
                       type="text"
-                      required
                       autoComplete="name"
                       value={form.previous_landlord_name}
                       onChange={(e) => {
-                        setField("previous_landlord_name", e.target.value);
+                        setForm((prev) => ({
+                          ...prev,
+                          previous_landlord_name: e.target.value,
+                          no_previous_landlord_contact: false,
+                        }));
                         clearFieldError("previous_landlord_name");
                       }}
                       className={inputClassFor("previous_landlord_name")}
@@ -1843,11 +1908,14 @@ export default function ApplyForm() {
                   <span className="block">{t(locale, "previousLandlordPhone")}</span>
                   <PhoneField
                     locale={locale}
-                    required
                     invalid={!!fieldErrors.previous_landlord_phone}
                     value={form.previous_landlord_phone}
                     onChange={(value) => {
-                      setField("previous_landlord_phone", value);
+                      setForm((prev) => ({
+                        ...prev,
+                        previous_landlord_phone: value,
+                        no_previous_landlord_contact: false,
+                      }));
                       setFieldValidation(
                         "previous_landlord_phone",
                         validatePhoneFormat(value)
@@ -2430,18 +2498,25 @@ export default function ApplyForm() {
                 )}
               />
             )}
-            {form.housing_status === "renting" && form.previous_address && (
-              <ReviewRow
-                label={t(locale, "previousLandlordName")}
-                value={form.previous_landlord_name}
-              />
-            )}
-            {form.housing_status === "renting" && form.previous_address && (
-              <ReviewRow
-                label={t(locale, "previousLandlordPhone")}
-                value={form.previous_landlord_phone}
-              />
-            )}
+            {form.housing_status === "renting" &&
+              form.previous_address &&
+              (form.no_previous_landlord_contact ? (
+                <ReviewRow
+                  label={t(locale, "previousLandlordName")}
+                  value={t(locale, "previousLandlordNoneNoted")}
+                />
+              ) : (
+                <>
+                  <ReviewRow
+                    label={t(locale, "previousLandlordName")}
+                    value={form.previous_landlord_name}
+                  />
+                  <ReviewRow
+                    label={t(locale, "previousLandlordPhone")}
+                    value={form.previous_landlord_phone}
+                  />
+                </>
+              ))}
             <ReviewRow
               label={t(locale, "moveInDate")}
               value={form.move_in_date}
@@ -2523,6 +2598,46 @@ export default function ApplyForm() {
           </p>
         </section>
       )}
+
+      {previousLandlordConfirmOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="previous-landlord-confirm-title"
+        >
+          <div className="w-full max-w-md rounded-lg border border-[#e7e0d5] bg-white p-5 shadow-lg">
+            <h3
+              id="previous-landlord-confirm-title"
+              className="text-base font-medium text-[#292524]"
+            >
+              {t(locale, "previousLandlordMissingTitle")}
+            </h3>
+            <p className="mt-2 text-sm leading-relaxed text-[#57534e]">
+              {t(locale, "previousLandlordMissingBody")}
+            </p>
+            <div className="mt-5 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={confirmNoPreviousLandlordContact}
+                className="w-full rounded bg-[#3d5a45] py-3 text-sm font-medium text-[#f4f1ec] transition hover:bg-[#334d3a]"
+              >
+                {t(locale, "previousLandlordContinueNone")}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setPreviousLandlordConfirmOpen(false);
+                  setPendingAfterLandlordConfirm(null);
+                }}
+                className="w-full rounded border border-[#e7e0d5] py-3 text-sm font-medium text-[#292524] transition hover:bg-[#faf8f4]"
+              >
+                {t(locale, "previousLandlordGoBack")}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </main>
   );
 }

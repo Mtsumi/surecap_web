@@ -26,6 +26,7 @@ import {
   validatePhones,
   validateReferencesStep,
   addressFieldErrors,
+  needsPreviousLandlordContactConfirm,
   type ApplyValidationInput,
 } from "./applyValidation";
 
@@ -212,7 +213,7 @@ describe("address date validation", () => {
     expect(errors.previous_address_lived_to).toBeUndefined();
   });
 
-  it("requires current and previous landlord when previous address is set", () => {
+  it("requires current landlord; previous landlord soft-confirm when both empty", () => {
     expect(
       addressFieldErrors(baseInput({ landlord_name: "", landlord_phone: "" }))
     ).toEqual({
@@ -227,8 +228,60 @@ describe("address date validation", () => {
         previous_address_lived_to: "2024-01-01",
       })
     );
-    expect(previousErrors.previous_landlord_name).toBe("required");
-    expect(previousErrors.previous_landlord_phone).toBe("required");
+    expect(previousErrors.previous_landlord_name).toBeUndefined();
+    expect(previousErrors.previous_landlord_phone).toBeUndefined();
+  });
+
+  it("requires both previous landlord fields when only one is filled", () => {
+    const errors = addressFieldErrors(
+      baseInput({
+        previous_address: "10 Old St",
+        previous_place_id: "ChIJTestPreviousAddress",
+        previous_address_lived_from: "2022-01-01",
+        previous_address_lived_to: "2024-01-01",
+        previous_landlord_name: "Old Landlord",
+        previous_landlord_phone: "",
+      })
+    );
+    expect(errors.previous_landlord_phone).toBe("required");
+  });
+
+  it("skips previous landlord when no_previous_landlord_contact is set", () => {
+    expect(
+      addressFieldErrors(
+        baseInput({
+          previous_address: "10 Old St",
+          previous_place_id: "ChIJTestPreviousAddress",
+          previous_address_lived_from: "2022-01-01",
+          previous_address_lived_to: "2024-01-01",
+          no_previous_landlord_contact: true,
+        })
+      )
+    ).toEqual({});
+  });
+
+  it("flags previous landlord confirm when both contact fields are empty", () => {
+    expect(
+      needsPreviousLandlordContactConfirm(
+        baseInput({
+          previous_address: "10 Old St",
+          previous_place_id: "ChIJTestPreviousAddress",
+          previous_address_lived_from: "2022-01-01",
+          previous_address_lived_to: "2024-01-01",
+        })
+      )
+    ).toBe(true);
+    expect(
+      needsPreviousLandlordContactConfirm(
+        baseInput({
+          previous_address: "10 Old St",
+          previous_place_id: "ChIJTestPreviousAddress",
+          previous_address_lived_from: "2022-01-01",
+          previous_address_lived_to: "2024-01-01",
+          no_previous_landlord_contact: true,
+        })
+      )
+    ).toBe(false);
   });
 
   it("skips landlord checks when require_landlord is false", () => {

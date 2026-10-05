@@ -347,6 +347,14 @@ export function mapServerSubmitError(
     };
   }
 
+  if (trimmed.startsWith("Previous landlord contact is incomplete")) {
+    return {
+      step: "addresses",
+      fieldErrors: {},
+      messageKey: "previousLandlordMissingTitle",
+    };
+  }
+
   if (trimmed === "Previous landlord name is required") {
     return {
       step: "addresses",

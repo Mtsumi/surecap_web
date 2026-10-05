@@ -16,6 +16,7 @@ export type AddressDateFormFields = {
   landlord_phone?: string;
   previous_landlord_name?: string;
   previous_landlord_phone?: string;
+  no_previous_landlord_contact?: boolean;
   current_place_id?: string;
   previous_place_id?: string;
   address_not_in_canada?: boolean;
@@ -47,6 +48,7 @@ export function toAddressValidationInput(
     landlord_phone: fields.landlord_phone,
     previous_landlord_name: fields.previous_landlord_name,
     previous_landlord_phone: fields.previous_landlord_phone,
+    no_previous_landlord_contact: fields.no_previous_landlord_contact,
     require_landlord:
       options?.requireLandlord !== undefined
         ? options.requireLandlord
