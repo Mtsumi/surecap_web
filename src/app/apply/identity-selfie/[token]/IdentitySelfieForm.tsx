@@ -134,6 +134,7 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
       <IdCameraCapture
         locale={locale}
         facingMode="user"
+        frame="selfie"
         titleKey="selfieCameraTitle"
         alignHintKey="selfieCameraAlignHint"
         onCapture={(captured) => {

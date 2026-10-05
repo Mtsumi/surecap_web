@@ -42,7 +42,7 @@ export default function IdCameraCapture({
   const filePrefix =
     frame === "a4"
       ? "payslip-capture"
-      : facingMode === "user"
+      : frame === "selfie"
         ? "selfie-capture"
         : "id-capture";
   const videoRef = useRef<HTMLVideoElement | null>(null);
@@ -248,7 +248,7 @@ export default function IdCameraCapture({
               <div
                 ref={frameRef}
                 className={
-                  frame === "a4"
+                  frame === "a4" || frame === "selfie"
                     ? "relative h-[72%] max-h-[36rem] rounded-sm border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]"
                     : "relative w-full max-w-md rounded-xl border-2 border-white/90 shadow-[0_0_0_9999px_rgba(0,0,0,0.55)]"
                 }
