@@ -69,6 +69,8 @@ type Props = (MemberMode | InviteMode) & {
   onEmploymentTypeChange: (type: EmploymentType) => void;
   onDocumentsChange?: (documents: MemberDocument[]) => void;
   showNoIncomeOption?: boolean;
+  /** Require proof_of_income when applicant declared an additional source. */
+  requireAdditionalProof?: boolean;
 };
 
 function documentsEqual(a: MemberDocument[], b: MemberDocument[]): boolean {
@@ -86,7 +88,9 @@ export default function StepIncomeUpload(props: Props) {
     onEmploymentTypeChange,
     onDocumentsChange,
     showNoIncomeOption = true,
+    requireAdditionalProof = false,
   } = props;
+  const incomeOptions = { requireAdditionalProof };
   const isMember = props.mode === "member";
   const applicationId = isMember ? props.applicationId : 0;
   const memberId = isMember ? props.memberId : 0;
@@ -308,10 +312,17 @@ export default function StepIncomeUpload(props: Props) {
       ) : (
       <div className="mt-4 space-y-3">
         {slots.map((slot) => {
-          const labelKey = SLOT_LABEL[slot];
+          const labelKey =
+            slot === "proof_of_income" && employmentType !== "other"
+              ? "incomeProofAdditional"
+              : SLOT_LABEL[slot];
           const uploaded = documents.find((doc) => doc.document_type === slot);
           const busy = busySlot === slot || switchingType;
-          const optional = isOptionalIncomeSlot(employmentType, slot);
+          const optional = isOptionalIncomeSlot(
+            employmentType,
+            slot,
+            incomeOptions
+          );
           return (
             <div key={slot} className="rounded border border-[#e7e0d5] bg-white px-4 py-3">
               <p className="text-sm font-medium text-[#292524]">
@@ -420,7 +431,7 @@ export default function StepIncomeUpload(props: Props) {
 
       {!loadingList &&
         employmentRequiresIncome(employmentType) &&
-        incomeUploadComplete(employmentType, incomeDocTypes) && (
+        incomeUploadComplete(employmentType, incomeDocTypes, incomeOptions) && (
         <p className="mt-4 text-sm text-[#3d5a45]">{t(locale, "incomeUploadComplete")}</p>
       )}
 

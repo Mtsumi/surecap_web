@@ -18,7 +18,7 @@ import {
   submitInvite,
 } from "@/lib/api";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
-import { incomeUploadComplete, parseMonthlyNetIncome, formatMonthlyNetIncome, employmentRequiresIncome } from "@/lib/incomeUpload";
+import { incomeUploadComplete, parseMonthlyNetIncome, formatMonthlyNetIncome, employmentRequiresIncome, employmentAllowsAdditionalIncome, type AdditionalIncomeKind } from "@/lib/incomeUpload";
 import { Locale, MessageKey, detectLocale, t } from "@/lib/i18n";
 import {
   addressDatePayload,
@@ -114,6 +114,9 @@ function emptyFields(): InviteeFormFields {
     hr_phone: "",
     employment_type: "employed",
     monthly_net_income: "",
+    include_additional_income: false,
+    additional_income_kind: "",
+    additional_monthly_net_income: "",
     referral_source: "",
     facebook_url: "",
     linkedin_url: "",
@@ -140,6 +143,15 @@ function buildInviteePayload(
     preferred_locale: locale,
     ...addressDatePayload(form),
   };
+  if (
+    employmentAllowsAdditionalIncome(form.employment_type) &&
+    form.include_additional_income &&
+    form.additional_income_kind
+  ) {
+    payload.additional_income_kind = form.additional_income_kind;
+    payload.additional_monthly_net_income =
+      parseMonthlyNetIncome(form.additional_monthly_net_income) ?? undefined;
+  }
   if (form.current_apartment.trim()) {
     payload.current_apartment = form.current_apartment.trim();
   }
@@ -357,6 +369,17 @@ export default function InviteForm({ token }: Props) {
       if (!parseMonthlyNetIncome(form.monthly_net_income)) {
         errors.monthly_net_income = "required";
       }
+      if (
+        employmentAllowsAdditionalIncome(form.employment_type) &&
+        form.include_additional_income
+      ) {
+        if (!(form.additional_income_kind || "").trim()) {
+          errors.additional_income_kind = "required";
+        }
+        if (!parseMonthlyNetIncome(form.additional_monthly_net_income)) {
+          errors.additional_monthly_net_income = "required";
+        }
+      }
       if (role === "guarantor") {
         const hrError = validatePhoneFormat(form.hr_phone);
         if (hrError) errors.hr_phone = hrError;
@@ -380,10 +403,18 @@ export default function InviteForm({ token }: Props) {
       current === "references" &&
       !incomeUploadComplete(
         form.employment_type,
-        incomeDocuments.map((doc) => doc.document_type)
+        incomeDocuments.map((doc) => doc.document_type),
+        { requireAdditionalProof: form.include_additional_income }
       )
     ) {
-      setError(t(locale, "incomeUploadRequired"));
+      setError(
+        t(
+          locale,
+          form.include_additional_income
+            ? "incomeAdditionalProofRequired"
+            : "incomeUploadRequired"
+        )
+      );
       return false;
     }
     return true;
@@ -462,10 +493,18 @@ export default function InviteForm({ token }: Props) {
     if (
       !incomeUploadComplete(
         form.employment_type,
-        incomeDocuments.map((doc) => doc.document_type)
+        incomeDocuments.map((doc) => doc.document_type),
+        { requireAdditionalProof: form.include_additional_income }
       )
     ) {
-      setError(t(locale, "incomeUploadRequired"));
+      setError(
+        t(
+          locale,
+          form.include_additional_income
+            ? "incomeAdditionalProofRequired"
+            : "incomeUploadRequired"
+        )
+      );
       setStep("references");
       return;
     }
@@ -1133,14 +1172,32 @@ export default function InviteForm({ token }: Props) {
             locale={locale}
             inviteToken={token}
             employmentType={form.employment_type}
-            onEmploymentTypeChange={(type) => setField("employment_type", type)}
+            requireAdditionalProof={form.include_additional_income}
+            onEmploymentTypeChange={(type) => {
+              setForm((prev) => ({
+                ...prev,
+                employment_type: type,
+                ...(employmentAllowsAdditionalIncome(type)
+                  ? {}
+                  : {
+                      include_additional_income: false,
+                      additional_income_kind: "",
+                      additional_monthly_net_income: "",
+                    }),
+              }));
+            }}
             onDocumentsChange={setIncomeDocuments}
             showNoIncomeOption={role === "roommate"}
           />
           {employmentRequiresIncome(form.employment_type) && (
           <>
           <label className="block text-sm text-[#57534e]">
-            {t(locale, "monthlyNetIncome")}
+            {t(
+              locale,
+              employmentAllowsAdditionalIncome(form.employment_type)
+                ? "monthlyNetIncomeFromJob"
+                : "monthlyNetIncome"
+            )}
             <span className="mt-0.5 block text-xs text-[#a8a29e]">
               {t(locale, "monthlyNetIncomeCad")}
             </span>
@@ -1160,6 +1217,91 @@ export default function InviteForm({ token }: Props) {
             </div>
             {fieldHint("monthly_net_income")}
           </label>
+          {employmentAllowsAdditionalIncome(form.employment_type) ? (
+            <div className="space-y-3 rounded border border-[#e7e0d5] bg-[#fffef9] px-3 py-3">
+              <label className="flex items-start gap-2 text-sm text-[#292524]">
+                <input
+                  type="checkbox"
+                  className="mt-1"
+                  checked={form.include_additional_income}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setForm((prev) => ({
+                      ...prev,
+                      include_additional_income: checked,
+                      ...(checked
+                        ? {
+                            additional_income_kind:
+                              prev.additional_income_kind || "government_benefits",
+                          }
+                        : {
+                            additional_income_kind: "",
+                            additional_monthly_net_income: "",
+                          }),
+                    }));
+                  }}
+                />
+                <span>
+                  {t(locale, "additionalIncomeToggle")}
+                  <span className="mt-0.5 block text-xs text-[#a8a29e]">
+                    {t(locale, "additionalIncomeHint")}
+                  </span>
+                </span>
+              </label>
+              {form.include_additional_income ? (
+                <>
+                  <label className="block text-sm text-[#57534e]">
+                    {t(locale, "additionalIncomeKind")}
+                    <select
+                      required
+                      value={form.additional_income_kind || "government_benefits"}
+                      onChange={(e) =>
+                        setField(
+                          "additional_income_kind",
+                          e.target.value as AdditionalIncomeKind
+                        )
+                      }
+                      className={inputClassFor("additional_income_kind")}
+                    >
+                      <option value="government_benefits">
+                        {t(locale, "additionalIncomeGovernment")}
+                      </option>
+                      <option value="other">
+                        {t(locale, "additionalIncomeOther")}
+                      </option>
+                    </select>
+                    {fieldHint("additional_income_kind")}
+                  </label>
+                  <label className="block text-sm text-[#57534e]">
+                    {t(locale, "additionalMonthlyNetIncome")}
+                    <span className="mt-0.5 block text-xs text-[#a8a29e]">
+                      {t(locale, "monthlyNetIncomeCad")}
+                    </span>
+                    <div className="relative mt-1">
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#78716c]">
+                        $
+                      </span>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        required
+                        value={form.additional_monthly_net_income}
+                        onChange={(e) =>
+                          setField("additional_monthly_net_income", e.target.value)
+                        }
+                        className={`${inputClassFor("additional_monthly_net_income")} pl-7`}
+                        placeholder="650"
+                      />
+                    </div>
+                    {fieldHint("additional_monthly_net_income")}
+                  </label>
+                  <p className="text-xs text-[#78716c]">
+                    {t(locale, "incomeAdditionalProofUploadHint")}
+                  </p>
+                </>
+              ) : null}
+            </div>
+          ) : null}
           <h3 className="pt-2 text-sm font-medium text-[#292524]">
             {t(locale, "incomeReferencesHeading")}
           </h3>

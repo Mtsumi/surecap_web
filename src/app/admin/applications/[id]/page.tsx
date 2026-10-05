@@ -205,6 +205,33 @@ function MemberCard({
                 <p className="admin-field-label">Employeur</p>
                 <p className="admin-field-value">{member.employer_name || "—"}</p>
               </div>
+              {member.monthly_net_income != null ? (
+                <AdminField
+                  label="Revenu net mensuel (emploi)"
+                  value={
+                    typeof member.monthly_net_income === "number"
+                      ? `$${member.monthly_net_income.toLocaleString("fr-CA", {
+                          maximumFractionDigits: 0,
+                        })}`
+                      : String(member.monthly_net_income)
+                  }
+                />
+              ) : null}
+              {member.additional_monthly_net_income ? (
+                <AdminField
+                  label="Revenu additionnel"
+                  value={`${
+                    member.additional_income_kind === "government_benefits"
+                      ? "Prestations"
+                      : member.additional_income_kind === "other"
+                        ? "Autre"
+                        : "Revenu"
+                  }: $${Number(member.additional_monthly_net_income).toLocaleString(
+                    "fr-CA",
+                    { maximumFractionDigits: 0 }
+                  )}`}
+                />
+              ) : null}
               <div className="rounded-md border border-[var(--ml-line)] bg-[var(--ml-paper)] p-3 space-y-1">
                 <p className="admin-field-label">Contact RH</p>
                 <p className="admin-field-value">{member.hr_name || "—"}</p>
@@ -1015,6 +1042,29 @@ export default function ApplicationDetailPage() {
                 </>
               ) : null}
               <AdminField label="Employeur" value={app.employer_name} />
+              {app.monthly_net_income != null ? (
+                <AdminField
+                  label="Revenu net mensuel (emploi)"
+                  value={`$${Number(app.monthly_net_income).toLocaleString("fr-CA", {
+                    maximumFractionDigits: 0,
+                  })}`}
+                />
+              ) : null}
+              {app.additional_monthly_net_income ? (
+                <AdminField
+                  label="Revenu additionnel"
+                  value={`${
+                    app.additional_income_kind === "government_benefits"
+                      ? "Prestations"
+                      : app.additional_income_kind === "other"
+                        ? "Autre"
+                        : "Revenu"
+                  }: $${Number(app.additional_monthly_net_income).toLocaleString(
+                    "fr-CA",
+                    { maximumFractionDigits: 0 }
+                  )}`}
+                />
+              ) : null}
               <AdminField label="Contact RH" value={app.hr_name} />
               <AdminField label="Tél. RH" value={app.hr_phone} />
             </dl>

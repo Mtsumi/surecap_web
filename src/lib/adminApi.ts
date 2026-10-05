@@ -76,6 +76,8 @@ export type ApplicationMember = {
   linkedin_url: string | null;
   employment_type?: string | null;
   monthly_net_income?: number | null;
+  additional_income_kind?: string | null;
+  additional_monthly_net_income?: number | null;
   documents?: MemberDocument[];
   identity?: MemberIdentityStatus | null;
 };
@@ -148,6 +150,10 @@ export type ApplicationDetail = {
   referral_source: string | null;
   facebook_url: string | null;
   linkedin_url: string | null;
+  employment_type?: string | null;
+  monthly_net_income?: number | null;
+  additional_income_kind?: string | null;
+  additional_monthly_net_income?: number | null;
   rejection_reason: string | null;
   accept_note?: string | null;
   rejection_email_locale?: string | null;

@@ -19,9 +19,15 @@ export type EmploymentType =
   | "other"
   | "no_income";
 
+export type AdditionalIncomeKind = "government_benefits" | "other";
+
 export const INCOME_DOCUMENT_SLOTS: Record<EmploymentType, readonly string[]> = {
-  employed: ["pay_slip_1", "pay_slip_2", "pay_slip_3"],
-  self_employed: ["notice_of_assessment_year_1", "notice_of_assessment_year_2"],
+  employed: ["pay_slip_1", "pay_slip_2", "pay_slip_3", "proof_of_income"],
+  self_employed: [
+    "notice_of_assessment_year_1",
+    "notice_of_assessment_year_2",
+    "proof_of_income",
+  ],
   other: ["proof_of_income"],
   no_income: [],
 };
@@ -36,6 +42,10 @@ export const REQUIRED_INCOME_DOCUMENT_SLOTS: Record<
   other: ["proof_of_income"],
   no_income: [],
 };
+
+export function employmentAllowsAdditionalIncome(type: EmploymentType): boolean {
+  return type === "employed" || type === "self_employed";
+}
 
 const INCOME_TYPES = new Set(
   Object.values(INCOME_DOCUMENT_SLOTS).flatMap((slots) => [...slots])
@@ -62,29 +72,47 @@ export function incomeSlotsForType(type: EmploymentType): readonly string[] {
   return INCOME_DOCUMENT_SLOTS[type];
 }
 
+export type IncomeUploadOptions = {
+  /** When true, proof_of_income is required (additional income source). */
+  requireAdditionalProof?: boolean;
+};
+
 export function requiredIncomeSlotsForType(
-  type: EmploymentType
+  type: EmploymentType,
+  options?: IncomeUploadOptions
 ): readonly string[] {
-  return REQUIRED_INCOME_DOCUMENT_SLOTS[type];
+  const base = REQUIRED_INCOME_DOCUMENT_SLOTS[type];
+  if (
+    options?.requireAdditionalProof &&
+    employmentAllowsAdditionalIncome(type) &&
+    !base.includes("proof_of_income")
+  ) {
+    return [...base, "proof_of_income"];
+  }
+  return base;
 }
 
 export function isOptionalIncomeSlot(
   type: EmploymentType,
-  slot: string
+  slot: string,
+  options?: IncomeUploadOptions
 ): boolean {
   return (
     incomeSlotsForType(type).includes(slot) &&
-    !requiredIncomeSlotsForType(type).includes(slot)
+    !requiredIncomeSlotsForType(type, options).includes(slot)
   );
 }
 
 export function incomeUploadComplete(
   type: EmploymentType,
-  uploadedTypes: Iterable<string>
+  uploadedTypes: Iterable<string>,
+  options?: IncomeUploadOptions
 ): boolean {
   if (!employmentRequiresIncome(type)) return true;
   const uploaded = new Set(uploadedTypes);
-  return requiredIncomeSlotsForType(type).every((slot) => uploaded.has(slot));
+  return requiredIncomeSlotsForType(type, options).every((slot) =>
+    uploaded.has(slot)
+  );
 }
 
 export function staleIncomeDocumentTypes(

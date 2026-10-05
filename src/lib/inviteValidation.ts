@@ -8,7 +8,7 @@ import {
   validatePhoneFormat,
   validatePhones,
 } from "./applyValidation";
-import { parseMonthlyNetIncome, type EmploymentType } from "./incomeUpload";
+import { parseMonthlyNetIncome, type AdditionalIncomeKind, type EmploymentType, employmentAllowsAdditionalIncome } from "./incomeUpload";
 import { toAddressValidationInput } from "./addressFormUtils";
 
 export type InviteeRole = "roommate" | "guarantor";
@@ -44,6 +44,9 @@ export type InviteeFormFields = {
   hr_phone: string;
   employment_type: EmploymentType;
   monthly_net_income: string;
+  include_additional_income: boolean;
+  additional_income_kind: AdditionalIncomeKind | "";
+  additional_monthly_net_income: string;
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
@@ -157,6 +160,18 @@ export function inviteeFieldErrors(
       })
     )
   );
+
+  if (
+    employmentAllowsAdditionalIncome(fields.employment_type) &&
+    fields.include_additional_income
+  ) {
+    if (!(fields.additional_income_kind || "").trim()) {
+      errors.additional_income_kind = "required";
+    }
+    if (!parseMonthlyNetIncome(fields.additional_monthly_net_income)) {
+      errors.additional_monthly_net_income = "required";
+    }
+  }
 
   return errors;
 }

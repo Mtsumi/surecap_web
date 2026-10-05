@@ -22,19 +22,28 @@ describe("incomeUpload", () => {
       "pay_slip_1",
       "pay_slip_2",
       "pay_slip_3",
+      "proof_of_income",
     ]);
     expect(requiredIncomeSlotsForType("employed")).toEqual(["pay_slip_1"]);
     expect(incomeSlotsForType("self_employed")).toEqual([
       "notice_of_assessment_year_1",
       "notice_of_assessment_year_2",
+      "proof_of_income",
     ]);
     expect(incomeSlotsForType("other")).toEqual(["proof_of_income"]);
     expect(incomeSlotsForType("no_income")).toEqual([]);
   });
 
-  it("marks optional employed pay slips", () => {
+  it("marks optional employed pay slips and additional proof", () => {
     expect(isOptionalIncomeSlot("employed", "pay_slip_2")).toBe(true);
     expect(isOptionalIncomeSlot("employed", "pay_slip_1")).toBe(false);
+    expect(isOptionalIncomeSlot("employed", "proof_of_income")).toBe(true);
+    expect(isOptionalIncomeSlot("self_employed", "proof_of_income")).toBe(true);
+    expect(
+      isOptionalIncomeSlot("employed", "proof_of_income", {
+        requireAdditionalProof: true,
+      })
+    ).toBe(false);
   });
 
   it("detects complete income uploads", () => {
@@ -42,6 +51,16 @@ describe("incomeUpload", () => {
       incomeUploadComplete("employed", ["pay_slip_1", "pay_slip_2", "pay_slip_3"])
     ).toBe(true);
     expect(incomeUploadComplete("employed", ["pay_slip_1"])).toBe(true);
+    expect(
+      incomeUploadComplete("employed", ["pay_slip_1"], {
+        requireAdditionalProof: true,
+      })
+    ).toBe(false);
+    expect(
+      incomeUploadComplete("employed", ["pay_slip_1", "proof_of_income"], {
+        requireAdditionalProof: true,
+      })
+    ).toBe(true);
     expect(incomeUploadComplete("employed", [])).toBe(false);
     expect(incomeUploadComplete("no_income", [])).toBe(true);
     expect(employmentRequiresIncome("no_income")).toBe(false);

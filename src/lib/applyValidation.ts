@@ -4,7 +4,11 @@ import {
   isValidPhone,
   normalizePhoneDigits,
 } from "./phoneValidation";
-import { EmploymentType, parseMonthlyNetIncome } from "./incomeUpload";
+import {
+  EmploymentType,
+  employmentAllowsAdditionalIncome,
+  parseMonthlyNetIncome,
+} from "./incomeUpload";
 import { isPickedCanadianAddress } from "./canadianPostal";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -75,6 +79,9 @@ export type ApplyValidationInput = {
   hr_phone: string;
   employment_type: EmploymentType;
   monthly_net_income: string;
+  additional_income_kind?: string;
+  additional_monthly_net_income?: string;
+  include_additional_income?: boolean;
 } & AddressDatesInput;
 
 function localDateString(): string {
@@ -610,6 +617,9 @@ export function incomeFieldErrors(
     | "hr_phone"
     | "landlord_phone"
     | "employment_type"
+    | "additional_income_kind"
+    | "additional_monthly_net_income"
+    | "include_additional_income"
   >
 ): ApplyFieldErrors {
   if (fields.employment_type === "no_income") {
@@ -638,6 +648,21 @@ export function incomeFieldErrors(
       errors.hr_phone = same;
     }
   }
+
+  if (
+    employmentAllowsAdditionalIncome(fields.employment_type) &&
+    fields.include_additional_income
+  ) {
+    const kind = (fields.additional_income_kind ?? "").trim();
+    const amount = parseMonthlyNetIncome(fields.additional_monthly_net_income ?? "");
+    if (!kind) {
+      errors.additional_income_kind = "required";
+    }
+    if (!amount) {
+      errors.additional_monthly_net_income = "required";
+    }
+  }
+
   return errors;
 }
 
