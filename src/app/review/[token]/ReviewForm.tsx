@@ -6,8 +6,10 @@ import {
   JanitorReview,
   JanitorReviewChecklist,
   JanitorReviewMember,
+  confirmReviewMemberIdentity,
   fetchJanitorReview,
   fetchReviewCreditConsentBlob,
+  fetchReviewDocumentBlob,
   fetchReviewRejectionEmailDraft,
   submitJanitorReview,
 } from "@/lib/api";
@@ -18,6 +20,10 @@ import RejectionEmailComposer, {
   type RejectionComposeValues,
 } from "@/app/admin/components/RejectionEmailComposer";
 import SteveCreditDecision from "@/app/admin/components/SteveCreditDecision";
+import MemberIdentityPanel, {
+  IdentityGateBanner,
+  IdentityUnlockStrip,
+} from "@/app/admin/components/MemberIdentityPanel";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   called_landlord: false,
@@ -141,10 +147,82 @@ function CreditConsentPreview({
 function MemberCard({
   member,
   token,
+  disabled,
+  submitting,
+  onIdentityUpdated,
+  onIdentityFlash,
 }: {
   member: JanitorReviewMember;
   token: string;
+  disabled?: boolean;
+  submitting?: boolean;
+  onIdentityUpdated: (review: JanitorReview) => void;
+  onIdentityFlash?: (message: string) => void;
 }) {
+  const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
+  const [idIsPdf, setIdIsPdf] = useState(false);
+  const [idError, setIdError] = useState<string | null>(null);
+  const [identityBusy, setIdentityBusy] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      if (idPreviewUrl) URL.revokeObjectURL(idPreviewUrl);
+    };
+  }, [idPreviewUrl]);
+
+  async function openDoc(
+    docId: number | null | undefined,
+    failMessage: string
+  ) {
+    if (!docId) return;
+    setIdError(null);
+    try {
+      const blob = await fetchReviewDocumentBlob(token, docId, "inline");
+      if (idPreviewUrl) URL.revokeObjectURL(idPreviewUrl);
+      setIdIsPdf(
+        blob.type.includes("pdf") || blob.type === "application/octet-stream"
+      );
+      setIdPreviewUrl(URL.createObjectURL(blob));
+      const refreshed = await fetchJanitorReview(token);
+      onIdentityUpdated(refreshed);
+    } catch (err: unknown) {
+      setIdError(err instanceof Error ? err.message : failMessage);
+    }
+  }
+
+  async function openId() {
+    await openDoc(
+      member.identity?.id_document_id,
+      "Impossible d'ouvrir la pièce d'identité"
+    );
+  }
+
+  async function openSelfie() {
+    await openDoc(
+      member.identity?.selfie_document_id,
+      "Impossible d'ouvrir le selfie"
+    );
+  }
+
+  async function confirm(met: boolean) {
+    setIdentityBusy(true);
+    try {
+      const updated = await confirmReviewMemberIdentity(token, member.id, met);
+      onIdentityUpdated(updated);
+      if (met) {
+        onIdentityFlash?.(`Rencontre confirmée pour ${member.name}.`);
+      } else {
+        onIdentityFlash?.(
+          `Selfie demandé pour ${member.name}: un courriel avec le lien de vérification a été envoyé au demandeur.`
+        );
+      }
+    } catch (err: unknown) {
+      setIdError(err instanceof Error ? err.message : "Échec de la confirmation");
+    } finally {
+      setIdentityBusy(false);
+    }
+  }
+
   return (
     <section className={adminUi.card}>
       <div className={adminUi.cardHeader}>
@@ -154,6 +232,38 @@ function MemberCard({
         </h2>
       </div>
       <dl className={`${adminUi.cardPad} grid gap-3 sm:grid-cols-2`}>
+        <MemberIdentityPanel
+          memberId={member.id}
+          memberName={member.name}
+          identity={member.identity}
+          disabled={disabled}
+          submitting={submitting || identityBusy}
+          onOpenId={openId}
+          onOpenSelfie={openSelfie}
+          onConfirmMet={() => confirm(true)}
+          onConfirmNotMet={() => confirm(false)}
+        />
+        {idError ? (
+          <div className="sm:col-span-2 text-sm text-[#7f1d1d]">{idError}</div>
+        ) : null}
+        {idPreviewUrl ? (
+          <div className="sm:col-span-2">
+            {idIsPdf ? (
+              <iframe
+                title="Document d'identité"
+                src={idPreviewUrl}
+                className="mt-1 h-80 w-full rounded border border-[var(--ml-line)] bg-white"
+              />
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={idPreviewUrl}
+                alt="Document d'identité"
+                className="mt-1 max-h-96 w-full rounded border border-[var(--ml-line)] object-contain bg-white"
+              />
+            )}
+          </div>
+        ) : null}
         <ContactRow label="Locateur" value={member.landlord_name} />
         <ContactRow label="Téléphone locateur" value={member.landlord_phone} />
         <ContactRow label="Locateur précédent" value={member.previous_landlord_name} />
@@ -185,6 +295,17 @@ export default function ReviewForm({ token }: { token: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [showRefuse, setShowRefuse] = useState(false);
   const [checklist, setChecklist] = useState<JanitorReviewChecklist>(EMPTY_CHECKLIST);
+  const [stripBusy, setStripBusy] = useState(false);
+  const [stripIdPreviewUrl, setStripIdPreviewUrl] = useState<string | null>(null);
+  const [stripIdIsPdf, setStripIdIsPdf] = useState(false);
+  const [stripIdError, setStripIdError] = useState<string | null>(null);
+  const [identityFlash, setIdentityFlash] = useState<string | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (stripIdPreviewUrl) URL.revokeObjectURL(stripIdPreviewUrl);
+    };
+  }, [stripIdPreviewUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -213,6 +334,68 @@ export default function ReviewForm({ token }: { token: string }) {
       checklist.called_landlord && checklist.called_employer && checklist.checked_social,
     [checklist]
   );
+
+  async function openStripDoc(
+    docId: number | null | undefined,
+    failMessage: string
+  ) {
+    if (!docId) return;
+    setStripIdError(null);
+    setStripBusy(true);
+    try {
+      const blob = await fetchReviewDocumentBlob(token, docId, "inline");
+      if (stripIdPreviewUrl) URL.revokeObjectURL(stripIdPreviewUrl);
+      setStripIdIsPdf(
+        blob.type.includes("pdf") || blob.type === "application/octet-stream"
+      );
+      setStripIdPreviewUrl(URL.createObjectURL(blob));
+      const refreshed = await fetchJanitorReview(token);
+      setReview(refreshed);
+    } catch (err: unknown) {
+      setStripIdError(err instanceof Error ? err.message : failMessage);
+    } finally {
+      setStripBusy(false);
+    }
+  }
+
+  async function openStripId(member: JanitorReviewMember) {
+    await openStripDoc(
+      member.identity?.id_document_id,
+      "Impossible d'ouvrir la pièce d'identité"
+    );
+  }
+
+  async function openStripSelfie(member: JanitorReviewMember) {
+    await openStripDoc(
+      member.identity?.selfie_document_id,
+      "Impossible d'ouvrir le selfie"
+    );
+  }
+
+  async function confirmStrip(memberId: number, met: boolean) {
+    setStripBusy(true);
+    setStripIdError(null);
+    setIdentityFlash(null);
+    try {
+      const updated = await confirmReviewMemberIdentity(token, memberId, met);
+      setReview(updated);
+      const member = updated.members.find((m) => m.id === memberId);
+      const name = member?.name || "le locataire";
+      if (met) {
+        setIdentityFlash(`Rencontre confirmée pour ${name}.`);
+      } else {
+        setIdentityFlash(
+          `Selfie demandé pour ${name}: un courriel avec le lien de vérification a été envoyé au demandeur.`
+        );
+      }
+    } catch (err: unknown) {
+      setStripIdError(
+        err instanceof Error ? err.message : "Échec de la confirmation"
+      );
+    } finally {
+      setStripBusy(false);
+    }
+  }
 
   async function runAction(
     action: "request_credit_check" | "accept" | "reject" | "offer_guarantor",
@@ -295,6 +478,62 @@ export default function ReviewForm({ token }: { token: string }) {
       </div>
 
       {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
+      {identityFlash ? (
+        <p className={`${adminUi.alertSuccess} mt-4`}>{identityFlash}</p>
+      ) : null}
+
+      {review.stage !== "done" ? (
+        <div className="mt-4">
+          <IdentityGateBanner
+            ready={review.identity?.ready_for_accept !== false}
+            blockers={review.identity?.blockers}
+            matchFlags={review.identity?.match_flags}
+          />
+          {/* Janitor: identity actions live inside Vérifications. Steve: strip if still blocked. */}
+          {review.stage !== "janitor" ? (
+            <IdentityUnlockStrip
+              disabled={false}
+              submitting={submitting || stripBusy}
+              items={review.members
+                .filter(
+                  (m) =>
+                    m.identity?.applies &&
+                    m.identity.ready_for_accept === false
+                )
+                .map((m) => ({
+                  memberId: m.id,
+                  name: m.name,
+                  identity: m.identity!,
+                  onOpenId: () => openStripId(m),
+                  onOpenSelfie: () => openStripSelfie(m),
+                  onConfirmMet: () => confirmStrip(m.id, true),
+                  onConfirmNotMet: () => confirmStrip(m.id, false),
+                }))}
+            />
+          ) : null}
+          {stripIdError ? (
+            <p className={`${adminUi.alertError} mt-2`}>{stripIdError}</p>
+          ) : null}
+          {stripIdPreviewUrl ? (
+            <div className="mt-3">
+              {stripIdIsPdf ? (
+                <iframe
+                  title="Pièce d'identité"
+                  src={stripIdPreviewUrl}
+                  className="h-80 w-full rounded border border-[var(--ml-line)] bg-white"
+                />
+              ) : (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={stripIdPreviewUrl}
+                  alt="Pièce d'identité"
+                  className="max-h-96 w-full rounded border border-[var(--ml-line)] object-contain bg-white"
+                />
+              )}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {review.stage === "done" ? (
         <section className={`${adminUi.cardPad} ${adminUi.card} mt-6`}>
@@ -339,50 +578,121 @@ export default function ReviewForm({ token }: { token: string }) {
 
       <div className={`${adminUi.sectionGap} mt-6`}>
         {review.members.map((member) => (
-          <MemberCard key={member.id} member={member} token={token} />
+          <MemberCard
+            key={member.id}
+            member={member}
+            token={token}
+            disabled={review.stage === "done"}
+            submitting={submitting}
+            onIdentityUpdated={setReview}
+            onIdentityFlash={setIdentityFlash}
+          />
         ))}
       </div>
 
       {review.stage !== "done" ? (
-        <section className={`${adminUi.card} mt-8`}>
+        <section className={`${adminUi.card} mt-8`} id="verifications-section">
           <div className={adminUi.cardHeader}>
             <h2 className={adminUi.sectionTitle}>Vérifications</h2>
             <p className={adminUi.pageSubtitle}>
               {review.stage === "janitor"
-                ? "Cochez les trois points avant d’envoyer le dossier ou de refuser."
-                : "Appels déjà faits par le concierge. Après le crédit, choisissez ci-dessous."}
+                ? "Complétez identité et les trois appels/contrôles avant d’envoyer le dossier à Steve."
+                : "Contrôles déjà faits par le concierge. Après le crédit, choisissez ci-dessous."}
             </p>
           </div>
-          <div className={`${adminUi.cardPad} space-y-3`}>
-            {(
-              [
-                ["called_landlord", "J’ai appelé le(s) locateur(s)"],
-                ["called_employer", "J’ai appelé l’employeur / les RH"],
-                ["checked_social", "J’ai vérifié Facebook"],
-              ] as const
-            ).map(([key, label]) => (
-              <label key={key} className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">
+          <div className={`${adminUi.cardPad} space-y-4`}>
+            <div className="space-y-3">
+              <label className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">
                 <input
                   type="checkbox"
                   className="mt-0.5"
-                  checked={checklist[key]}
-                  disabled={review.stage !== "janitor" || submitting || showRefuse}
-                  onChange={(event) =>
-                    setChecklist((current) => ({ ...current, [key]: event.target.checked }))
-                  }
+                  checked={review.identity?.ready_for_accept !== false}
+                  disabled
+                  readOnly
                 />
-                <span>{label}</span>
+                <span>
+                  Identité confirmée (rencontre après ouverture de la pièce
+                  d&apos;identité / selfie)
+                  {review.stage === "janitor" &&
+                  review.identity?.ready_for_accept === false ? (
+                    <span className="mt-0.5 block text-[var(--ml-steel)]">
+                      Ouvrez la pièce d&apos;identité, puis confirmez la
+                      rencontre ou demandez un selfie ci-dessous.
+                    </span>
+                  ) : null}
+                </span>
               </label>
-            ))}
+              {(
+                [
+                  ["called_landlord", "J’ai appelé le(s) locateur(s)"],
+                  ["called_employer", "J’ai appelé l’employeur / les RH"],
+                  ["checked_social", "J’ai vérifié Facebook"],
+                ] as const
+              ).map(([key, label]) => (
+                <label
+                  key={key}
+                  className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
+                >
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={checklist[key]}
+                    disabled={
+                      review.stage !== "janitor" || submitting || showRefuse
+                    }
+                    onChange={(event) =>
+                      setChecklist((current) => ({
+                        ...current,
+                        [key]: event.target.checked,
+                      }))
+                    }
+                  />
+                  <span>{label}</span>
+                </label>
+              ))}
+            </div>
+            {review.stage === "janitor" &&
+            review.identity?.ready_for_accept === false ? (
+              <div className="space-y-3 border-t border-[var(--ml-line)] pt-3">
+                <p className="text-sm font-medium text-[var(--ml-ink)]">
+                  Identité des locataires
+                </p>
+                {review.members
+                  .filter(
+                    (m) =>
+                      m.identity?.applies &&
+                      m.identity.ready_for_accept === false
+                  )
+                  .map((m) => (
+                    <MemberIdentityPanel
+                      key={m.id}
+                      memberId={m.id}
+                      memberName={m.name}
+                      identity={m.identity}
+                      disabled={false}
+                      submitting={submitting || stripBusy}
+                      anchor
+                      onOpenId={() => openStripId(m)}
+                      onOpenSelfie={() => openStripSelfie(m)}
+                      onConfirmMet={() => confirmStrip(m.id, true)}
+                      onConfirmNotMet={() => confirmStrip(m.id, false)}
+                    />
+                  ))}
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}
 
       {review.stage === "janitor" ? (
-        <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-start">
           <button
             type="button"
-            disabled={!allChecked || submitting}
+            disabled={
+              !allChecked ||
+              submitting ||
+              review.identity?.ready_for_accept === false
+            }
             className={`${adminUi.btnPrimary} disabled:opacity-50`}
             onClick={() => void runAction("request_credit_check")}
           >
@@ -397,6 +707,12 @@ export default function ReviewForm({ token }: { token: string }) {
           offerSentAt={review.guarantor_offer_sent_at}
           submitting={submitting}
           showRefuse={showRefuse}
+          acceptDisabled={review.identity?.ready_for_accept === false}
+          acceptDisabledReason={
+            review.identity?.ready_for_accept === false
+              ? "Identité incomplète: la rencontre doit être confirmée pour chaque locataire."
+              : null
+          }
           loadRejectionDraft={({ locale, reason: draftReason }) =>
             fetchReviewRejectionEmailDraft(token, {
               locale,

@@ -718,6 +718,33 @@ export function deleteInviteDocument(
 
 export type JanitorReviewStage = "janitor" | "steve" | "done";
 
+export type MemberIdentityStatus = {
+  applies: boolean;
+  ready_for_accept: boolean;
+  id_document_id?: number | null;
+  selfie_document_id?: number | null;
+  id_viewed: boolean;
+  met_in_person?: boolean | null;
+  selfie_requested: boolean;
+  selfie_uploaded: boolean;
+  match_status?: string | null;
+  match_notes?: string | null;
+  blocking_reason?: string | null;
+  confirmed_at?: string | null;
+  confirmed_by?: string | null;
+};
+
+export type ApplicationIdentityGate = {
+  ready_for_accept: boolean;
+  blockers: Array<{ member_id: number; name: string; reason: string }>;
+  match_flags: Array<{
+    member_id: number;
+    name: string;
+    match_status: string;
+    notes?: string | null;
+  }>;
+};
+
 export type JanitorReviewMember = {
   id: number;
   role: string;
@@ -732,6 +759,7 @@ export type JanitorReviewMember = {
   facebook_url?: string | null;
   linkedin_url?: string | null;
   credit_consent_document_id?: number | null;
+  identity?: MemberIdentityStatus | null;
 };
 
 export type JanitorReviewChecklist = {
@@ -757,6 +785,7 @@ export type JanitorReview = {
   has_guarantor?: boolean;
   guarantor_offer_sent_at?: string | null;
   token_expired: boolean;
+  identity?: ApplicationIdentityGate | null;
 };
 
 export type RejectionEmailDraft = {
@@ -802,7 +831,7 @@ export function reviewCreditConsentPath(token: string, documentId: number): stri
   return `/admin/janitor-review/${encodeURIComponent(token)}/documents/${documentId}/file`;
 }
 
-export async function fetchReviewCreditConsentBlob(
+export async function fetchReviewDocumentBlob(
   token: string,
   documentId: number,
   disposition: "inline" | "attachment" = "inline"
@@ -818,13 +847,23 @@ export async function fetchReviewCreditConsentBlob(
     throw new Error("Impossible de joindre le serveur. Vérifiez la connexion, puis réessayez.");
   }
   if (!res.ok) {
-    throw new Error("Impossible d'ouvrir le formulaire de crédit.");
+    throw new Error("Impossible d'ouvrir le document.");
   }
   const buffer = await res.arrayBuffer();
   if (buffer.byteLength === 0) {
     throw new Error("Fichier vide ou introuvable");
   }
-  return new Blob([buffer], { type: "application/pdf" });
+  const contentType = res.headers.get("content-type") || "application/octet-stream";
+  return new Blob([buffer], { type: contentType });
+}
+
+/** @deprecated Prefer fetchReviewDocumentBlob — kept for credit consent callers. */
+export async function fetchReviewCreditConsentBlob(
+  token: string,
+  documentId: number,
+  disposition: "inline" | "attachment" = "inline"
+): Promise<Blob> {
+  return fetchReviewDocumentBlob(token, documentId, disposition);
 }
 
 export function submitJanitorReview(
@@ -844,5 +883,46 @@ export function submitJanitorReview(
       method: "POST",
       body: JSON.stringify(payload),
     }
+  );
+}
+
+export function confirmReviewMemberIdentity(
+  token: string,
+  memberId: number,
+  metInPerson: boolean
+): Promise<JanitorReview> {
+  return apiFetch<JanitorReview>(
+    `/admin/janitor-review/${encodeURIComponent(token)}/members/${memberId}/identity`,
+    {
+      method: "POST",
+      body: JSON.stringify({ met_in_person: metInPerson }),
+    }
+  );
+}
+
+export type IdentitySelfieContext = {
+  member_name: string;
+  locale: "en" | "fr";
+  selfie_uploaded: boolean;
+  application_closed: boolean;
+};
+
+export function fetchIdentitySelfieContext(
+  token: string
+): Promise<IdentitySelfieContext> {
+  return apiFetch<IdentitySelfieContext>(
+    `/applications/identity-selfie/${encodeURIComponent(token)}`
+  );
+}
+
+export async function uploadIdentitySelfie(
+  token: string,
+  file: File
+): Promise<IdentitySelfieContext> {
+  const form = new FormData();
+  form.append("file", file);
+  return apiFetchForm<IdentitySelfieContext>(
+    `/applications/identity-selfie/${encodeURIComponent(token)}`,
+    form
   );
 }

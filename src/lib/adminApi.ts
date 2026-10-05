@@ -76,6 +76,23 @@ export type ApplicationMember = {
   employment_type?: string | null;
   monthly_net_income?: number | null;
   documents?: MemberDocument[];
+  identity?: MemberIdentityStatus | null;
+};
+
+export type MemberIdentityStatus = {
+  applies: boolean;
+  ready_for_accept: boolean;
+  id_document_id?: number | null;
+  selfie_document_id?: number | null;
+  id_viewed: boolean;
+  met_in_person?: boolean | null;
+  selfie_requested: boolean;
+  selfie_uploaded: boolean;
+  match_status?: string | null;
+  match_notes?: string | null;
+  blocking_reason?: string | null;
+  confirmed_at?: string | null;
+  confirmed_by?: string | null;
 };
 
 export type HouseholdAffordability = {
@@ -89,6 +106,12 @@ export type HouseholdAffordability = {
   ocr_ratio: number | null;
   ocr_tone: string;
   ocr_label: string;
+};
+
+export type JanitorReviewChecklist = {
+  called_landlord: boolean;
+  called_employer: boolean;
+  checked_social: boolean;
 };
 
 export type ApplicationDetail = {
@@ -150,6 +173,8 @@ export type ApplicationDetail = {
   /** E-U3: TAL/SOQUIJ flags that should be visible before Accept. */
   screening_concerns?: string[];
   screening_reviews?: string[];
+  janitor_review_checklist?: JanitorReviewChecklist | null;
+  credit_check_requested_at?: string | null;
 };
 
 export type ApplicationList = {
@@ -381,6 +406,33 @@ export function acceptApplication(id: number, acceptNote?: string | null) {
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+export function requestCreditCheck(
+  id: number,
+  checklist: JanitorReviewChecklist
+) {
+  return adminFetch<ApplicationDetail>(
+    `/admin/applications/${id}/request-credit-check`,
+    {
+      method: "POST",
+      body: JSON.stringify(checklist),
+    }
+  );
+}
+
+export function confirmMemberIdentity(
+  applicationId: number,
+  memberId: number,
+  metInPerson: boolean
+) {
+  return adminFetch<ApplicationDetail>(
+    `/admin/applications/${applicationId}/members/${memberId}/identity`,
+    {
+      method: "POST",
+      body: JSON.stringify({ met_in_person: metInPerson }),
+    }
+  );
 }
 
 export function rejectApplication(id: number, payload: RejectApplicationPayload) {

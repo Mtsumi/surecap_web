@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { ApplicationMember } from "@/lib/adminApi";
 import { regenerateApplicationSummary } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
@@ -44,6 +44,8 @@ type ApplicationDocumentsProps = {
   memberDisplayName: (member: ApplicationMember) => string;
   onSummaryRegenerated?: () => void;
   reviewRequest?: DocumentReviewRequest | null;
+  /** Fired after a member document preview loads (e.g. ID viewed for identity gate). */
+  onMemberDocumentPreviewed?: (document: MemberDocument) => void;
 };
 
 function DocumentPreviewModal({
@@ -53,6 +55,7 @@ function DocumentPreviewModal({
   onPrev,
   onNext,
   positionLabel,
+  onMemberDocumentPreviewed,
 }: {
   applicationId: number;
   target: PreviewTarget;
@@ -60,10 +63,14 @@ function DocumentPreviewModal({
   onPrev?: () => void;
   onNext?: () => void;
   positionLabel?: string | null;
+  onMemberDocumentPreviewed?: (document: MemberDocument) => void;
 }) {
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const onPreviewedRef = useRef(onMemberDocumentPreviewed);
+  onPreviewedRef.current = onMemberDocumentPreviewed;
+  const notifiedDocIdRef = useRef<number | null>(null);
 
   const filename =
     target.kind === "member" ? target.document.original_filename : target.filename;
@@ -75,6 +82,8 @@ function DocumentPreviewModal({
     target.kind === "member"
       ? isPdfDocument(target.document)
       : isPdfContentType(target.contentType);
+  const memberDocumentId =
+    target.kind === "member" ? target.document.id : null;
 
   useEffect(() => {
     let cancelled = false;
@@ -96,6 +105,13 @@ function DocumentPreviewModal({
         if (cancelled) return;
         objectUrl = URL.createObjectURL(blob);
         setBlobUrl(objectUrl);
+        if (
+          target.kind === "member" &&
+          notifiedDocIdRef.current !== target.document.id
+        ) {
+          notifiedDocIdRef.current = target.document.id;
+          onPreviewedRef.current?.(target.document);
+        }
       } catch (e) {
         if (!cancelled) {
           setError(e instanceof Error ? e.message : "Impossible d'ouvrir le fichier");
@@ -111,7 +127,7 @@ function DocumentPreviewModal({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [applicationId, fallbackContentType, target]);
+  }, [applicationId, fallbackContentType, memberDocumentId, target]);
 
   const onDownload = useCallback(async () => {
     try {
@@ -239,6 +255,7 @@ export default function ApplicationDocuments({
   memberDisplayName,
   onSummaryRegenerated,
   reviewRequest,
+  onMemberDocumentPreviewed,
 }: ApplicationDocumentsProps) {
   const [previewQueue, setPreviewQueue] = useState<PreviewTarget[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
@@ -268,7 +285,9 @@ export default function ApplicationDocuments({
       }))
     );
     setPreviewIndex(0);
-  }, [members, reviewRequest]);
+    // Only when a new reviewRequest is issued (nonce), not when members refresh after Met/Not-met.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: members listed for read at request time
+  }, [reviewRequest]);
 
   if (!summaryPdfAvailable && !hasMemberDocs && !dropboxDossierReady) {
     return <p className={adminUi.empty}>Aucun document téléversé pour cette demande.</p>;
@@ -453,6 +472,7 @@ export default function ApplicationDocuments({
         <DocumentPreviewModal
           applicationId={applicationId}
           target={preview}
+          onMemberDocumentPreviewed={onMemberDocumentPreviewed}
           onClose={() => {
             setPreviewQueue([]);
             setPreviewIndex(0);
