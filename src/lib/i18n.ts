@@ -469,7 +469,7 @@ export const messages = {
     idUploadLaterHint:
       "Pas de pièce d'identité sous la main? Continuez — revenez sur ce téléphone/navigateur pour prendre une photo avant d'envoyer.",
     idUploadCameraHint:
-      "Vous pouvez photographier votre pièce d'identité ou parcourir une image/PDF. Les photos sont compressées avant l'envoi.",
+      "Vous pouvez photographier votre pièce d'identité ou parcourir une image ou un PDF. Les photos sont compressées avant l'envoi.",
     idUploadImageOnly:
       "Veuillez téléverser une photo ou un PDF de votre pièce d'identité.",
     idTakePhoto: "Prendre une photo",
