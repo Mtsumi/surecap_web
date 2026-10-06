@@ -156,8 +156,8 @@ export const messages = {
     idUploadLaterHint:
       "Don't have your ID with you? Continue for now — come back on this phone/browser to take a photo before you submit.",
     idUploadCameraHint:
-      "Use your phone camera to photograph your ID. Photos are compressed before upload.",
-    idUploadImageOnly: "Please upload an image or PDF of your ID.",
+      "Use your phone camera to photograph your ID — gallery and PDF uploads are not allowed. Photos are compressed before upload.",
+    idUploadImageOnly: "Please take a photo of your ID with the camera (images only).",
     idTakePhoto: "Take photo",
     idRetakePhoto: "Retake photo",
     idBrowseFile: "Browse files",
@@ -469,9 +469,9 @@ export const messages = {
     idUploadLaterHint:
       "Pas de pièce d'identité sous la main? Continuez — revenez sur ce téléphone/navigateur pour prendre une photo avant d'envoyer.",
     idUploadCameraHint:
-      "Utilisez l'appareil photo pour photographier votre pièce d'identité. Les photos sont compressées avant l'envoi.",
+      "Utilisez l'appareil photo pour photographier votre pièce d'identité — la galerie et les PDF ne sont pas acceptés. Les photos sont compressées avant l'envoi.",
     idUploadImageOnly:
-      "Veuillez téléverser une photo ou un PDF de votre pièce d'identité.",
+      "Veuillez photographier votre pièce d'identité avec l'appareil photo (images seulement).",
     idTakePhoto: "Prendre une photo",
     idRetakePhoto: "Reprendre la photo",
     idBrowseFile: "Parcourir les fichiers",
