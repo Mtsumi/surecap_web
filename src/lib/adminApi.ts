@@ -405,6 +405,18 @@ export function fetchRejectionEmailDraft(
   );
 }
 
+export function fetchGuarantorOfferEmailDraft(
+  id: number,
+  opts?: { locale?: "fr" | "en" }
+) {
+  const params = new URLSearchParams();
+  if (opts?.locale) params.set("locale", opts.locale);
+  const q = params.toString();
+  return adminFetch<RejectionEmailDraft>(
+    `/admin/applications/${id}/guarantor-offer-email-draft${q ? `?${q}` : ""}`
+  );
+}
+
 export function acceptApplication(id: number, acceptNote?: string | null) {
   const body =
     acceptNote && acceptNote.trim()
@@ -456,10 +468,19 @@ export function rejectApplication(id: number, payload: RejectApplicationPayload)
   });
 }
 
-export function offerGuarantor(id: number) {
+export type OfferGuarantorPayload = {
+  locale?: "fr" | "en";
+  email_subject?: string;
+  email_body?: string;
+};
+
+export function offerGuarantor(id: number, payload?: OfferGuarantorPayload) {
   return adminFetch<ApplicationDetail>(
     `/admin/applications/${id}/offer-guarantor`,
-    { method: "POST" }
+    {
+      method: "POST",
+      body: JSON.stringify(payload ?? {}),
+    }
   );
 }
 

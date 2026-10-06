@@ -21,6 +21,10 @@ type Props = {
   onConfirm: (values: RejectionComposeValues) => void | Promise<void>;
   initialReason?: string;
   title?: string;
+  submitLabel?: string;
+  submitClassName?: string;
+  showReason?: boolean;
+  hint?: string;
 };
 
 export default function RejectionEmailComposer({
@@ -30,6 +34,10 @@ export default function RejectionEmailComposer({
   onConfirm,
   initialReason = "",
   title = "Courriel de refus au demandeur",
+  submitLabel = "Envoyer le refus",
+  submitClassName = adminUi.btnDanger,
+  showReason = true,
+  hint,
 }: Props) {
   const [reason, setReason] = useState(initialReason);
   const [locale, setLocale] = useState<"fr" | "en">("fr");
@@ -111,34 +119,43 @@ export default function RejectionEmailComposer({
     });
   };
 
+  const defaultHint = showReason
+    ? `Modifiez le courriel avant l'envoi. Le concierge est en copie (CC) lorsqu'une adresse est configurée${
+        janitorEmail ? ` (${janitorEmail})` : ""
+      }${ccJanitor ? "." : " — aucun CC pour ce dossier."}`
+    : `Modifiez le courriel avant l'envoi. Le lien d'ajout du garant est mis à jour à l'envoi, même si vous le retirez du texte.${
+        janitorEmail
+          ? ` Un avis distinct est envoyé au concierge (${janitorEmail}).`
+          : ""
+      }`;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-3 border-t border-[var(--ml-line)] pt-4">
       <h3 className="text-sm font-semibold text-[var(--ml-ink)]">{title}</h3>
-      <p className="text-xs text-[var(--ml-steel)]">
-        Modifiez le courriel avant l&apos;envoi. Le concierge est en copie (CC)
-        lorsqu&apos;une adresse est configurée
-        {janitorEmail ? ` (${janitorEmail})` : ""}
-        {ccJanitor ? "." : " — aucun CC pour ce dossier."}
-      </p>
+      <p className="text-xs text-[var(--ml-steel)]">{hint ?? defaultHint}</p>
 
-      <label className="block text-sm text-[var(--ml-steel)]">
-        Motif (dossier + ligne Motif/Reason)
-        <textarea
-          value={reason}
-          onChange={(e) => setReason(e.target.value)}
-          rows={2}
-          className={`${adminUi.textarea} mt-1`}
-          placeholder="Ex. crédit insuffisant"
-        />
-      </label>
-      <button
-        type="button"
-        disabled={loadingDraft || submitting}
-        onClick={() => void refreshDraft(locale, reason)}
-        className={`${adminUi.btnGhost} text-xs`}
-      >
-        Réinjecter le motif dans le brouillon
-      </button>
+      {showReason ? (
+        <>
+          <label className="block text-sm text-[var(--ml-steel)]">
+            Motif (dossier + ligne Motif/Reason)
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              rows={2}
+              className={`${adminUi.textarea} mt-1`}
+              placeholder="Ex. crédit insuffisant"
+            />
+          </label>
+          <button
+            type="button"
+            disabled={loadingDraft || submitting}
+            onClick={() => void refreshDraft(locale, reason)}
+            className={`${adminUi.btnGhost} text-xs`}
+          >
+            Réinjecter le motif dans le brouillon
+          </button>
+        </>
+      ) : null}
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
         <span className="text-[var(--ml-steel)]">Langue</span>
@@ -196,9 +213,9 @@ export default function RejectionEmailComposer({
         <button
           type="submit"
           disabled={submitting || loadingDraft || !body.trim() || !subject.trim()}
-          className={`${adminUi.btnDanger} disabled:opacity-50`}
+          className={`${submitClassName} disabled:opacity-50`}
         >
-          Envoyer le refus
+          {submitLabel}
         </button>
         <button
           type="button"

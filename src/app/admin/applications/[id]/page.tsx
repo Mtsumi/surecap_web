@@ -13,6 +13,7 @@ import {
   acceptApplication,
   adminMe,
   confirmMemberIdentity,
+  fetchGuarantorOfferEmailDraft,
   fetchRejectionEmailDraft,
   getApplication,
   getApplicationJobs,
@@ -343,6 +344,7 @@ export default function ApplicationDetailPage() {
   const [acceptNote, setAcceptNote] = useState("");
   const [checklist, setChecklist] = useState<JanitorReviewChecklist>(EMPTY_CHECKLIST);
   const [showRefuse, setShowRefuse] = useState(false);
+  const [showOffer, setShowOffer] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [reviewRequest, setReviewRequest] = useState<DocumentReviewRequest | null>(null);
@@ -569,19 +571,21 @@ export default function ApplicationDetailPage() {
     }
   };
 
-  const onOfferGuarantor = async () => {
-    const resend = Boolean(app?.guarantor_offer_sent_at);
-    const ok = window.confirm(
-      resend
-        ? "Renvoyer le courriel au demandeur pour proposer d'ajouter un garant?"
-        : "Envoyer un courriel au demandeur pour proposer d'ajouter un garant?"
-    );
-    if (!ok) return;
+  const onOfferGuarantor = async (values: RejectionComposeValues) => {
+    if (!values.email_body.trim() || !values.email_subject.trim()) {
+      setError("L'objet et le message du courriel sont obligatoires.");
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
-      const updated = await offerGuarantor(id);
+      const updated = await offerGuarantor(id, {
+        locale: values.locale,
+        email_subject: values.email_subject,
+        email_body: values.email_body,
+      });
       setApp(updated);
+      setShowOffer(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
     } finally {
@@ -760,6 +764,7 @@ export default function ApplicationDetailPage() {
                 offerSentAt={app.guarantor_offer_sent_at}
                 submitting={busy}
                 showRefuse={showRefuse}
+                showOffer={showOffer}
                 acceptDisabled={!identityReady}
                 acceptDisabledReason={
                   !identityReady
@@ -769,9 +774,20 @@ export default function ApplicationDetailPage() {
                 loadRejectionDraft={({ locale, reason: draftReason }) =>
                   fetchRejectionEmailDraft(id, { locale, reason: draftReason })
                 }
+                loadOfferDraft={({ locale }) =>
+                  fetchGuarantorOfferEmailDraft(id, { locale })
+                }
                 onApprove={() => void onAccept()}
-                onOfferGuarantor={() => void onOfferGuarantor()}
-                onShowRefuse={() => setShowRefuse(true)}
+                onShowOffer={() => {
+                  setShowRefuse(false);
+                  setShowOffer(true);
+                }}
+                onCancelOffer={() => setShowOffer(false)}
+                onConfirmOffer={(values) => void onOfferGuarantor(values)}
+                onShowRefuse={() => {
+                  setShowOffer(false);
+                  setShowRefuse(true);
+                }}
                 onCancelRefuse={() => setShowRefuse(false)}
                 onConfirmRefuse={(values) => onReject(values)}
               />
