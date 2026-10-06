@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { MemberIdentityStatus } from "@/lib/api";
 import { adminUi } from "@/lib/adminUi";
+import type { AdminMessageKey } from "@/lib/adminI18n";
+import { useAdminCopy } from "../AdminLocaleContext";
 
 export function identityMemberDomId(memberId: number): string {
   return `identity-member-${memberId}`;
@@ -14,43 +16,51 @@ export function scrollToIdentityMember(memberId: number): void {
   el.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function statusLabel(identity: MemberIdentityStatus): string {
-  if (!identity.applies) return "Non applicable (garant)";
-  if (identity.met_in_person === true) return "Rencontre confirmée";
+function statusLabel(
+  identity: MemberIdentityStatus,
+  t: (key: AdminMessageKey) => string
+): string {
+  if (!identity.applies) return t("identityNAguarantor");
+  if (identity.met_in_person === true) return t("identityMetConfirmed");
   if (identity.selfie_uploaded) {
     if (identity.match_status === "fail") {
-      return "Selfie reçu - correspondance à vérifier, puis confirmez la rencontre";
+      return t("identitySelfieFailReview");
     }
     if (identity.match_status === "pass") {
-      return "Selfie reçu - correspondance OK, confirmez la rencontre";
+      return t("identitySelfiePass");
     }
     if (identity.match_status === "pending") {
-      return "Selfie reçu - analyse en cours";
+      return t("identitySelfiePending");
     }
-    return "Selfie reçu - confirmez la rencontre";
+    return t("identitySelfieReceived");
   }
   if (identity.met_in_person === false) {
-    return "Selfie demandé - courriel envoyé au demandeur";
+    return t("identitySelfieRequested");
   }
-  if (!identity.id_document_id) return "Pièce d'identité manquante";
-  if (!identity.id_viewed) return "Ouvrir la pièce d'identité d'abord";
-  return "En attente de confirmation";
+  if (!identity.id_document_id) return t("identityIdMissing");
+  if (!identity.id_viewed) return t("identityOpenIdFirst");
+  return t("identityAwaitingConfirm");
 }
 
-export function identityNextStep(reason: string | null | undefined, name: string): string {
+export function identityNextStep(
+  reason: string | null | undefined,
+  name: string,
+  t: (key: AdminMessageKey) => string
+): string {
+  const withName = (key: AdminMessageKey) => t(key).replace("{name}", name);
   switch (reason) {
     case "id_not_viewed":
-      return `Pour ${name} : ouvrez la pièce d'identité, puis indiquez si vous l'avez rencontré(e).`;
+      return withName("identityNextIdNotViewed");
     case "identity_unconfirmed":
-      return `Pour ${name} : indiquez si vous l'avez rencontré(e) en personne.`;
+      return withName("identityNextUnconfirmed");
     case "selfie_pending":
-      return `Pour ${name} : selfie en attente. Vous pouvez aussi confirmer une rencontre si vous l'avez vu(e) depuis.`;
+      return withName("identityNextSelfiePending");
     case "selfie_awaiting_met":
-      return `Pour ${name} : selfie reçu — comparez avec la pièce d'identité, puis confirmez la rencontre.`;
+      return withName("identityNextSelfieAwaiting");
     case "id_missing":
-      return `Pour ${name} : pièce d'identité manquante sur le dossier.`;
+      return withName("identityNextIdMissing");
     default:
-      return `Pour ${name} : complétez la vérification d'identité.`;
+      return withName("identityNextDefault");
   }
 }
 
@@ -80,6 +90,7 @@ export default function MemberIdentityPanel({
   onConfirmMet: () => void | Promise<void>;
   onConfirmNotMet: () => void | Promise<void>;
 }) {
+  const { t } = useAdminCopy();
   const [choice, setChoice] = useState<MeetChoice>(null);
   const [idMatches, setIdMatches] = useState(false);
 
@@ -100,8 +111,8 @@ export default function MemberIdentityPanel({
   const showOpenSelfie =
     Boolean(identity.selfie_document_id && onOpenSelfie) && !metConfirmed;
   const title = memberName
-    ? `Vérification d'identité · ${memberName}`
-    : "Vérification d'identité";
+    ? t("identityTitleNamed").replace("{name}", memberName)
+    : t("identityTitle");
 
   const selectChoice = (next: MeetChoice) => {
     setChoice(next);
@@ -117,11 +128,9 @@ export default function MemberIdentityPanel({
     >
       <dt className="admin-field-label">{title}</dt>
       <dd className="admin-field-value mt-1 space-y-2">
-        <p className="text-sm text-[var(--ml-ink)]">{statusLabel(identity)}</p>
+        <p className="text-sm text-[var(--ml-ink)]">{statusLabel(identity, t)}</p>
         {matchFail ? (
-          <p className="text-sm text-[#7f1d1d]">
-            La photo ne correspond pas à la pièce d&apos;identité.
-          </p>
+          <p className="text-sm text-[#7f1d1d]">{t("identityMatchFailNote")}</p>
         ) : null}
         {showOpenId || showOpenSelfie ? (
           <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
@@ -132,9 +141,7 @@ export default function MemberIdentityPanel({
                 disabled={submitting}
                 onClick={() => void onOpenId?.()}
               >
-                {identity.id_viewed
-                  ? "Revoir la pièce d'identité"
-                  : "Ouvrir la pièce d'identité"}
+                {identity.id_viewed ? t("identityReopenId") : t("identityOpenId")}
               </button>
             ) : null}
             {showOpenSelfie ? (
@@ -144,7 +151,7 @@ export default function MemberIdentityPanel({
                 disabled={submitting}
                 onClick={() => void onOpenSelfie?.()}
               >
-                Voir le selfie
+                {t("identityViewSelfie")}
               </button>
             ) : null}
           </div>
@@ -152,7 +159,7 @@ export default function MemberIdentityPanel({
         {showActions ? (
           <div className="space-y-3">
             <p className="text-sm font-medium text-[var(--ml-ink)]">
-              Rencontré le demandeur en personne&nbsp;:
+              {t("identityMetQuestion")}
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <button
@@ -166,7 +173,7 @@ export default function MemberIdentityPanel({
                 }`}
                 onClick={() => selectChoice("oui")}
               >
-                Oui
+                {t("identityYes")}
               </button>
               {showRequestSelfie ? (
                 <button
@@ -180,7 +187,7 @@ export default function MemberIdentityPanel({
                   }`}
                   onClick={() => selectChoice("non")}
                 >
-                  Non
+                  {t("identityNo")}
                 </button>
               ) : null}
             </div>
@@ -194,10 +201,7 @@ export default function MemberIdentityPanel({
                     disabled={submitting}
                     onChange={(event) => setIdMatches(event.target.checked)}
                   />
-                  <span>
-                    La photo sur la pièce d&apos;identité correspond à la
-                    personne rencontrée
-                  </span>
+                  <span>{t("identityIdMatchesCheckbox")}</span>
                 </label>
                 <button
                   type="button"
@@ -205,14 +209,14 @@ export default function MemberIdentityPanel({
                   className={`${adminUi.btnPrimary} disabled:opacity-50`}
                   onClick={() => void onConfirmMet()}
                 >
-                  Confirmer la rencontre
+                  {t("identityConfirmMet")}
                 </button>
               </div>
             ) : null}
             {choice === "non" && showRequestSelfie ? (
               <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white/60 p-3">
                 <p className="text-sm text-[var(--ml-steel)]">
-                  Un courriel avec un lien de selfie sera envoyé au demandeur.
+                  {t("identitySelfieWillEmail")}
                 </p>
                 <button
                   type="button"
@@ -220,17 +224,14 @@ export default function MemberIdentityPanel({
                   className={`${adminUi.btnPrimary} disabled:opacity-50`}
                   onClick={() => void onConfirmNotMet()}
                 >
-                  Envoyer une demande de confirmation d&apos;identité
+                  {t("identitySendSelfieRequest")}
                 </button>
               </div>
             ) : null}
           </div>
         ) : null}
         {!identity.id_viewed && identity.id_document_id && showActions ? (
-          <p className="text-xs text-[var(--ml-steel)]">
-            Les boutons restent désactivés tant que la pièce d&apos;identité
-            n&apos;a pas été ouverte.
-          </p>
+          <p className="text-xs text-[var(--ml-steel)]">{t("identityButtonsLocked")}</p>
         ) : null}
       </dd>
     </div>
@@ -267,6 +268,7 @@ export function IdentityGateBanner({
     notes?: string | null;
   }>;
 }) {
+  const { t } = useAdminCopy();
   if (ready && !matchFlags?.length) return null;
 
   return (
@@ -279,14 +281,11 @@ export function IdentityGateBanner({
     >
       {!ready ? (
         <div className="space-y-2">
-          <p className="font-medium">
-            Acceptation bloquée: complétez l&apos;identité des locataires
-            ci-dessous.
-          </p>
+          <p className="font-medium">{t("identityGateBlocked")}</p>
           <ul className="list-disc space-y-1 pl-5">
             {(blockers || []).map((b) => (
               <li key={b.member_id}>
-                <span>{identityNextStep(b.reason, b.name)} </span>
+                <span>{identityNextStep(b.reason, b.name, t)} </span>
                 <button
                   type="button"
                   className="underline underline-offset-2"
@@ -303,7 +302,7 @@ export function IdentityGateBanner({
                     scrollToIdentityMember(b.member_id);
                   }}
                 >
-                  Aller à l&apos;identité
+                  {t("identityGoTo")}
                 </button>
               </li>
             ))}
@@ -312,8 +311,10 @@ export function IdentityGateBanner({
       ) : null}
       {matchFlags?.length ? (
         <p className={!ready ? "mt-2" : undefined}>
-          Correspondance selfie à vérifier:{" "}
-          {matchFlags.map((f) => f.name).join(", ")}.
+          {t("identityMatchFlags").replace(
+            "{names}",
+            matchFlags.map((f) => f.name).join(", ")
+          )}
         </p>
       ) : null}
     </div>
@@ -330,17 +331,15 @@ export function IdentityUnlockStrip({
   disabled?: boolean;
   submitting?: boolean;
 }) {
+  const { t } = useAdminCopy();
   const pending = items.filter((item) => !item.identity.ready_for_accept);
   if (pending.length === 0) return null;
 
   return (
     <section className={`${adminUi.card} mt-3`}>
       <div className={adminUi.cardHeader}>
-        <h2 className={adminUi.sectionTitle}>Identité à compléter</h2>
-        <p className={adminUi.pageSubtitle}>
-          Ouvrez la pièce d&apos;identité, puis indiquez si vous avez rencontré
-          le demandeur. Sans cela, l&apos;acceptation reste bloquée.
-        </p>
+        <h2 className={adminUi.sectionTitle}>{t("identityStripTitle")}</h2>
+        <p className={adminUi.pageSubtitle}>{t("identityStripSubtitle")}</p>
       </div>
       <div className={`${adminUi.cardPad} space-y-3`}>
         {pending.map((item) => (

@@ -1,7 +1,9 @@
 "use client";
 
-import { createContext, useContext } from "react";
+import { createContext, useCallback, useContext } from "react";
+import { type AdminMessageKey, adminT } from "@/lib/adminI18n";
 import { useAdminLocale } from "@/lib/useAdminLocale";
+import { useSyncedLocale } from "@/lib/useSyncedLocale";
 
 type AdminLocaleContextValue = ReturnType<typeof useAdminLocale>;
 
@@ -20,4 +22,21 @@ export function useAdminLocaleContext(): AdminLocaleContextValue {
     throw new Error("useAdminLocaleContext must be used within AdminLocaleProvider");
   }
   return ctx;
+}
+
+/** Admin shell or sticky locale (review token pages without AdminLocaleProvider). */
+export function useAdminCopy(): {
+  locale: "fr" | "en";
+  setLocale: (next: "fr" | "en") => void;
+  t: (key: AdminMessageKey) => string;
+} {
+  const ctx = useContext(AdminLocaleContext);
+  const synced = useSyncedLocale();
+  const locale = ctx?.locale ?? synced.locale;
+  const setLocale = ctx?.setLocale ?? synced.setLocale;
+  const t = useCallback(
+    (key: AdminMessageKey) => (ctx ? ctx.t(key) : adminT(locale, key)),
+    [ctx, locale]
+  );
+  return { locale, setLocale, t };
 }

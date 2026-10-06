@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { adminUi } from "@/lib/adminUi";
 import type { RejectionEmailDraft } from "@/lib/adminApi";
+import { useAdminCopy } from "../AdminLocaleContext";
 
 export type RejectionComposeValues = {
   reason: string;
@@ -33,12 +34,13 @@ export default function RejectionEmailComposer({
   onCancel,
   onConfirm,
   initialReason = "",
-  title = "Courriel de refus au demandeur",
-  submitLabel = "Envoyer le refus",
+  title,
+  submitLabel,
   submitClassName = adminUi.btnDanger,
   showReason = true,
   hint,
 }: Props) {
+  const { t } = useAdminCopy();
   const [reason, setReason] = useState(initialReason);
   const [locale, setLocale] = useState<"fr" | "en">("fr");
   const [subject, setSubject] = useState("");
@@ -50,6 +52,9 @@ export default function RejectionEmailComposer({
   // Keep latest loader without putting it in effect deps (parents pass inline arrows).
   const loadDraftRef = useRef(loadDraft);
   loadDraftRef.current = loadDraft;
+
+  const resolvedTitle = title ?? t("rejectComposerTitle");
+  const resolvedSubmit = submitLabel ?? t("rejectComposerSubmit");
 
   const applyDraft = useCallback((draft: RejectionEmailDraft) => {
     setLocale(draft.locale);
@@ -71,13 +76,13 @@ export default function RejectionEmailComposer({
         applyDraft(draft);
       } catch (e) {
         setDraftError(
-          e instanceof Error ? e.message : "Impossible de charger le brouillon"
+          e instanceof Error ? e.message : t("composerDraftError")
         );
       } finally {
         setLoadingDraft(false);
       }
     },
-    [applyDraft]
+    [applyDraft, t]
   );
 
   useEffect(() => {
@@ -91,7 +96,7 @@ export default function RejectionEmailComposer({
       } catch (e) {
         if (!cancelled) {
           setDraftError(
-            e instanceof Error ? e.message : "Impossible de charger le brouillon"
+            e instanceof Error ? e.message : t("composerDraftError")
           );
         }
       } finally {
@@ -101,7 +106,7 @@ export default function RejectionEmailComposer({
     return () => {
       cancelled = true;
     };
-  }, [applyDraft, initialReason]);
+  }, [applyDraft, initialReason, t]);
 
   const onLocaleChange = async (next: "fr" | "en") => {
     setLocale(next);
@@ -120,30 +125,30 @@ export default function RejectionEmailComposer({
   };
 
   const defaultHint = showReason
-    ? `Modifiez le courriel avant l'envoi. Le concierge est en copie (CC) lorsqu'une adresse est configurée${
+    ? `${t("rejectComposerHintCc")}${
         janitorEmail ? ` (${janitorEmail})` : ""
-      }${ccJanitor ? "." : " — aucun CC pour ce dossier."}`
-    : `Modifiez le courriel avant l'envoi. Le lien d'ajout du garant est mis à jour à l'envoi, même si vous le retirez du texte.${
+      }${ccJanitor ? "." : t("rejectComposerHintNoCc")}`
+    : `${t("offerComposerHint")}${
         janitorEmail
-          ? ` Un avis distinct est envoyé au concierge (${janitorEmail}).`
+          ? t("offerComposerHintJanitor").replace("{email}", janitorEmail)
           : ""
       }`;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-3 border-t border-[var(--ml-line)] pt-4">
-      <h3 className="text-sm font-semibold text-[var(--ml-ink)]">{title}</h3>
+      <h3 className="text-sm font-semibold text-[var(--ml-ink)]">{resolvedTitle}</h3>
       <p className="text-xs text-[var(--ml-steel)]">{hint ?? defaultHint}</p>
 
       {showReason ? (
         <>
           <label className="block text-sm text-[var(--ml-steel)]">
-            Motif (dossier + ligne Motif/Reason)
+            {t("composerReasonLabel")}
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               rows={2}
               className={`${adminUi.textarea} mt-1`}
-              placeholder="Ex. crédit insuffisant"
+              placeholder={t("composerReasonPlaceholder")}
             />
           </label>
           <button
@@ -152,13 +157,13 @@ export default function RejectionEmailComposer({
             onClick={() => void refreshDraft(locale, reason)}
             className={`${adminUi.btnGhost} text-xs`}
           >
-            Réinjecter le motif dans le brouillon
+            {t("composerReinjectReason")}
           </button>
         </>
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="text-[var(--ml-steel)]">Langue</span>
+        <span className="text-[var(--ml-steel)]">{t("composerEmailLocale")}</span>
         <button
           type="button"
           disabled={loadingDraft || submitting}
@@ -176,17 +181,17 @@ export default function RejectionEmailComposer({
           EN
         </button>
         <span className="text-xs text-[var(--ml-steel)]">
-          (changer la langue recharge le modèle)
+          {t("composerEmailLocaleHint")}
         </span>
       </div>
 
       {draftError ? <p className={adminUi.alertError}>{draftError}</p> : null}
       {loadingDraft ? (
-        <p className="text-sm text-[var(--ml-steel)]">Chargement du brouillon…</p>
+        <p className="text-sm text-[var(--ml-steel)]">{t("composerDraftLoading")}</p>
       ) : null}
 
       <label className="block text-sm text-[var(--ml-steel)]">
-        Objet
+        {t("composerSubject")}
         <input
           type="text"
           value={subject}
@@ -198,7 +203,7 @@ export default function RejectionEmailComposer({
       </label>
 
       <label className="block text-sm text-[var(--ml-steel)]">
-        Message
+        {t("composerBody")}
         <textarea
           value={body}
           onChange={(e) => setBody(e.target.value)}
@@ -215,7 +220,7 @@ export default function RejectionEmailComposer({
           disabled={submitting || loadingDraft || !body.trim() || !subject.trim()}
           className={`${submitClassName} disabled:opacity-50`}
         >
-          {submitLabel}
+          {resolvedSubmit}
         </button>
         <button
           type="button"
@@ -223,7 +228,7 @@ export default function RejectionEmailComposer({
           className={adminUi.btnGhost}
           onClick={onCancel}
         >
-          Annuler
+          {t("composerCancel")}
         </button>
       </div>
     </form>

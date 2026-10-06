@@ -221,6 +221,91 @@ export const adminMessages = {
     listingQrDownload: "Télécharger le code",
     listingQrOpen: "Ouvrir la page",
     listingQrPrint: "Imprimer",
+    creditDecisionTitle: "Décision après crédit",
+    creditDecisionIntro:
+      "Si le crédit est acceptable, approuvez pour la signature du bail.",
+    creditDecisionGuarantorHint:
+      " Si le crédit n'est pas suffisant, vous pouvez proposer d'ajouter un garant.",
+    creditDecisionRefuseHint:
+      " Sinon, refusez. Approuver enregistre la décision et lance la préparation du bail.",
+    creditApprove: "Approuver pour la signature du bail",
+    creditOfferGuarantor: "Proposer d'ajouter un garant",
+    creditResendGuarantor: "Renvoyer le courriel (ajouter un garant)",
+    creditRefuse: "Refuser la demande",
+    creditOfferHint:
+      "Ouvre un brouillon du courriel au demandeur (objet, message, FR/EN) avec un lien pour ajouter un garant. S'ils n'en ont pas, ils doivent communiquer avec le concierge. Le dossier reste ouvert.",
+    creditOfferLastSent: "Dernier envoi : {when}.",
+    creditIdentityIncomplete:
+      "Identité incomplète: la rencontre doit être confirmée pour chaque locataire.",
+    rejectComposerTitle: "Courriel de refus au demandeur",
+    rejectComposerSubmit: "Envoyer le refus",
+    rejectComposerHintCc:
+      "Modifiez le courriel avant l'envoi. Le concierge est en copie (CC) lorsqu'une adresse est configurée",
+    rejectComposerHintNoCc: " — aucun CC pour ce dossier.",
+    offerComposerTitle: "Courriel pour proposer un garant",
+    offerComposerSubmit: "Envoyer le courriel au demandeur",
+    offerComposerHint:
+      "Modifiez le courriel avant l'envoi. Le lien d'ajout du garant est mis à jour à l'envoi, même si vous le retirez du texte.",
+    offerComposerHintJanitor: " Un avis distinct est envoyé au concierge ({email}).",
+    composerReasonLabel: "Motif (dossier + ligne Motif/Reason)",
+    composerReasonPlaceholder: "Ex. crédit insuffisant",
+    composerReinjectReason: "Réinjecter le motif dans le brouillon",
+    composerEmailLocale: "Langue",
+    composerEmailLocaleHint: "(changer la langue recharge le modèle)",
+    composerDraftError: "Impossible de charger le brouillon",
+    composerDraftLoading: "Chargement du brouillon…",
+    composerSubject: "Objet",
+    composerBody: "Message",
+    composerCancel: "Annuler",
+    composerBodyRequired: "Le message du courriel est obligatoire.",
+    composerSubjectBodyRequired: "L'objet et le message du courriel sont obligatoires.",
+    identityTitle: "Vérification d'identité",
+    identityTitleNamed: "Vérification d'identité · {name}",
+    identityNAguarantor: "Non applicable (garant)",
+    identityMetConfirmed: "Rencontre confirmée",
+    identitySelfieFailReview:
+      "Selfie reçu - correspondance à vérifier, puis confirmez la rencontre",
+    identitySelfiePass: "Selfie reçu - correspondance OK, confirmez la rencontre",
+    identitySelfiePending: "Selfie reçu - analyse en cours",
+    identitySelfieReceived: "Selfie reçu - confirmez la rencontre",
+    identitySelfieRequested: "Selfie demandé - courriel envoyé au demandeur",
+    identityIdMissing: "Pièce d'identité manquante",
+    identityOpenIdFirst: "Ouvrir la pièce d'identité d'abord",
+    identityAwaitingConfirm: "En attente de confirmation",
+    identityMatchFailNote: "La photo ne correspond pas à la pièce d'identité.",
+    identityOpenId: "Ouvrir la pièce d'identité",
+    identityReopenId: "Revoir la pièce d'identité",
+    identityViewSelfie: "Voir le selfie",
+    identityMetQuestion: "Rencontré le demandeur en personne :",
+    identityYes: "Oui",
+    identityNo: "Non",
+    identityIdMatchesCheckbox:
+      "La photo sur la pièce d'identité correspond à la personne rencontrée",
+    identityConfirmMet: "Confirmer la rencontre",
+    identitySelfieWillEmail:
+      "Un courriel avec un lien de selfie sera envoyé au demandeur.",
+    identitySendSelfieRequest: "Envoyer une demande de confirmation d'identité",
+    identityButtonsLocked:
+      "Les boutons restent désactivés tant que la pièce d'identité n'a pas été ouverte.",
+    identityGateBlocked:
+      "Acceptation bloquée: complétez l'identité des locataires ci-dessous.",
+    identityGoTo: "Aller à l'identité",
+    identityMatchFlags: "Correspondance selfie à vérifier: {names}.",
+    identityStripTitle: "Identité à compléter",
+    identityStripSubtitle:
+      "Ouvrez la pièce d'identité, puis indiquez si vous avez rencontré le demandeur. Sans cela, l'acceptation reste bloquée.",
+    identityNextIdNotViewed:
+      "Pour {name} : ouvrez la pièce d'identité, puis indiquez si vous l'avez rencontré(e).",
+    identityNextUnconfirmed:
+      "Pour {name} : indiquez si vous l'avez rencontré(e) en personne.",
+    identityNextSelfiePending:
+      "Pour {name} : selfie en attente. Vous pouvez aussi confirmer une rencontre si vous l'avez vu(e) depuis.",
+    identityNextSelfieAwaiting:
+      "Pour {name} : selfie reçu — comparez avec la pièce d'identité, puis confirmez la rencontre.",
+    identityNextIdMissing: "Pour {name} : pièce d'identité manquante sur le dossier.",
+    identityNextDefault: "Pour {name} : complétez la vérification d'identité.",
+    draftNudgeSent: "Relance concierge envoyée le {when}",
+    applicantNudgeSent: "Relance demandeur envoyée le {when}",
   },
   en: {
     brand: "Montreal Living",
@@ -439,6 +524,91 @@ export const adminMessages = {
     listingQrDownload: "Download code",
     listingQrOpen: "Open page",
     listingQrPrint: "Print",
+    creditDecisionTitle: "Decision after credit",
+    creditDecisionIntro:
+      "If credit is acceptable, approve for lease signing.",
+    creditDecisionGuarantorHint:
+      " If credit is not enough, you can offer adding a guarantor.",
+    creditDecisionRefuseHint:
+      " Otherwise refuse. Approving records the decision and starts lease prep.",
+    creditApprove: "Approve for lease signing",
+    creditOfferGuarantor: "Offer adding a guarantor",
+    creditResendGuarantor: "Resend email (add a guarantor)",
+    creditRefuse: "Refuse the application",
+    creditOfferHint:
+      "Opens a draft email to the applicant (subject, body, FR/EN) with a link to add a guarantor. If they do not have one, they should contact the janitor. The file stays open.",
+    creditOfferLastSent: "Last sent: {when}.",
+    creditIdentityIncomplete:
+      "Identity incomplete: in-person meeting must be confirmed for each tenant.",
+    rejectComposerTitle: "Refusal email to the applicant",
+    rejectComposerSubmit: "Send refusal",
+    rejectComposerHintCc:
+      "Edit the email before sending. The janitor is CC'd when an address is configured",
+    rejectComposerHintNoCc: " — no CC for this file.",
+    offerComposerTitle: "Email to offer a guarantor",
+    offerComposerSubmit: "Send email to the applicant",
+    offerComposerHint:
+      "Edit the email before sending. The add-guarantor link is refreshed on send even if you remove it from the text.",
+    offerComposerHintJanitor: " A separate notice is sent to the janitor ({email}).",
+    composerReasonLabel: "Reason (file + Reason line)",
+    composerReasonPlaceholder: "e.g. insufficient credit",
+    composerReinjectReason: "Re-inject reason into the draft",
+    composerEmailLocale: "Language",
+    composerEmailLocaleHint: "(changing language reloads the template)",
+    composerDraftError: "Could not load the draft",
+    composerDraftLoading: "Loading draft…",
+    composerSubject: "Subject",
+    composerBody: "Message",
+    composerCancel: "Cancel",
+    composerBodyRequired: "The email message is required.",
+    composerSubjectBodyRequired: "Subject and message are required.",
+    identityTitle: "Identity verification",
+    identityTitleNamed: "Identity verification · {name}",
+    identityNAguarantor: "Not applicable (guarantor)",
+    identityMetConfirmed: "Meeting confirmed",
+    identitySelfieFailReview:
+      "Selfie received - match needs review, then confirm the meeting",
+    identitySelfiePass: "Selfie received - match OK, confirm the meeting",
+    identitySelfiePending: "Selfie received - analysis in progress",
+    identitySelfieReceived: "Selfie received - confirm the meeting",
+    identitySelfieRequested: "Selfie requested - email sent to the applicant",
+    identityIdMissing: "ID document missing",
+    identityOpenIdFirst: "Open the ID document first",
+    identityAwaitingConfirm: "Waiting for confirmation",
+    identityMatchFailNote: "The photo does not match the ID document.",
+    identityOpenId: "Open ID document",
+    identityReopenId: "Review ID document",
+    identityViewSelfie: "View selfie",
+    identityMetQuestion: "Met the applicant in person:",
+    identityYes: "Yes",
+    identityNo: "No",
+    identityIdMatchesCheckbox:
+      "The photo on the ID matches the person you met",
+    identityConfirmMet: "Confirm meeting",
+    identitySelfieWillEmail:
+      "An email with a selfie link will be sent to the applicant.",
+    identitySendSelfieRequest: "Send an identity confirmation request",
+    identityButtonsLocked:
+      "Buttons stay disabled until the ID document has been opened.",
+    identityGateBlocked:
+      "Accept blocked: complete tenant identity below.",
+    identityGoTo: "Go to identity",
+    identityMatchFlags: "Selfie match to review: {names}.",
+    identityStripTitle: "Identity to complete",
+    identityStripSubtitle:
+      "Open the ID, then say whether you met the applicant. Accept stays blocked until then.",
+    identityNextIdNotViewed:
+      "For {name}: open the ID, then say whether you met them.",
+    identityNextUnconfirmed:
+      "For {name}: say whether you met them in person.",
+    identityNextSelfiePending:
+      "For {name}: selfie pending. You can still confirm a meeting if you have seen them since.",
+    identityNextSelfieAwaiting:
+      "For {name}: selfie received — compare with the ID, then confirm the meeting.",
+    identityNextIdMissing: "For {name}: ID document missing on the file.",
+    identityNextDefault: "For {name}: complete identity verification.",
+    draftNudgeSent: "Janitor follow-up sent {when}",
+    applicantNudgeSent: "Applicant follow-up sent {when}",
   },
 } as const;
 
