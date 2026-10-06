@@ -441,6 +441,7 @@ describe("field error maps", () => {
       includeGuarantor: true,
       guarantor: { email: "guarantor@example.com", phone: "bad" },
       phone: "5145550100",
+      employment_type: "employed",
     });
     expect(errors.email).toBe("duplicate_email");
     expect(errors.roommate_email_0).toBe("duplicate_email");

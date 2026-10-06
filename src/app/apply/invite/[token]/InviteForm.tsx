@@ -18,7 +18,7 @@ import {
   submitInvite,
 } from "@/lib/api";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
-import { incomeUploadComplete, parseMonthlyNetIncome, formatMonthlyNetIncome, employmentRequiresIncome, employmentAllowsAdditionalIncome, type AdditionalIncomeKind } from "@/lib/incomeUpload";
+import { incomeUploadComplete, parseMonthlyNetIncome, formatMonthlyNetIncome, employmentRequiresIncome, employmentRequiresGuarantor, employmentAllowsAdditionalIncome, type AdditionalIncomeKind } from "@/lib/incomeUpload";
 import { Locale, MessageKey, t } from "@/lib/i18n";
 import { useSyncedLocale } from "@/lib/useSyncedLocale";
 import LocaleToggle from "@/components/LocaleToggle";
@@ -71,6 +71,7 @@ const VALIDATION_MESSAGE: Record<
   date_of_birth_underage: "validationDateOfBirthUnderage",
   guarantor_required_abroad: "validationGuarantorRequiredAbroad",
   guarantor_address_not_quebec: "validationGuarantorAddressQuebec",
+  guarantor_required_pays: "incomeGuarantorPaysNeedsHousehold",
   invite_email_mismatch: "validationInviteEmailMismatch",
 };
 
@@ -338,7 +339,7 @@ export default function InviteForm({ token }: Props) {
       personal: ["given_name", "family_name", "date_of_birth", "email", "phone"],
       addresses: [],
       references:
-        role === "guarantor" || form.employment_type === "no_income"
+        role === "guarantor" || !employmentRequiresIncome(form.employment_type)
           ? role === "guarantor"
             ? ["employer_name", "hr_name", "hr_phone", "monthly_net_income"]
             : []
@@ -395,6 +396,15 @@ export default function InviteForm({ token }: Props) {
           }
         }
       }
+    }
+    if (
+      current === "references" &&
+      role === "roommate" &&
+      employmentRequiresGuarantor(form.employment_type) &&
+      context &&
+      !context.has_guarantor
+    ) {
+      errors.employment_type = "guarantor_required_pays";
     }
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
@@ -1169,6 +1179,9 @@ export default function InviteForm({ token }: Props) {
             locale={locale}
             inviteToken={token}
             employmentType={form.employment_type}
+            householdHasGuarantor={
+              role === "roommate" ? Boolean(context?.has_guarantor) : null
+            }
             requireAdditionalProof={form.include_additional_income}
             additionalProofHost={
               form.include_additional_income ? additionalProofHost : null

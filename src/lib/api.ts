@@ -165,7 +165,7 @@ export type ApplicationUpdate = Partial<{
   referral_source: string;
   facebook_url: string;
   linkedin_url: string;
-  employment_type: "employed" | "self_employed" | "other" | "no_income";
+  employment_type: "employed" | "self_employed" | "other" | "no_income" | "guarantor_pays";
   monthly_net_income: number;
   additional_income_kind?: "government_benefits" | "other" | null;
   additional_monthly_net_income?: number | null;
@@ -496,6 +496,7 @@ export type InviteContext = {
   unit_number: string;
   building_address: string;
   move_in_date: string | null;
+  has_guarantor: boolean;
 };
 
 export type InviteeSubmitPayload = {
@@ -529,7 +530,7 @@ export type InviteeSubmitPayload = {
   referral_source?: string;
   facebook_url?: string;
   linkedin_url?: string;
-  employment_type: "employed" | "self_employed" | "other" | "no_income";
+  employment_type: "employed" | "self_employed" | "other" | "no_income" | "guarantor_pays";
   monthly_net_income: number;
   additional_income_kind?: "government_benefits" | "other";
   additional_monthly_net_income?: number;

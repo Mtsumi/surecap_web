@@ -33,6 +33,7 @@ describe("incomeUpload", () => {
     ]);
     expect(incomeSlotsForType("other")).toEqual(["proof_of_income"]);
     expect(incomeSlotsForType("no_income")).toEqual([]);
+    expect(incomeSlotsForType("guarantor_pays")).toEqual([]);
   });
 
   it("keeps additional proof out of the main documents list for job types", () => {
@@ -47,6 +48,7 @@ describe("incomeUpload", () => {
     ]);
     expect(mainIncomeDocumentSlots("other")).toEqual(["proof_of_income"]);
     expect(mainIncomeDocumentSlots("no_income")).toEqual([]);
+    expect(mainIncomeDocumentSlots("guarantor_pays")).toEqual([]);
   });
 
   it("marks optional employed pay slips and additional proof", () => {
@@ -79,6 +81,8 @@ describe("incomeUpload", () => {
     expect(incomeUploadComplete("employed", [])).toBe(false);
     expect(incomeUploadComplete("no_income", [])).toBe(true);
     expect(employmentRequiresIncome("no_income")).toBe(false);
+    expect(incomeUploadComplete("guarantor_pays", [])).toBe(true);
+    expect(employmentRequiresIncome("guarantor_pays")).toBe(false);
     expect(
       incomeUploadComplete("self_employed", [
         "notice_of_assessment_year_1",

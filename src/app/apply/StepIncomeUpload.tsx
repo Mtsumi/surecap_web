@@ -71,6 +71,8 @@ type Props = (MemberMode | InviteMode) & {
   onEmploymentTypeChange: (type: EmploymentType) => void;
   onDocumentsChange?: (documents: MemberDocument[]) => void;
   showNoIncomeOption?: boolean;
+  /** When set, guarantor_pays is only allowed if the household already has a guarantor. */
+  householdHasGuarantor?: boolean | null;
   /** Require proof_of_income when applicant declared an additional source. */
   requireAdditionalProof?: boolean;
   /**
@@ -95,6 +97,7 @@ export default function StepIncomeUpload(props: Props) {
     onEmploymentTypeChange,
     onDocumentsChange,
     showNoIncomeOption = true,
+    householdHasGuarantor = null,
     requireAdditionalProof = false,
     additionalProofHost = null,
   } = props;
@@ -435,12 +438,18 @@ export default function StepIncomeUpload(props: Props) {
           {showNoIncomeOption ? (
             <option value="no_income">{t(locale, "employmentNoIncome")}</option>
           ) : null}
+          <option value="guarantor_pays">{t(locale, "employmentGuarantorPays")}</option>
         </select>
       </label>
 
       {!employmentRequiresIncome(employmentType) ? (
         <p className="mt-4 text-sm leading-relaxed text-[#57534e]">
-          {t(locale, "incomeNoIncomeHint")}
+          {t(
+            locale,
+            employmentType === "guarantor_pays"
+              ? "incomeGuarantorPaysHint"
+              : "incomeNoIncomeHint"
+          )}
         </p>
       ) : (
         <div className="mt-4 space-y-3">
@@ -448,6 +457,12 @@ export default function StepIncomeUpload(props: Props) {
         </div>
       )}
 
+      {employmentType === "guarantor_pays" &&
+      householdHasGuarantor === false ? (
+        <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
+          {t(locale, "incomeGuarantorPaysNeedsHousehold")}
+        </p>
+      ) : null}
       {error && (
         <p className="mt-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
           {error}

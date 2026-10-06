@@ -7,6 +7,8 @@ import {
 import {
   EmploymentType,
   employmentAllowsAdditionalIncome,
+  employmentRequiresGuarantor,
+  employmentSkipsIncomeReferences,
   parseMonthlyNetIncome,
 } from "./incomeUpload";
 import { isPickedCanadianAddress } from "./canadianPostal";
@@ -29,6 +31,7 @@ export type ApplyValidationCode =
   | "date_of_birth_underage"
   | "guarantor_required_abroad"
   | "guarantor_address_not_quebec"
+  | "guarantor_required_pays"
   | "pick_google_address";
 
 export type ApplyFormStep = "personal" | "addresses" | "housing" | "references" | "other";
@@ -480,6 +483,8 @@ export function stepForValidationCode(code: ApplyValidationCode): ApplyFormStep 
       return "housing";
     case "landlord_hr_same_phone":
       return "references";
+    case "guarantor_required_pays":
+      return "housing";
     case "required":
     case "address_date_required":
     case "invalid_address_date_range":
@@ -512,6 +517,13 @@ export function findFirstValidationIssue(
   const housing = validateHousingStep(input);
   if (housing) return { code: housing, step: "housing" };
 
+  if (
+    employmentRequiresGuarantor(input.employment_type) &&
+    !input.includeGuarantor
+  ) {
+    return { code: "guarantor_required_pays", step: "housing" };
+  }
+
   if (input.includeGuarantor && input.guarantor?.phone) {
     const guarantorPhone = validatePhoneFormat(input.guarantor.phone);
     if (guarantorPhone) return { code: guarantorPhone, step: "housing" };
@@ -542,9 +554,17 @@ export function housingFieldErrors(
     | "guarantor"
     | "phone"
     | "address_not_in_canada"
+    | "employment_type"
   >
 ): ApplyFieldErrors {
   const errors: ApplyFieldErrors = {};
+
+  if (
+    employmentRequiresGuarantor(input.employment_type) &&
+    !input.includeGuarantor
+  ) {
+    errors.guarantor = "guarantor_required_pays";
+  }
 
   if (input.move_in_date) {
     const moveInError = moveInValidationCode(input.move_in_date, {
@@ -622,7 +642,7 @@ export function incomeFieldErrors(
     | "include_additional_income"
   >
 ): ApplyFieldErrors {
-  if (fields.employment_type === "no_income") {
+  if (employmentSkipsIncomeReferences(fields.employment_type)) {
     return {};
   }
   const errors: ApplyFieldErrors = {};

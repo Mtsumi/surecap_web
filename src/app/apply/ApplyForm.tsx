@@ -41,7 +41,9 @@ import {
   AdditionalIncomeKind,
   EmploymentType,
   employmentAllowsAdditionalIncome,
+  employmentRequiresGuarantor,
   employmentRequiresIncome,
+  employmentSkipsIncomeReferences,
   employmentTypeMessageKey,
   incomeUploadComplete,
   parseMonthlyNetIncome,
@@ -92,6 +94,7 @@ const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   date_of_birth_underage: "validationDateOfBirthUnderage",
   guarantor_required_abroad: "validationGuarantorRequiredAbroad",
   guarantor_address_not_quebec: "validationGuarantorAddressQuebec",
+  guarantor_required_pays: "guarantorRequiredPaysHint",
 };
 
 type Step =
@@ -276,17 +279,19 @@ function formPayload(
       fields.housing_status === "own_home" || !fields.previous_address.trim()
         ? false
         : Boolean(fields.no_previous_landlord_contact),
-    hr_name: fields.employment_type === "no_income" ? undefined : fields.hr_name.trim(),
-    employer_name:
-      fields.employment_type === "no_income"
-        ? undefined
-        : fields.employer_name.trim() || undefined,
-    hr_phone: fields.employment_type === "no_income" ? undefined : fields.hr_phone.trim(),
+    hr_name: employmentSkipsIncomeReferences(fields.employment_type)
+      ? undefined
+      : fields.hr_name.trim(),
+    employer_name: employmentSkipsIncomeReferences(fields.employment_type)
+      ? undefined
+      : fields.employer_name.trim() || undefined,
+    hr_phone: employmentSkipsIncomeReferences(fields.employment_type)
+      ? undefined
+      : fields.hr_phone.trim(),
     employment_type: fields.employment_type,
-    monthly_net_income:
-      fields.employment_type === "no_income"
-        ? 0
-        : parseMonthlyNetIncome(fields.monthly_net_income) ?? 0,
+    monthly_net_income: employmentSkipsIncomeReferences(fields.employment_type)
+      ? 0
+      : parseMonthlyNetIncome(fields.monthly_net_income) ?? 0,
     additional_income_kind:
       employmentAllowsAdditionalIncome(fields.employment_type) &&
       fields.include_additional_income &&
@@ -379,7 +384,8 @@ export default function ApplyForm() {
   formRef.current = form;
   roommatesRef.current = roommates;
   guarantorRef.current = guarantor;
-  includeGuarantorRef.current = includeGuarantor;
+  includeGuarantorRef.current =
+    includeGuarantor || employmentRequiresGuarantor(form.employment_type);
   draftSessionRef.current = draftSession;
   idKindRef.current = idKind;
   stepRef.current = step;
@@ -1013,8 +1019,12 @@ export default function ApplyForm() {
     date_of_birth: form.date_of_birth,
     phone: form.phone,
     roommates: form.renting_with_others ? roommates : [],
-    includeGuarantor,
-    guarantor: includeGuarantor ? guarantor : null,
+    includeGuarantor:
+      includeGuarantor || employmentRequiresGuarantor(form.employment_type),
+    guarantor:
+      includeGuarantor || employmentRequiresGuarantor(form.employment_type)
+        ? guarantor
+        : null,
     address_not_in_canada: form.address_not_in_canada,
     landlord_phone: form.landlord_phone,
     landlord_name: form.landlord_name,
@@ -1113,7 +1123,13 @@ export default function ApplyForm() {
       await updateApplication(
         draftSession.applicationId,
         draftSession.uploadToken,
-        formPayload(form, roommates, includeGuarantor ? guarantor : null)
+        formPayload(
+          form,
+          roommates,
+          includeGuarantor || employmentRequiresGuarantor(form.employment_type)
+            ? guarantor
+            : null
+        )
       );
       const app = await submitApplicationById(
         draftSession.applicationId,
@@ -2142,11 +2158,17 @@ export default function ApplyForm() {
             )}
             <div className="rounded border border-[#e7e0d5] bg-[#fffef9] p-4">
               <h3 className="text-sm font-medium text-[#292524]">
-                {form.address_not_in_canada
-                  ? t(locale, "guarantorRecommendedTitle")
-                  : t(locale, "guarantorOptional")}
+                {employmentRequiresGuarantor(form.employment_type)
+                  ? t(locale, "guarantorRequiredTitle")
+                  : form.address_not_in_canada
+                    ? t(locale, "guarantorRecommendedTitle")
+                    : t(locale, "guarantorOptional")}
               </h3>
-              {form.address_not_in_canada ? (
+              {employmentRequiresGuarantor(form.employment_type) ? (
+                <p className="mt-2 text-sm text-[#78716c]">
+                  {t(locale, "guarantorRequiredPaysHint")}
+                </p>
+              ) : form.address_not_in_canada ? (
                 <p className="mt-2 text-sm text-[#78716c]">
                   {t(locale, "validationGuarantorRequiredAbroad")}
                 </p>
@@ -2154,12 +2176,17 @@ export default function ApplyForm() {
               <label className="mt-3 flex items-center gap-2 text-sm text-[#292524]">
                 <input
                   type="checkbox"
-                  checked={includeGuarantor}
+                  checked={
+                    includeGuarantor ||
+                    employmentRequiresGuarantor(form.employment_type)
+                  }
+                  disabled={employmentRequiresGuarantor(form.employment_type)}
                   onChange={(e) => setIncludeGuarantor(e.target.checked)}
                 />
                 {t(locale, "includeGuarantor")}
               </label>
-              {includeGuarantor && (
+              {(includeGuarantor ||
+                employmentRequiresGuarantor(form.employment_type)) && (
                 <div className="mt-4 space-y-3">
                   <label className="block text-sm text-[#57534e]">
                     {t(locale, "guarantorName")}
@@ -2307,6 +2334,9 @@ export default function ApplyForm() {
                           additional_monthly_net_income: "",
                         }),
                   }));
+                  if (employmentRequiresGuarantor(type)) {
+                    setIncludeGuarantor(true);
+                  }
                 }}
                 onDocumentsChange={setIncomeDocuments}
               />

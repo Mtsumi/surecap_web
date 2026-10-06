@@ -8,7 +8,7 @@ import {
   validatePhoneFormat,
   validatePhones,
 } from "./applyValidation";
-import { parseMonthlyNetIncome, type AdditionalIncomeKind, type EmploymentType, employmentAllowsAdditionalIncome } from "./incomeUpload";
+import { parseMonthlyNetIncome, type AdditionalIncomeKind, type EmploymentType, employmentAllowsAdditionalIncome, employmentSkipsIncomeReferences } from "./incomeUpload";
 import { toAddressValidationInput } from "./addressFormUtils";
 
 export type InviteeRole = "roommate" | "guarantor";
@@ -109,14 +109,14 @@ export function inviteeFieldErrors(
   const errors: InviteeFieldErrors = {};
   const baseRequired = role === "guarantor" ? GUARANTOR_REQUIRED : ROOMMATE_REQUIRED;
   const required =
-    role === "roommate" && fields.employment_type === "no_income"
+    role === "roommate" && employmentSkipsIncomeReferences(fields.employment_type)
       ? baseRequired.filter((key) => !INCOME_REFERENCE_FIELDS.has(key))
       : baseRequired;
 
   for (const key of required) {
     const value = fields[key];
     if (key === "monthly_net_income") {
-      if (fields.employment_type !== "no_income" || role === "guarantor") {
+      if (!employmentSkipsIncomeReferences(fields.employment_type) || role === "guarantor") {
         if (!parseMonthlyNetIncome(String(value ?? ""))) {
           errors[key] = "required";
         }
