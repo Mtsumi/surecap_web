@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { MemberIdentityStatus } from "@/lib/api";
 import { adminUi } from "@/lib/adminUi";
 
@@ -39,9 +40,9 @@ function statusLabel(identity: MemberIdentityStatus): string {
 export function identityNextStep(reason: string | null | undefined, name: string): string {
   switch (reason) {
     case "id_not_viewed":
-      return `Pour ${name} : ouvrez la pièce d'identité, puis confirmez la rencontre ou demandez un selfie.`;
+      return `Pour ${name} : ouvrez la pièce d'identité, puis indiquez si vous l'avez rencontré(e).`;
     case "identity_unconfirmed":
-      return `Pour ${name} : confirmez si vous l'avez rencontré(e), ou demandez un selfie.`;
+      return `Pour ${name} : indiquez si vous l'avez rencontré(e) en personne.`;
     case "selfie_pending":
       return `Pour ${name} : selfie en attente. Vous pouvez aussi confirmer une rencontre si vous l'avez vu(e) depuis.`;
     case "selfie_awaiting_met":
@@ -52,6 +53,8 @@ export function identityNextStep(reason: string | null | undefined, name: string
       return `Pour ${name} : complétez la vérification d'identité.`;
   }
 }
+
+type MeetChoice = "oui" | "non" | null;
 
 export default function MemberIdentityPanel({
   memberId,
@@ -77,6 +80,9 @@ export default function MemberIdentityPanel({
   onConfirmMet: () => void | Promise<void>;
   onConfirmNotMet: () => void | Promise<void>;
 }) {
+  const [choice, setChoice] = useState<MeetChoice>(null);
+  const [idMatches, setIdMatches] = useState(false);
+
   if (!identity?.applies) return null;
 
   const canConfirm = Boolean(identity.id_viewed) && !disabled;
@@ -84,9 +90,9 @@ export default function MemberIdentityPanel({
   const matchFail =
     identity.match_status === "fail" && !metConfirmed;
   // Met stays available after selfie; credit/Accept wait on met confirmation.
-  const showMet = canConfirm && !metConfirmed;
+  const showActions = canConfirm && !metConfirmed;
   const showRequestSelfie =
-    canConfirm &&
+    showActions &&
     !identity.selfie_uploaded &&
     identity.met_in_person !== false;
   const showOpenId =
@@ -96,6 +102,11 @@ export default function MemberIdentityPanel({
   const title = memberName
     ? `Vérification d'identité · ${memberName}`
     : "Vérification d'identité";
+
+  const selectChoice = (next: MeetChoice) => {
+    setChoice(next);
+    if (next !== "oui") setIdMatches(false);
+  };
 
   return (
     <div
@@ -138,31 +149,84 @@ export default function MemberIdentityPanel({
             ) : null}
           </div>
         ) : null}
-        {showMet || showRequestSelfie ? (
-          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-            {showMet ? (
+        {showActions ? (
+          <div className="space-y-3">
+            <p className="text-sm font-medium text-[var(--ml-ink)]">
+              Rencontré le demandeur en personne&nbsp;:
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <button
                 type="button"
                 disabled={!canConfirm || submitting}
-                className={`${adminUi.btnSecondary} disabled:opacity-50`}
-                onClick={() => void onConfirmMet()}
+                aria-pressed={choice === "oui"}
+                className={`${adminUi.btnSecondary} disabled:opacity-50 ${
+                  choice === "oui"
+                    ? "ring-2 ring-[var(--ml-ink)] ring-offset-1"
+                    : ""
+                }`}
+                onClick={() => selectChoice("oui")}
               >
-                Oui, je l&apos;ai rencontré(e)
+                Oui
               </button>
+              {showRequestSelfie ? (
+                <button
+                  type="button"
+                  disabled={!canConfirm || submitting}
+                  aria-pressed={choice === "non"}
+                  className={`${adminUi.btnSecondary} disabled:opacity-50 ${
+                    choice === "non"
+                      ? "ring-2 ring-[var(--ml-ink)] ring-offset-1"
+                      : ""
+                  }`}
+                  onClick={() => selectChoice("non")}
+                >
+                  Non
+                </button>
+              ) : null}
+            </div>
+            {choice === "oui" ? (
+              <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white/60 p-3">
+                <label className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    checked={idMatches}
+                    disabled={submitting}
+                    onChange={(event) => setIdMatches(event.target.checked)}
+                  />
+                  <span>
+                    La photo sur la pièce d&apos;identité correspond à la
+                    personne rencontrée
+                  </span>
+                </label>
+                <button
+                  type="button"
+                  disabled={!idMatches || submitting}
+                  className={`${adminUi.btnPrimary} disabled:opacity-50`}
+                  onClick={() => void onConfirmMet()}
+                >
+                  Confirmer la rencontre
+                </button>
+              </div>
             ) : null}
-            {showRequestSelfie ? (
-              <button
-                type="button"
-                disabled={!canConfirm || submitting}
-                className={`${adminUi.btnSecondary} disabled:opacity-50`}
-                onClick={() => void onConfirmNotMet()}
-              >
-                Non - demander un selfie
-              </button>
+            {choice === "non" && showRequestSelfie ? (
+              <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white/60 p-3">
+                <p className="text-sm text-[var(--ml-steel)]">
+                  Un courriel avec un lien de selfie sera envoyé au demandeur.
+                </p>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  className={`${adminUi.btnPrimary} disabled:opacity-50`}
+                  onClick={() => void onConfirmNotMet()}
+                >
+                  Envoyer une demande de confirmation d&apos;identité
+                </button>
+              </div>
             ) : null}
           </div>
         ) : null}
-        {!identity.id_viewed && identity.id_document_id && showMet ? (
+        {!identity.id_viewed && identity.id_document_id && showActions ? (
           <p className="text-xs text-[var(--ml-steel)]">
             Les boutons restent désactivés tant que la pièce d&apos;identité
             n&apos;a pas été ouverte.
@@ -274,8 +338,8 @@ export function IdentityUnlockStrip({
       <div className={adminUi.cardHeader}>
         <h2 className={adminUi.sectionTitle}>Identité à compléter</h2>
         <p className={adminUi.pageSubtitle}>
-          Ouvrez la pièce d&apos;identité, puis confirmez la rencontre ou
-          demandez un selfie. Sans cela, l&apos;acceptation reste bloquée.
+          Ouvrez la pièce d&apos;identité, puis indiquez si vous avez rencontré
+          le demandeur. Sans cela, l&apos;acceptation reste bloquée.
         </p>
       </div>
       <div className={`${adminUi.cardPad} space-y-3`}>

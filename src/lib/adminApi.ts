@@ -432,13 +432,19 @@ export function requestCreditCheck(
 export function confirmMemberIdentity(
   applicationId: number,
   memberId: number,
-  metInPerson: boolean
+  metInPerson: boolean,
+  options?: { idPhotoMatches?: boolean }
 ) {
   return adminFetch<ApplicationDetail>(
     `/admin/applications/${applicationId}/members/${memberId}/identity`,
     {
       method: "POST",
-      body: JSON.stringify({ met_in_person: metInPerson }),
+      body: JSON.stringify({
+        met_in_person: metInPerson,
+        ...(metInPerson
+          ? { id_photo_matches: options?.idPhotoMatches === true }
+          : {}),
+      }),
     }
   );
 }
