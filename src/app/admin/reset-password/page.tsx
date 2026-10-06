@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { resetPassword } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
+import LocaleToggle from "@/components/LocaleToggle";
 
 function ResetPasswordForm() {
   const router = useRouter();
@@ -109,7 +110,7 @@ function ResetPasswordForm() {
 }
 
 export default function AdminResetPasswordPage() {
-  const { t, toggleLocale } = useAdminLocaleContext();
+  const { t, locale, setLocale } = useAdminLocaleContext();
 
   return (
     <main className="admin-auth-page">
@@ -122,13 +123,7 @@ export default function AdminResetPasswordPage() {
             <h1 className={adminUi.pageTitle}>{t("resetTitle")}</h1>
             <p className={adminUi.pageSubtitle}>{t("resetSubtitle")}</p>
           </div>
-          <button
-            type="button"
-            onClick={toggleLocale}
-            className="shrink-0 text-sm text-[var(--ml-steel)] hover:underline"
-          >
-            {t("langToggle")}
-          </button>
+          <LocaleToggle locale={locale} onChange={setLocale} />
         </div>
 
         <Suspense fallback={<p className={`${adminUi.empty} mt-6`}>{t("loading")}</p>}>

@@ -47,7 +47,9 @@ import {
   parseMonthlyNetIncome,
   formatMonthlyNetIncome,
 } from "@/lib/incomeUpload";
-import { Locale, type MessageKey, detectLocale, t } from "@/lib/i18n";
+import { Locale, type MessageKey, t } from "@/lib/i18n";
+import { useSyncedLocale } from "@/lib/useSyncedLocale";
+import LocaleToggle from "@/components/LocaleToggle";
 import {
   ApplyFieldErrors,
   ApplyValidationCode,
@@ -321,7 +323,7 @@ function isFormStep(value: string): value is (typeof FORM_STEPS)[number] {
 
 export default function ApplyForm() {
   const searchParams = useSearchParams();
-  const [locale, setLocale] = useState<Locale>("fr");
+  const { locale, setLocale } = useSyncedLocale();
   const [step, setStep] = useState<Step>("building");
   const [buildings, setBuildings] = useState<Building[]>([]);
   const [units, setUnits] = useState<Unit[]>([]);
@@ -458,10 +460,6 @@ export default function ApplyForm() {
   const preselectBuildingId = searchParams.get("building");
   const preselectUnitId = searchParams.get("unit");
 
-  useEffect(() => {
-    setLocale(detectLocale());
-  }, []);
-
   const loadBuildings = useCallback(async () => {
     setLoading(true);
     setError(null);
@@ -480,7 +478,9 @@ export default function ApplyForm() {
     } finally {
       setLoading(false);
     }
-  }, [preselectBuildingId, locale]);
+    // Locale only used for fallback error copy — do not refetch on language toggle.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [preselectBuildingId]);
 
   useEffect(() => {
     loadBuildings();
@@ -1213,10 +1213,6 @@ export default function ApplyForm() {
 
   const consentSatisfied = consent?.signed === true;
 
-  const toggleLocale = () => {
-    setLocale(locale === "en" ? "fr" : "en");
-  };
-
   const setField = <K extends keyof FormFields>(key: K, value: FormFields[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
     clearFieldError(key);
@@ -1248,8 +1244,8 @@ export default function ApplyForm() {
     ) : null;
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-md flex-col px-5 py-10">
-      <header className="mb-10 border-b border-[#e7e0d5] pb-8">
+    <main className="mx-auto flex min-h-screen max-w-md flex-col px-5 pb-10 pt-0">
+      <header className="sticky top-0 z-20 -mx-5 mb-8 border-b border-[#e7e0d5] bg-[#f4f1ec]/95 px-5 pb-4 pt-4 backdrop-blur-sm">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-[1.65rem] font-semibold leading-tight text-[#292524]">
@@ -1261,13 +1257,7 @@ export default function ApplyForm() {
                 : t(locale, "subtitle")}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={toggleLocale}
-            className="shrink-0 rounded border border-[#d6d0c4] bg-[#fffef9] px-3 py-1.5 text-sm text-[#44403c] transition hover:border-[#a8a29e]"
-          >
-            {t(locale, "langToggle")}
-          </button>
+          <LocaleToggle locale={locale} onChange={setLocale} />
         </div>
 
         {showFormProgress && (

@@ -7,11 +7,9 @@ import {
   fetchAddGuarantor,
   submitAddGuarantor,
 } from "@/lib/api";
-import {
-  Locale,
-  detectLocale,
-  t,
-} from "@/lib/i18n";
+import { t } from "@/lib/i18n";
+import { useSyncedLocale } from "@/lib/useSyncedLocale";
+import LocaleToggle from "@/components/LocaleToggle";
 import {
   validateEmailFormat,
   validatePhoneFormat,
@@ -21,7 +19,7 @@ const inputClass =
   "mt-1 w-full rounded border border-[#e7e0d5] bg-white px-3 py-2.5 text-base text-[#292524] outline-none transition focus:border-[#3d5a45]";
 
 export default function AddGuarantorForm({ token }: { token: string }) {
-  const [locale, setLocale] = useState<Locale>("fr");
+  const { locale, setLocale } = useSyncedLocale();
   const [context, setContext] = useState<AddGuarantorContext | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -30,10 +28,6 @@ export default function AddGuarantorForm({ token }: { token: string }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
-
-  useEffect(() => {
-    setLocale(detectLocale());
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -56,7 +50,8 @@ export default function AddGuarantorForm({ token }: { token: string }) {
     return () => {
       cancelled = true;
     };
-  }, [token, locale]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -140,7 +135,8 @@ export default function AddGuarantorForm({ token }: { token: string }) {
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-3">
+      <div className="sticky top-0 z-20 -mx-4 mb-6 border-b border-[#e7e0d5] bg-[#f4f1ec]/95 px-4 py-4 backdrop-blur-sm">
+        <div className="flex items-start justify-between gap-3">
         <div>
           <h1 className="text-lg font-semibold text-[#292524]">
             {t(locale, "addGuarantorTitle")}
@@ -148,13 +144,8 @@ export default function AddGuarantorForm({ token }: { token: string }) {
           <p className="mt-1 text-sm text-[#78716c]">{subtitle}</p>
           <p className="mt-1 text-sm text-[#78716c]">{context.building_address}</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setLocale(locale === "fr" ? "en" : "fr")}
-          className="shrink-0 text-sm text-[#57534e] underline-offset-2 hover:underline"
-        >
-          {t(locale, "langToggle")}
-        </button>
+        <LocaleToggle locale={locale} onChange={setLocale} />
+        </div>
       </div>
 
       <p className="text-sm text-[#57534e]">{t(locale, "addGuarantorIntro")}</p>

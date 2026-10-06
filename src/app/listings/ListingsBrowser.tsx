@@ -4,7 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchListings, type Listing } from "@/lib/api";
-import { detectLocale, t, type Locale } from "@/lib/i18n";
+import { t } from "@/lib/i18n";
+import { useSyncedLocale } from "@/lib/useSyncedLocale";
+import LocaleToggle from "@/components/LocaleToggle";
 import {
   listingAreaBySlug,
   listingAreaForBuildingName,
@@ -58,7 +60,7 @@ export default function ListingsBrowser({ areaSlug }: Props) {
   const view = parseListingView(searchParams.get("view"));
   const featuredUnitId = parseListingUnitId(searchParams.get("unit"));
   const requestedBuildingId = parseListingUnitId(searchParams.get("building"));
-  const [locale, setLocale] = useState<Locale>("fr");
+  const { locale, setLocale } = useSyncedLocale();
   const [listings, setListings] = useState<Listing[]>([]);
   const [bedrooms, setBedrooms] = useState<BedroomFilter>("any");
   const [amenityFilters, setAmenityFilters] = useState<string[]>([]);
@@ -68,10 +70,6 @@ export default function ListingsBrowser({ areaSlug }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<number | null>(null);
   const [shareFallback, setShareFallback] = useState<string | null>(null);
-
-  useEffect(() => {
-    setLocale(detectLocale());
-  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -188,8 +186,8 @@ export default function ListingsBrowser({ areaSlug }: Props) {
   };
 
   return (
-    <main className="mx-auto min-h-screen max-w-6xl px-4 py-8 sm:px-5 sm:py-10">
-      <header className="mb-6 border-b border-[#e7e0d5] pb-6 sm:mb-8 sm:pb-8">
+    <main className="mx-auto min-h-screen max-w-6xl px-4 pb-8 pt-0 sm:px-5 sm:pb-10">
+      <header className="sticky top-0 z-20 -mx-4 mb-6 border-b border-[#e7e0d5] bg-[#f4f1ec]/95 px-4 py-4 backdrop-blur-sm sm:-mx-5 sm:mb-8 sm:px-5">
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-[#78716c]">
@@ -210,13 +208,7 @@ export default function ListingsBrowser({ areaSlug }: Props) {
               {area ? area.buildings.join(", ") : t(locale, "listingsSubtitle")}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setLocale(locale === "en" ? "fr" : "en")}
-            className="shrink-0 rounded border border-[#d6d0c4] bg-[#fffef9] px-3 py-1.5 text-sm text-[#44403c] transition hover:border-[#a8a29e]"
-          >
-            {t(locale, "langToggle")}
-          </button>
+          <LocaleToggle locale={locale} onChange={setLocale} />
         </div>
       </header>
 
