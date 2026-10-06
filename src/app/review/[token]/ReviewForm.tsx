@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   JanitorReview,
@@ -27,6 +27,7 @@ import MemberIdentityPanel, {
 } from "@/app/admin/components/MemberIdentityPanel";
 import LocaleToggle from "@/components/LocaleToggle";
 import { useAdminCopy } from "@/app/admin/AdminLocaleContext";
+import type { AdminMessageKey } from "@/lib/adminI18n";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   called_landlord: false,
@@ -34,14 +35,14 @@ const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   checked_social: false,
 };
 
-function roleLabel(role: string): string {
+function roleLabel(role: string, t: (key: AdminMessageKey) => string): string {
   switch (role) {
     case "primary":
-      return "Demandeur principal";
+      return t("reviewRolePrimary");
     case "roommate":
-      return "Colocataire";
+      return t("reviewRoleRoommate");
     case "guarantor":
-      return "Garant";
+      return t("reviewRoleGuarantor");
     default:
       return role;
   }
@@ -88,6 +89,9 @@ function CreditConsentPreview({
   token: string;
   documentId: number;
 }) {
+  const { t } = useAdminCopy();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +106,7 @@ function CreditConsentPreview({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Impossible d'ouvrir le PDF");
+        setError(err instanceof Error ? err.message : tRef.current("reviewPdfOpenError"));
       });
     return () => {
       cancelled = true;
@@ -121,26 +125,26 @@ function CreditConsentPreview({
       anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Impossible de télécharger le PDF");
+      setError(err instanceof Error ? err.message : t("reviewPdfDownloadError"));
     }
   };
 
   return (
     <div className="sm:col-span-2">
-      <dt className="admin-field-label">Formulaire de crédit signé</dt>
+      <dt className="admin-field-label">{t("reviewCreditConsent")}</dt>
       <dd className="admin-field-value">
         <button type="button" onClick={() => void download()} className={adminUi.link}>
-          Télécharger le PDF
+          {t("reviewDownloadPdf")}
         </button>
         {error ? <p className="mt-1 text-sm text-[#7f1d1d]">{error}</p> : null}
         {blobUrl ? (
           <iframe
-            title="Formulaire de crédit signé"
+            title={t("reviewCreditConsent")}
             src={blobUrl}
             className="mt-3 h-80 w-full rounded border border-[var(--ml-line)] bg-white"
           />
         ) : !error ? (
-          <p className="mt-2 text-sm text-[var(--ml-steel)]">Chargement du PDF…</p>
+          <p className="mt-2 text-sm text-[var(--ml-steel)]">{t("reviewPdfLoading")}</p>
         ) : null}
       </dd>
     </div>
@@ -162,6 +166,7 @@ function MemberCard({
   onIdentityUpdated: (review: JanitorReview) => void;
   onIdentityFlash?: (message: string) => void;
 }) {
+  const { t } = useAdminCopy();
   const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
   const [idIsPdf, setIdIsPdf] = useState(false);
   const [idError, setIdError] = useState<string | null>(null);
@@ -194,17 +199,11 @@ function MemberCard({
   }
 
   async function openId() {
-    await openDoc(
-      member.identity?.id_document_id,
-      "Impossible d'ouvrir la pièce d'identité"
-    );
+    await openDoc(member.identity?.id_document_id, t("reviewIdOpenError"));
   }
 
   async function openSelfie() {
-    await openDoc(
-      member.identity?.selfie_document_id,
-      "Impossible d'ouvrir le selfie"
-    );
+    await openDoc(member.identity?.selfie_document_id, t("reviewSelfieOpenError"));
   }
 
   async function confirm(met: boolean) {
@@ -215,14 +214,12 @@ function MemberCard({
       });
       onIdentityUpdated(updated);
       if (met) {
-        onIdentityFlash?.(`Rencontre confirmée pour ${member.name}.`);
+        onIdentityFlash?.(t("reviewMetFlash").replace("{name}", member.name));
       } else {
-        onIdentityFlash?.(
-          `Selfie demandé pour ${member.name}: un courriel avec le lien de vérification a été envoyé au demandeur.`
-        );
+        onIdentityFlash?.(t("reviewSelfieFlash").replace("{name}", member.name));
       }
     } catch (err: unknown) {
-      setIdError(err instanceof Error ? err.message : "Échec de la confirmation");
+      setIdError(err instanceof Error ? err.message : t("reviewIdentityConfirmFail"));
     } finally {
       setIdentityBusy(false);
     }
@@ -233,7 +230,9 @@ function MemberCard({
       <div className={adminUi.cardHeader}>
         <h2 className="text-sm font-semibold text-[var(--ml-ink)]">
           {member.name}{" "}
-          <span className="font-normal text-[var(--ml-steel)]">· {roleLabel(member.role)}</span>
+          <span className="font-normal text-[var(--ml-steel)]">
+            · {roleLabel(member.role, t)}
+          </span>
         </h2>
       </div>
       <dl className={`${adminUi.cardPad} grid gap-3 sm:grid-cols-2`}>
@@ -255,7 +254,7 @@ function MemberCard({
           <div className="sm:col-span-2">
             {idIsPdf ? (
               <iframe
-                title="Document d'identité"
+                title={t("reviewIdDocAlt")}
                 src={idPreviewUrl}
                 className="mt-1 h-80 w-full rounded border border-[var(--ml-line)] bg-white"
               />
@@ -263,37 +262,43 @@ function MemberCard({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={idPreviewUrl}
-                alt="Document d'identité"
+                alt={t("reviewIdDocAlt")}
                 className="mt-1 max-h-96 w-full rounded border border-[var(--ml-line)] object-contain bg-white"
               />
             )}
           </div>
         ) : null}
-        <ContactRow label="Locateur" value={member.landlord_name} />
-        <ContactRow label="Téléphone locateur" value={member.landlord_phone} />
+        <ContactRow label={t("reviewLandlord")} value={member.landlord_name} />
+        <ContactRow label={t("reviewLandlordPhone")} value={member.landlord_phone} />
         {member.no_previous_landlord_contact ? (
-          <ContactRow label="Locateur précédent" value="Aucun contact fourni" />
+          <ContactRow
+            label={t("reviewPrevLandlord")}
+            value={t("reviewPrevLandlordNone")}
+          />
         ) : (
           <>
-            <ContactRow label="Locateur précédent" value={member.previous_landlord_name} />
             <ContactRow
-              label="Téléphone locateur précédent"
+              label={t("reviewPrevLandlord")}
+              value={member.previous_landlord_name}
+            />
+            <ContactRow
+              label={t("reviewPrevLandlordPhone")}
               value={member.previous_landlord_phone}
             />
           </>
         )}
-        <ContactRow label="Employeur" value={member.employer_name} />
-        <ContactRow label="RH" value={member.hr_name} />
-        <ContactRow label="Téléphone RH" value={member.hr_phone} />
+        <ContactRow label={t("reviewEmployer")} value={member.employer_name} />
+        <ContactRow label={t("reviewHr")} value={member.hr_name} />
+        <ContactRow label={t("reviewHrPhone")} value={member.hr_phone} />
         <FacebookRow member={member} />
         <ContactRow label="LinkedIn" value={member.linkedin_url} />
         {member.credit_consent_document_id ? (
           <CreditConsentPreview token={token} documentId={member.credit_consent_document_id} />
         ) : (
           <div className="sm:col-span-2">
-            <dt className="admin-field-label">Formulaire de crédit signé</dt>
+            <dt className="admin-field-label">{t("reviewCreditConsent")}</dt>
             <dd className="admin-field-value text-[var(--ml-steel)]">
-              PDF introuvable pour ce membre.
+              {t("reviewCreditConsentMissing")}
             </dd>
           </div>
         )}
@@ -335,7 +340,7 @@ export default function ReviewForm({ token }: { token: string }) {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Lien invalide ou expiré");
+        setError(err instanceof Error ? err.message : t("reviewInvalidLink"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -375,17 +380,11 @@ export default function ReviewForm({ token }: { token: string }) {
   }
 
   async function openStripId(member: JanitorReviewMember) {
-    await openStripDoc(
-      member.identity?.id_document_id,
-      "Impossible d'ouvrir la pièce d'identité"
-    );
+    await openStripDoc(member.identity?.id_document_id, t("reviewIdOpenError"));
   }
 
   async function openStripSelfie(member: JanitorReviewMember) {
-    await openStripDoc(
-      member.identity?.selfie_document_id,
-      "Impossible d'ouvrir le selfie"
-    );
+    await openStripDoc(member.identity?.selfie_document_id, t("reviewSelfieOpenError"));
   }
 
   async function confirmStrip(memberId: number, met: boolean) {
@@ -398,17 +397,15 @@ export default function ReviewForm({ token }: { token: string }) {
       });
       setReview(updated);
       const member = updated.members.find((m) => m.id === memberId);
-      const name = member?.name || "le locataire";
+      const name = member?.name || t("reviewTenantFallback");
       if (met) {
-        setIdentityFlash(`Rencontre confirmée pour ${name}.`);
+        setIdentityFlash(t("reviewMetFlash").replace("{name}", name));
       } else {
-        setIdentityFlash(
-          `Selfie demandé pour ${name}: un courriel avec le lien de vérification a été envoyé au demandeur.`
-        );
+        setIdentityFlash(t("reviewSelfieFlash").replace("{name}", name));
       }
     } catch (err: unknown) {
       setStripIdError(
-        err instanceof Error ? err.message : "Échec de la confirmation"
+        err instanceof Error ? err.message : t("reviewIdentityConfirmFail")
       );
     } finally {
       setStripBusy(false);
@@ -449,7 +446,7 @@ export default function ReviewForm({ token }: { token: string }) {
       setShowRefuse(false);
       setShowOffer(false);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "La mise à jour a échoué");
+      setError(err instanceof Error ? err.message : t("reviewUpdateFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -461,7 +458,7 @@ export default function ReviewForm({ token }: { token: string }) {
       return;
     }
     if (review?.stage === "janitor" && !allChecked) {
-      setError("Cochez les trois vérifications avant de refuser.");
+      setError(t("reviewRejectNeedChecks"));
       setShowRefuse(false);
       return;
     }
@@ -477,11 +474,11 @@ export default function ReviewForm({ token }: { token: string }) {
   }
 
   if (loading) {
-    return <p className={adminUi.empty}>Chargement…</p>;
+    return <p className={adminUi.empty}>{t("loading")}</p>;
   }
 
   if (!review) {
-    return <p className={adminUi.alertError}>{error || "Lien invalide ou expiré"}</p>;
+    return <p className={adminUi.alertError}>{error || t("reviewInvalidLink")}</p>;
   }
 
   const unitLine = [review.building_name, review.unit_number, review.building_address]
@@ -495,23 +492,23 @@ export default function ReviewForm({ token }: { token: string }) {
       </p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className={adminUi.pageTitle}>Revue des références</h1>
+          <h1 className={adminUi.pageTitle}>{t("reviewTitle")}</h1>
           <p className={adminUi.pageSubtitle}>
-            Demande #{review.application_id}
+            {t("reviewApplication").replace("{id}", String(review.application_id))}
             {unitLine ? ` · ${unitLine}` : ""}
             {" · "}
             <Link
               href={`/admin/applications/${review.application_id}`}
               className={adminUi.link}
             >
-              Dossier admin ↗
+              {t("reviewAdminFile")}
             </Link>
           </p>
         </div>
         <div className="flex items-center gap-3">
           <LocaleToggle locale={locale} onChange={setLocale} />
           <span className={applicationStatusClass(review.status)}>
-            {applicationStatusLabel(review.status)}
+            {applicationStatusLabel(review.status, locale)}
           </span>
         </div>
       </div>
@@ -557,7 +554,7 @@ export default function ReviewForm({ token }: { token: string }) {
             <div className="mt-3">
               {stripIdIsPdf ? (
                 <iframe
-                  title="Pièce d'identité"
+                  title={t("reviewStripIdAlt")}
                   src={stripIdPreviewUrl}
                   className="h-80 w-full rounded border border-[var(--ml-line)] bg-white"
                 />
@@ -565,7 +562,7 @@ export default function ReviewForm({ token }: { token: string }) {
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={stripIdPreviewUrl}
-                  alt="Pièce d'identité"
+                  alt={t("reviewStripIdAlt")}
                   className="max-h-96 w-full rounded border border-[var(--ml-line)] object-contain bg-white"
                 />
               )}
@@ -578,22 +575,22 @@ export default function ReviewForm({ token }: { token: string }) {
         <section className={`${adminUi.cardPad} ${adminUi.card} mt-6`}>
           <p className="text-sm text-[var(--ml-ink)]">
             {review.token_expired
-              ? "Ce lien a expiré. La décision ne peut plus être modifiée ici."
+              ? t("reviewLinkExpired")
               : review.status === "accepted"
-                ? "Demande approuvée pour la signature du bail."
+                ? t("reviewApproved")
                 : review.status === "rejected"
-                  ? "Demande refusée."
-                  : "Merci. La décision a déjà été enregistrée."}
+                  ? t("reviewRejected")
+                  : t("reviewAlreadyDecided")}
           </p>
           {review.rejection_reason ? (
             <p className={`${adminUi.pageSubtitle} mt-2`}>
-              Raison du refus : {review.rejection_reason}
+              {t("reviewRejectReason").replace("{reason}", review.rejection_reason)}
             </p>
           ) : null}
           {review.rejection_email_body || review.rejection_email_subject ? (
             <details className="mt-3 text-sm">
               <summary className="cursor-pointer font-medium text-[var(--ml-ink)]">
-                Voir le courriel envoyé
+                {t("reviewViewSentEmail")}
                 {review.rejection_email_locale
                   ? ` (${review.rejection_email_locale.toUpperCase()})`
                   : ""}
@@ -601,7 +598,10 @@ export default function ReviewForm({ token }: { token: string }) {
               <div className="mt-2 space-y-2">
                 {review.rejection_email_subject ? (
                   <p className="text-[var(--ml-steel)]">
-                    Objet : {review.rejection_email_subject}
+                    {t("reviewSubjectPrefix").replace(
+                      "{subject}",
+                      review.rejection_email_subject
+                    )}
                   </p>
                 ) : null}
                 {review.rejection_email_body ? (
@@ -632,11 +632,11 @@ export default function ReviewForm({ token }: { token: string }) {
       {review.stage !== "done" ? (
         <section className={`${adminUi.card} mt-8`} id="verifications-section">
           <div className={adminUi.cardHeader}>
-            <h2 className={adminUi.sectionTitle}>Vérifications</h2>
+            <h2 className={adminUi.sectionTitle}>{t("reviewChecksTitle")}</h2>
             <p className={adminUi.pageSubtitle}>
               {review.stage === "janitor"
-                ? "Complétez identité et les trois appels/contrôles avant d’envoyer le dossier à Steve."
-                : "Contrôles déjà faits par le concierge. Après le crédit, choisissez ci-dessous."}
+                ? t("reviewChecksJanitor")
+                : t("reviewChecksSteve")}
             </p>
           </div>
           <div className={`${adminUi.cardPad} space-y-4`}>
@@ -650,24 +650,22 @@ export default function ReviewForm({ token }: { token: string }) {
                   readOnly
                 />
                 <span>
-                  Identité confirmée (rencontre en personne + photo d&apos;identité
-                  correspondante, ou selfie)
+                  {t("reviewIdentityConfirmedCheckbox")}
                   {review.stage === "janitor" &&
                   review.identity?.ready_for_accept === false ? (
                     <span className="mt-0.5 block text-[var(--ml-steel)]">
-                      Ouvrez la pièce d&apos;identité, puis indiquez Oui ou Non
-                      ci-dessous.
+                      {t("reviewIdentityOpenThenYesNo")}
                     </span>
                   ) : null}
                 </span>
               </label>
               {(
                 [
-                  ["called_landlord", "J’ai appelé le(s) locateur(s)"],
-                  ["called_employer", "J’ai appelé l’employeur / les RH"],
-                  ["checked_social", "J’ai vérifié Facebook"],
+                  ["called_landlord", "reviewCheckLandlord"],
+                  ["called_employer", "reviewCheckEmployer"],
+                  ["checked_social", "reviewCheckSocial"],
                 ] as const
-              ).map(([key, label]) => (
+              ).map(([key, labelKey]) => (
                 <label
                   key={key}
                   className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
@@ -686,7 +684,7 @@ export default function ReviewForm({ token }: { token: string }) {
                       }))
                     }
                   />
-                  <span>{label}</span>
+                  <span>{t(labelKey)}</span>
                 </label>
               ))}
             </div>
@@ -694,7 +692,7 @@ export default function ReviewForm({ token }: { token: string }) {
             review.identity?.ready_for_accept === false ? (
               <div className="space-y-3 border-t border-[var(--ml-line)] pt-3">
                 <p className="text-sm font-medium text-[var(--ml-ink)]">
-                  Identité des locataires
+                  {t("reviewTenantsIdentity")}
                 </p>
                 {review.members
                   .filter(
@@ -735,7 +733,7 @@ export default function ReviewForm({ token }: { token: string }) {
             className={`${adminUi.btnPrimary} disabled:opacity-50`}
             onClick={() => void runAction("request_credit_check")}
           >
-            Prêt pour la vérification de crédit
+            {t("reviewReadyForCredit")}
           </button>
         </div>
       ) : null}
@@ -787,7 +785,7 @@ export default function ReviewForm({ token }: { token: string }) {
               className={`${adminUi.btnDanger} disabled:opacity-50`}
               onClick={() => setShowRefuse(true)}
             >
-              Refuser
+              {t("reviewRefuse")}
             </button>
           ) : (
             <RejectionEmailComposer
