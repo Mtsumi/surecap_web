@@ -7,6 +7,8 @@ import {
 import {
   EmploymentType,
   employmentAllowsAdditionalIncome,
+  employmentRequiresGuarantor,
+  employmentSkipsIncomeReferences,
   parseMonthlyNetIncome,
 } from "./incomeUpload";
 import { isPickedCanadianAddress } from "./canadianPostal";
@@ -29,6 +31,7 @@ export type ApplyValidationCode =
   | "date_of_birth_underage"
   | "guarantor_required_abroad"
   | "guarantor_address_not_quebec"
+  | "guarantor_required_pays"
   | "pick_google_address";
 
 export type ApplyFormStep = "personal" | "addresses" | "housing" | "references" | "other";
@@ -66,7 +69,7 @@ export type ApplyValidationInput = {
   date_of_birth?: string;
   roommates: { email: string }[];
   includeGuarantor: boolean;
-  guarantor: { email: string; phone: string } | null;
+  guarantor: { name: string; email: string; phone: string } | null;
   address_not_in_canada?: boolean;
   phone: string;
   landlord_name: string;
@@ -313,8 +316,11 @@ export function validateHousingStep(
   }
   if (input.includeGuarantor && input.guarantor) {
     const email = input.guarantor.email.trim();
+    if (!input.guarantor.name.trim()) return "required";
+    if (!email) return "required";
     if (!isValidEmail(email)) return "invalid_email";
     emails.push(email.toLowerCase());
+    if (!input.guarantor.phone.trim()) return "required";
   }
   if (new Set(emails).size !== emails.length) {
     return "duplicate_email";
@@ -480,6 +486,8 @@ export function stepForValidationCode(code: ApplyValidationCode): ApplyFormStep 
       return "housing";
     case "landlord_hr_same_phone":
       return "references";
+    case "guarantor_required_pays":
+      return "housing";
     case "required":
     case "address_date_required":
     case "invalid_address_date_range":
@@ -512,6 +520,20 @@ export function findFirstValidationIssue(
   const housing = validateHousingStep(input);
   if (housing) return { code: housing, step: "housing" };
 
+  if (
+    employmentRequiresGuarantor(input.employment_type) &&
+    !input.includeGuarantor
+  ) {
+    return { code: "guarantor_required_pays", step: "housing" };
+  }
+
+  if (input.includeGuarantor) {
+    const g = input.guarantor;
+    if (!g?.name?.trim() || !g.email?.trim() || !g.phone?.trim()) {
+      return { code: "required", step: "housing" };
+    }
+  }
+
   if (input.includeGuarantor && input.guarantor?.phone) {
     const guarantorPhone = validatePhoneFormat(input.guarantor.phone);
     if (guarantorPhone) return { code: guarantorPhone, step: "housing" };
@@ -542,9 +564,30 @@ export function housingFieldErrors(
     | "guarantor"
     | "phone"
     | "address_not_in_canada"
+    | "employment_type"
   >
 ): ApplyFieldErrors {
   const errors: ApplyFieldErrors = {};
+
+  if (
+    employmentRequiresGuarantor(input.employment_type) &&
+    !input.includeGuarantor
+  ) {
+    errors.guarantor = "guarantor_required_pays";
+  }
+
+  if (input.includeGuarantor) {
+    const g = input.guarantor;
+    if (!g?.name?.trim()) {
+      errors.guarantor_name = "required";
+    }
+    if (!g?.email?.trim()) {
+      errors.guarantor_email = "required";
+    }
+    if (!g?.phone?.trim()) {
+      errors.guarantor_phone = "required";
+    }
+  }
 
   if (input.move_in_date) {
     const moveInError = moveInValidationCode(input.move_in_date, {
@@ -622,7 +665,7 @@ export function incomeFieldErrors(
     | "include_additional_income"
   >
 ): ApplyFieldErrors {
-  if (fields.employment_type === "no_income") {
+  if (employmentSkipsIncomeReferences(fields.employment_type)) {
     return {};
   }
   const errors: ApplyFieldErrors = {};

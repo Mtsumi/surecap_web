@@ -79,11 +79,19 @@ export const messages = {
     employmentSelfEmployed: "Self-employed",
     employmentOther: "Other",
     employmentNoIncome: "Student (no personal income)",
+    employmentGuarantorPays: "Guarantor will pay rent",
     incomeNoIncomeHint:
       "No pay slips or employer references are needed. A guarantor on the application may cover rent.",
+    incomeGuarantorPaysHint:
+      "No pay slips or employer references are needed. You must add a guarantor on this application who will cover the rent.",
+    incomeGuarantorPaysNeedsHousehold:
+      "A guarantor must already be on this application before you can choose this option. Ask the primary applicant to add one, then try again.",
     incomeEmploymentTitle: "Employment & income",
     referencesNoteNoIncome:
       "Tell us about your situation. If you have no personal income, a guarantor on the application may be required.",
+    guarantorRequiredTitle: "Guarantor required",
+    guarantorRequiredPaysHint:
+      "Because a guarantor will pay the rent, you must add their contact details below.",
     incomeOptionalSuffix: "(optional)",
     monthlyNetIncome: "Monthly net income (after tax)",
     monthlyNetIncomeCad: "Canadian dollars (CAD)",
@@ -391,11 +399,19 @@ export const messages = {
     employmentSelfEmployed: "Travailleur autonome",
     employmentOther: "Autre",
     employmentNoIncome: "Étudiant(e) (sans revenu personnel)",
+    employmentGuarantorPays: "Le garant paiera le loyer",
     incomeNoIncomeHint:
       "Aucun talon de paie ni référence d'employeur requis. Un garant sur la demande peut couvrir le loyer.",
+    incomeGuarantorPaysHint:
+      "Aucun talon de paie ni référence d'employeur requis. Vous devez ajouter un garant sur cette demande qui couvrira le loyer.",
+    incomeGuarantorPaysNeedsHousehold:
+      "Un garant doit déjà être sur cette demande avant de choisir cette option. Demandez au demandeur principal d'en ajouter un, puis réessayez.",
     incomeEmploymentTitle: "Emploi et revenu",
     referencesNoteNoIncome:
       "Indiquez votre situation. Sans revenu personnel, un garant sur la demande peut être requis.",
+    guarantorRequiredTitle: "Garant requis",
+    guarantorRequiredPaysHint:
+      "Parce qu'un garant paiera le loyer, vous devez indiquer ses coordonnées ci-dessous.",
     incomeOptionalSuffix: "(facultatif)",
     monthlyNetIncome: "Revenu net mensuel (après impôts)",
     monthlyNetIncomeCad: "Dollars canadiens (CAD)",

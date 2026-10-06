@@ -41,7 +41,9 @@ import {
   AdditionalIncomeKind,
   EmploymentType,
   employmentAllowsAdditionalIncome,
+  employmentRequiresGuarantor,
   employmentRequiresIncome,
+  employmentSkipsIncomeReferences,
   employmentTypeMessageKey,
   incomeUploadComplete,
   parseMonthlyNetIncome,
@@ -92,6 +94,7 @@ const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   date_of_birth_underage: "validationDateOfBirthUnderage",
   guarantor_required_abroad: "validationGuarantorRequiredAbroad",
   guarantor_address_not_quebec: "validationGuarantorAddressQuebec",
+  guarantor_required_pays: "guarantorRequiredPaysHint",
 };
 
 type Step =
@@ -276,17 +279,19 @@ function formPayload(
       fields.housing_status === "own_home" || !fields.previous_address.trim()
         ? false
         : Boolean(fields.no_previous_landlord_contact),
-    hr_name: fields.employment_type === "no_income" ? undefined : fields.hr_name.trim(),
-    employer_name:
-      fields.employment_type === "no_income"
-        ? undefined
-        : fields.employer_name.trim() || undefined,
-    hr_phone: fields.employment_type === "no_income" ? undefined : fields.hr_phone.trim(),
+    hr_name: employmentSkipsIncomeReferences(fields.employment_type)
+      ? undefined
+      : fields.hr_name.trim(),
+    employer_name: employmentSkipsIncomeReferences(fields.employment_type)
+      ? undefined
+      : fields.employer_name.trim() || undefined,
+    hr_phone: employmentSkipsIncomeReferences(fields.employment_type)
+      ? undefined
+      : fields.hr_phone.trim(),
     employment_type: fields.employment_type,
-    monthly_net_income:
-      fields.employment_type === "no_income"
-        ? 0
-        : parseMonthlyNetIncome(fields.monthly_net_income) ?? 0,
+    monthly_net_income: employmentSkipsIncomeReferences(fields.employment_type)
+      ? 0
+      : parseMonthlyNetIncome(fields.monthly_net_income) ?? 0,
     additional_income_kind:
       employmentAllowsAdditionalIncome(fields.employment_type) &&
       fields.include_additional_income &&
@@ -379,7 +384,8 @@ export default function ApplyForm() {
   formRef.current = form;
   roommatesRef.current = roommates;
   guarantorRef.current = guarantor;
-  includeGuarantorRef.current = includeGuarantor;
+  includeGuarantorRef.current =
+    includeGuarantor || employmentRequiresGuarantor(form.employment_type);
   draftSessionRef.current = draftSession;
   idKindRef.current = idKind;
   stepRef.current = step;
@@ -805,8 +811,31 @@ export default function ApplyForm() {
         return addressFieldErrors(input);
       case "housing":
         return housingFieldErrors(input);
-      case "references":
-        return incomeFieldErrors(input);
+      case "references": {
+        const errors = incomeFieldErrors(input);
+        // Employment type (incl. guarantor_pays) is chosen on this step.
+        if (employmentRequiresGuarantor(form.employment_type)) {
+          Object.assign(
+            errors,
+            housingFieldErrors({
+              ...input,
+              includeGuarantor: true,
+              guarantor,
+            })
+          );
+        }
+        return errors;
+      }
+      case "other":
+      case "review":
+        if (employmentRequiresGuarantor(form.employment_type)) {
+          return housingFieldErrors({
+            ...input,
+            includeGuarantor: true,
+            guarantor,
+          });
+        }
+        return {};
       default:
         return {};
     }
@@ -859,9 +888,22 @@ export default function ApplyForm() {
       for (let i = currentIdx; i < targetIdx; i++) {
         const stepErrors = fieldErrorsForFormStep(FORM_STEPS[i]);
         if (blockWithFieldErrors(stepErrors)) {
-          setErrorStep(FORM_STEPS[i]);
-          setStep(FORM_STEPS[i]);
-          persistProgress(FORM_STEPS[i]);
+          const guarantorBlocked = Object.keys(stepErrors).some(
+            (k) => k === "guarantor" || k.startsWith("guarantor_")
+          );
+          const dest = guarantorBlocked ? "housing" : FORM_STEPS[i];
+          if (
+            employmentRequiresGuarantor(form.employment_type) &&
+            (stepErrors.guarantor === "guarantor_required_pays" ||
+              stepErrors.guarantor_name === "required" ||
+              stepErrors.guarantor_email === "required" ||
+              stepErrors.guarantor_phone === "required")
+          ) {
+            setError(t(locale, "guarantorRequiredPaysHint"));
+          }
+          setErrorStep(dest);
+          setStep(dest);
+          persistProgress(dest);
           return;
         }
         if (
@@ -1013,8 +1055,12 @@ export default function ApplyForm() {
     date_of_birth: form.date_of_birth,
     phone: form.phone,
     roommates: form.renting_with_others ? roommates : [],
-    includeGuarantor,
-    guarantor: includeGuarantor ? guarantor : null,
+    includeGuarantor:
+      includeGuarantor || employmentRequiresGuarantor(form.employment_type),
+    guarantor:
+      includeGuarantor || employmentRequiresGuarantor(form.employment_type)
+        ? guarantor
+        : null,
     address_not_in_canada: form.address_not_in_canada,
     landlord_phone: form.landlord_phone,
     landlord_name: form.landlord_name,
@@ -1113,7 +1159,13 @@ export default function ApplyForm() {
       await updateApplication(
         draftSession.applicationId,
         draftSession.uploadToken,
-        formPayload(form, roommates, includeGuarantor ? guarantor : null)
+        formPayload(
+          form,
+          roommates,
+          includeGuarantor || employmentRequiresGuarantor(form.employment_type)
+            ? guarantor
+            : null
+        )
       );
       const app = await submitApplicationById(
         draftSession.applicationId,
@@ -2142,11 +2194,17 @@ export default function ApplyForm() {
             )}
             <div className="rounded border border-[#e7e0d5] bg-[#fffef9] p-4">
               <h3 className="text-sm font-medium text-[#292524]">
-                {form.address_not_in_canada
-                  ? t(locale, "guarantorRecommendedTitle")
-                  : t(locale, "guarantorOptional")}
+                {employmentRequiresGuarantor(form.employment_type)
+                  ? t(locale, "guarantorRequiredTitle")
+                  : form.address_not_in_canada
+                    ? t(locale, "guarantorRecommendedTitle")
+                    : t(locale, "guarantorOptional")}
               </h3>
-              {form.address_not_in_canada ? (
+              {employmentRequiresGuarantor(form.employment_type) ? (
+                <p className="mt-2 text-sm text-[#78716c]">
+                  {t(locale, "guarantorRequiredPaysHint")}
+                </p>
+              ) : form.address_not_in_canada ? (
                 <p className="mt-2 text-sm text-[#78716c]">
                   {t(locale, "validationGuarantorRequiredAbroad")}
                 </p>
@@ -2154,24 +2212,33 @@ export default function ApplyForm() {
               <label className="mt-3 flex items-center gap-2 text-sm text-[#292524]">
                 <input
                   type="checkbox"
-                  checked={includeGuarantor}
+                  checked={
+                    includeGuarantor ||
+                    employmentRequiresGuarantor(form.employment_type)
+                  }
+                  disabled={employmentRequiresGuarantor(form.employment_type)}
                   onChange={(e) => setIncludeGuarantor(e.target.checked)}
                 />
                 {t(locale, "includeGuarantor")}
               </label>
-              {includeGuarantor && (
+              {(includeGuarantor ||
+                employmentRequiresGuarantor(form.employment_type)) && (
                 <div className="mt-4 space-y-3">
-                  <label className="block text-sm text-[#57534e]">
-                    {t(locale, "guarantorName")}
-                    <input
-                      required
-                      value={guarantor.name}
-                      onChange={(e) =>
-                        setGuarantor((g) => ({ ...g, name: e.target.value }))
-                      }
-                      className={inputClass}
-                    />
-                  </label>
+                  <div id="apply-field-guarantor_name">
+                    <label className="block text-sm text-[#57534e]">
+                      {t(locale, "guarantorName")}
+                      <input
+                        required
+                        value={guarantor.name}
+                        onChange={(e) => {
+                          clearFieldError("guarantor_name");
+                          setGuarantor((g) => ({ ...g, name: e.target.value }));
+                        }}
+                        className={inputClassFor("guarantor_name")}
+                      />
+                    </label>
+                    {fieldHint("guarantor_name")}
+                  </div>
                   <div id="apply-field-guarantor_email">
                   <label className="block text-sm text-[#57534e]">
                     {t(locale, "email")}
@@ -2278,6 +2345,25 @@ export default function ApplyForm() {
                 setErrorStep("references");
                 return;
               }
+              // guarantor_pays is chosen here (after housing); send back if contacts missing.
+              if (employmentRequiresGuarantor(form.employment_type)) {
+                setIncludeGuarantor(true);
+                const guarantorErrors = housingFieldErrors({
+                  ...validationInput(),
+                  includeGuarantor: true,
+                  guarantor,
+                });
+                if (Object.keys(guarantorErrors).length) {
+                  applyFieldErrors(guarantorErrors);
+                  setError(t(locale, "guarantorRequiredPaysHint"));
+                  setErrorStep("housing");
+                  persistProgress("housing");
+                  setStep("housing");
+                  const key = firstFieldErrorKey(guarantorErrors);
+                  if (key) scrollToField(key);
+                  return;
+                }
+              }
               setError(null);
               continueToStep("other");
             }}
@@ -2307,6 +2393,9 @@ export default function ApplyForm() {
                           additional_monthly_net_income: "",
                         }),
                   }));
+                  if (employmentRequiresGuarantor(type)) {
+                    setIncludeGuarantor(true);
+                  }
                 }}
                 onDocumentsChange={setIncomeDocuments}
               />

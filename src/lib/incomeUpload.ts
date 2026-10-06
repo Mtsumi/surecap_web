@@ -17,7 +17,8 @@ export type EmploymentType =
   | "employed"
   | "self_employed"
   | "other"
-  | "no_income";
+  | "no_income"
+  | "guarantor_pays";
 
 export type AdditionalIncomeKind = "government_benefits" | "other";
 
@@ -30,6 +31,7 @@ export const INCOME_DOCUMENT_SLOTS: Record<EmploymentType, readonly string[]> = 
   ],
   other: ["proof_of_income"],
   no_income: [],
+  guarantor_pays: [],
 };
 
 /** Minimum uploads before the income step is considered complete. */
@@ -41,6 +43,7 @@ export const REQUIRED_INCOME_DOCUMENT_SLOTS: Record<
   self_employed: ["notice_of_assessment_year_1", "notice_of_assessment_year_2"],
   other: ["proof_of_income"],
   no_income: [],
+  guarantor_pays: [],
 };
 
 export function employmentAllowsAdditionalIncome(type: EmploymentType): boolean {
@@ -51,8 +54,17 @@ const INCOME_TYPES = new Set(
   Object.values(INCOME_DOCUMENT_SLOTS).flatMap((slots) => [...slots])
 );
 
+/** No payslips / employer refs (student or guarantor covers rent). */
+export function employmentSkipsIncomeReferences(type: EmploymentType): boolean {
+  return type === "no_income" || type === "guarantor_pays";
+}
+
+export function employmentRequiresGuarantor(type: EmploymentType): boolean {
+  return type === "guarantor_pays";
+}
+
 export function employmentRequiresIncome(type: EmploymentType): boolean {
-  return type !== "no_income";
+  return !employmentSkipsIncomeReferences(type);
 }
 
 export function employmentTypeMessageKey(type: EmploymentType): MessageKey {
@@ -63,6 +75,8 @@ export function employmentTypeMessageKey(type: EmploymentType): MessageKey {
       return "employmentSelfEmployed";
     case "no_income":
       return "employmentNoIncome";
+    case "guarantor_pays":
+      return "employmentGuarantorPays";
     default:
       return "employmentOther";
   }
