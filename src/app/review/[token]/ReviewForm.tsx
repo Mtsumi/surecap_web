@@ -207,7 +207,9 @@ function MemberCard({
   async function confirm(met: boolean) {
     setIdentityBusy(true);
     try {
-      const updated = await confirmReviewMemberIdentity(token, member.id, met);
+      const updated = await confirmReviewMemberIdentity(token, member.id, met, {
+        idPhotoMatches: met ? true : undefined,
+      });
       onIdentityUpdated(updated);
       if (met) {
         onIdentityFlash?.(`Rencontre confirmée pour ${member.name}.`);
@@ -386,7 +388,9 @@ export default function ReviewForm({ token }: { token: string }) {
     setStripIdError(null);
     setIdentityFlash(null);
     try {
-      const updated = await confirmReviewMemberIdentity(token, memberId, met);
+      const updated = await confirmReviewMemberIdentity(token, memberId, met, {
+        idPhotoMatches: met ? true : undefined,
+      });
       setReview(updated);
       const member = updated.members.find((m) => m.id === memberId);
       const name = member?.name || "le locataire";
@@ -620,13 +624,13 @@ export default function ReviewForm({ token }: { token: string }) {
                   readOnly
                 />
                 <span>
-                  Identité confirmée (rencontre après ouverture de la pièce
-                  d&apos;identité / selfie)
+                  Identité confirmée (rencontre en personne + photo d&apos;identité
+                  correspondante, ou selfie)
                   {review.stage === "janitor" &&
                   review.identity?.ready_for_accept === false ? (
                     <span className="mt-0.5 block text-[var(--ml-steel)]">
-                      Ouvrez la pièce d&apos;identité, puis confirmez la
-                      rencontre ou demandez un selfie ci-dessous.
+                      Ouvrez la pièce d&apos;identité, puis indiquez Oui ou Non
+                      ci-dessous.
                     </span>
                   ) : null}
                 </span>

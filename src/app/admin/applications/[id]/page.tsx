@@ -470,7 +470,9 @@ export default function ApplicationDetailPage() {
     setError(null);
     setIdentityFlash(null);
     try {
-      const updated = await confirmMemberIdentity(id, memberId, met);
+      const updated = await confirmMemberIdentity(id, memberId, met, {
+        idPhotoMatches: met ? true : undefined,
+      });
       setApp(updated);
       setReviewRequest(null);
       const member = updated.members?.find((m) => m.id === memberId);
@@ -739,8 +741,8 @@ export default function ApplicationDetailPage() {
                       readOnly
                     />
                     <span>
-                      Identité confirmée (rencontre après ouverture de la pièce
-                      d&apos;identité / selfie)
+                      Identité confirmée (rencontre en personne + photo
+                      d&apos;identité correspondante, ou selfie)
                     </span>
                   </label>
                 </div>
@@ -806,12 +808,12 @@ export default function ApplicationDetailPage() {
                         readOnly
                       />
                       <span>
-                        Identité confirmée (rencontre après ouverture de la
-                        pièce d&apos;identité / selfie)
+                        Identité confirmée (rencontre en personne + photo
+                        d&apos;identité correspondante, ou selfie)
                         {!identityReady ? (
                           <span className="mt-0.5 block text-[var(--ml-steel)]">
-                            Ouvrez la pièce d&apos;identité, puis confirmez la
-                            rencontre ou demandez un selfie ci-dessous.
+                            Ouvrez la pièce d&apos;identité, puis indiquez Oui
+                            ou Non ci-dessous.
                           </span>
                         ) : null}
                       </span>

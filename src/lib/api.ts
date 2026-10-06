@@ -899,13 +899,19 @@ export function submitJanitorReview(
 export function confirmReviewMemberIdentity(
   token: string,
   memberId: number,
-  metInPerson: boolean
+  metInPerson: boolean,
+  options?: { idPhotoMatches?: boolean }
 ): Promise<JanitorReview> {
   return apiFetch<JanitorReview>(
     `/admin/janitor-review/${encodeURIComponent(token)}/members/${memberId}/identity`,
     {
       method: "POST",
-      body: JSON.stringify({ met_in_person: metInPerson }),
+      body: JSON.stringify({
+        met_in_person: metInPerson,
+        ...(metInPerson
+          ? { id_photo_matches: options?.idPhotoMatches === true }
+          : {}),
+      }),
     }
   );
 }
