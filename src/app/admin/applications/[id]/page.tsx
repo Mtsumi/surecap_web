@@ -33,6 +33,7 @@ import {
   SELFIE_REVIEW_DOCUMENT_TYPES,
 } from "@/lib/adminDocuments";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
+import type { AdminMessageKey } from "@/lib/adminI18n";
 import { facebookLink } from "@/lib/facebookSearch";
 import RejectionEmailComposer, {
   type RejectionComposeValues,
@@ -50,31 +51,35 @@ const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   checked_social: false,
 };
 
-const CHECKLIST_LABELS: Array<{
+const CHECKLIST_KEYS: Array<{
   key: keyof JanitorReviewChecklist;
-  label: string;
+  labelKey: AdminMessageKey;
 }> = [
-  { key: "called_landlord", label: "J’ai appelé le(s) locateur(s)" },
-  { key: "called_employer", label: "J’ai appelé l’employeur / les RH" },
-  { key: "checked_social", label: "J’ai vérifié Facebook" },
+  { key: "called_landlord", labelKey: "reviewCheckLandlord" },
+  { key: "called_employer", labelKey: "reviewCheckEmployer" },
+  { key: "checked_social", labelKey: "reviewCheckSocial" },
 ];
 
 function formatLivedDates(
   from: string | null | undefined,
-  to: string | null | undefined
+  to: string | null | undefined,
+  locale: "fr" | "en"
 ): string | null {
   if (!from) return null;
-  return formatAddressDateRange("fr", from, to);
+  return formatAddressDateRange(locale, from, to);
 }
 
-function memberRoleLabel(role: string): string {
+function memberRoleLabel(
+  role: string,
+  t: (key: AdminMessageKey) => string
+): string {
   switch (role) {
     case "primary":
-      return "Demandeur principal";
+      return t("reviewRolePrimary");
     case "roommate":
-      return "Colocataire";
+      return t("reviewRoleRoommate");
     case "guarantor":
-      return "Garant";
+      return t("reviewRoleGuarantor");
     default:
       return role;
   }
@@ -109,7 +114,7 @@ function MemberCard({
       compact
       defaultOpen={defaultOpen}
       title={memberDisplayName(member)}
-      subtitle={`${memberRoleLabel(member.role)} · ${memberStatusLabel(member.member_status, locale)}`}
+      subtitle={`${memberRoleLabel(member.role, t)} · ${memberStatusLabel(member.member_status, locale)}`}
       bodyClassName="!pt-0"
     >
       <dl className="grid gap-4 sm:grid-cols-2">
@@ -134,7 +139,8 @@ function MemberCard({
           label="Dates à l'adresse actuelle"
           value={formatLivedDates(
             member.current_address_lived_from,
-            member.current_address_lived_to
+            member.current_address_lived_to,
+            locale
           )}
         />
         {member.address_not_in_canada ? (
@@ -156,7 +162,8 @@ function MemberCard({
           label="Dates à l'adresse précédente"
           value={formatLivedDates(
             member.previous_address_lived_from,
-            member.previous_address_lived_to
+            member.previous_address_lived_to,
+            locale
           )}
         />
         {(member.role === "primary" || member.role === "roommate") && (
@@ -337,7 +344,7 @@ function MemberCard({
 export default function ApplicationDetailPage() {
   const params = useParams();
   const id = Number(params.id);
-  const { locale } = useAdminLocaleContext();
+  const { locale, t } = useAdminLocaleContext();
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [jobs, setJobs] = useState<ApplicationJob[]>([]);
   const [reason, setReason] = useState("");
@@ -508,8 +515,8 @@ export default function ApplicationDetailPage() {
 
   const jobMemberLabel = (memberId: number) => {
     const member = members.find((m) => m.id === memberId);
-    if (!member) return `Membre #${memberId}`;
-    return `${memberRoleLabel(member.role)} - ${memberDisplayName(member)}`;
+    if (!member) return t("appDetailMemberFallback").replace("{id}", String(memberId));
+    return `${memberRoleLabel(member.role, t)} - ${memberDisplayName(member)}`;
   };
 
   const checklistComplete =
@@ -523,11 +530,9 @@ export default function ApplicationDetailPage() {
     try {
       const updated = await requestCreditCheck(id, checklist);
       setApp(updated);
-      setIdentityFlash(
-        "Vérification de crédit demandée: Steve a été notifié. Aucun dossier prospect créé."
-      );
+      setIdentityFlash(t("appDetailCreditRequested"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("teamError"));
     } finally {
       setBusy(false);
     }
@@ -541,7 +546,7 @@ export default function ApplicationDetailPage() {
       setApp(updated);
       setAcceptNote("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("teamError"));
     } finally {
       setBusy(false);
     }
@@ -549,7 +554,7 @@ export default function ApplicationDetailPage() {
 
   const onReject = async (values: RejectionComposeValues) => {
     if (!values.email_body.trim()) {
-      setError("Le message du courriel est obligatoire.");
+      setError(t("composerBodyRequired"));
       return;
     }
     setBusy(true);
@@ -565,7 +570,7 @@ export default function ApplicationDetailPage() {
       setShowRefuse(false);
       setReason(values.reason);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("teamError"));
     } finally {
       setBusy(false);
     }
@@ -573,7 +578,7 @@ export default function ApplicationDetailPage() {
 
   const onOfferGuarantor = async (values: RejectionComposeValues) => {
     if (!values.email_body.trim() || !values.email_subject.trim()) {
-      setError("L'objet et le message du courriel sont obligatoires.");
+      setError(t("composerSubjectBodyRequired"));
       return;
     }
     setBusy(true);
@@ -587,7 +592,7 @@ export default function ApplicationDetailPage() {
       setApp(updated);
       setShowOffer(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(e instanceof Error ? e.message : t("teamError"));
     } finally {
       setBusy(false);
     }
@@ -599,15 +604,17 @@ export default function ApplicationDetailPage() {
   }, [id]);
 
   if (!app) {
-    return <p className={adminUi.empty}>{error || "Chargement…"}</p>;
+    return <p className={adminUi.empty}>{error || t("loading")}</p>;
   }
 
   const primaryName = [app.given_name, app.family_name].filter(Boolean).join(" ");
   const metaParts = [
     app.building_name,
     app.unit_number,
-    app.has_guarantor ? "avec garant" : null,
-    app.roommate_count ? `${app.roommate_count} colocataire(s)` : null,
+    app.has_guarantor ? t("appDetailWithGuarantor") : null,
+    app.roommate_count
+      ? t("appDetailRoommates").replace("{count}", String(app.roommate_count))
+      : null,
   ].filter(Boolean);
 
   const documentCount =
@@ -654,7 +661,7 @@ export default function ApplicationDetailPage() {
   return (
     <>
       <Link href="/admin/applications" className={`${adminUi.link} text-sm`}>
-        ← Demandes
+        {t("appDetailBack")}
       </Link>
 
       <header className={`${adminUi.card} mt-4`}>
@@ -662,7 +669,7 @@ export default function ApplicationDetailPage() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="min-w-0">
               <h1 className={adminUi.pageTitle}>
-                Demande #{app.id}
+                {t("appDetailTitle").replace("{id}", String(app.id))}
                 {primaryName ? ` - ${primaryName}` : ""}
               </h1>
               <p className={adminUi.pageSubtitle}>{metaParts.join(" · ")}</p>
@@ -697,16 +704,28 @@ export default function ApplicationDetailPage() {
 
           {app.draft_nudge_sent_at ? (
             <p className={`${adminUi.pageSubtitle} mt-4`}>
-              Relance concierge envoyée le{" "}
-              {new Date(app.draft_nudge_sent_at).toLocaleString(
-                locale === "en" ? "en-CA" : "fr-CA"
+              {t("draftNudgeSent").replace(
+                "{when}",
+                new Date(app.draft_nudge_sent_at).toLocaleString(
+                  locale === "en" ? "en-CA" : "fr-CA"
+                )
+              )}
+            </p>
+          ) : null}
+          {app.applicant_draft_nudge_sent_at ? (
+            <p className={`${adminUi.pageSubtitle} mt-2`}>
+              {t("applicantNudgeSent").replace(
+                "{when}",
+                new Date(app.applicant_draft_nudge_sent_at).toLocaleString(
+                  locale === "en" ? "en-CA" : "fr-CA"
+                )
               )}
             </p>
           ) : null}
 
           {app.status === "accepted" && app.accept_note ? (
             <p className={`${adminUi.pageSubtitle} mt-4`}>
-              Note d&apos;acceptation: {app.accept_note}
+              {t("appDetailAcceptNote").replace("{note}", app.accept_note)}
             </p>
           ) : null}
 
@@ -714,14 +733,15 @@ export default function ApplicationDetailPage() {
             <>
               <section className={`${adminUi.card} mt-4`}>
                 <div className={adminUi.cardHeader}>
-                  <h2 className={adminUi.sectionTitle}>Vérifications du concierge</h2>
+                  <h2 className={adminUi.sectionTitle}>
+                    {t("appDetailJanitorChecksTitle")}
+                  </h2>
                   <p className={adminUi.pageSubtitle}>
-                    Contrôles déjà faits avant la demande de crédit (appels,
-                    Facebook, identité).
+                    {t("appDetailJanitorChecksSubtitle")}
                   </p>
                 </div>
                 <div className={`${adminUi.cardPad} space-y-2`}>
-                  {CHECKLIST_LABELS.map(({ key, label }) => (
+                  {CHECKLIST_KEYS.map(({ key, labelKey }) => (
                     <label
                       key={key}
                       className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
@@ -733,7 +753,7 @@ export default function ApplicationDetailPage() {
                         disabled
                         readOnly
                       />
-                      <span>{label}</span>
+                      <span>{t(labelKey)}</span>
                     </label>
                   ))}
                   <label className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">
@@ -744,10 +764,7 @@ export default function ApplicationDetailPage() {
                       disabled
                       readOnly
                     />
-                    <span>
-                      Identité confirmée (rencontre en personne + photo
-                      d&apos;identité correspondante, ou selfie)
-                    </span>
+                    <span>{t("reviewIdentityConfirmedCheckbox")}</span>
                   </label>
                 </div>
               </section>
@@ -767,9 +784,7 @@ export default function ApplicationDetailPage() {
                 showOffer={showOffer}
                 acceptDisabled={!identityReady}
                 acceptDisabledReason={
-                  !identityReady
-                    ? "Identité incomplète: la rencontre doit être confirmée pour chaque locataire."
-                    : null
+                  !identityReady ? t("creditIdentityIncomplete") : null
                 }
                 loadRejectionDraft={({ locale, reason: draftReason }) =>
                   fetchRejectionEmailDraft(id, { locale, reason: draftReason })
@@ -805,12 +820,9 @@ export default function ApplicationDetailPage() {
               />
               <section className={adminUi.card} id="verifications-section">
                 <div className={adminUi.cardHeader}>
-                  <h2 className={adminUi.sectionTitle}>Vérifications</h2>
+                  <h2 className={adminUi.sectionTitle}>{t("appDetailChecksTitle")}</h2>
                   <p className={adminUi.pageSubtitle}>
-                    Complétez identité et les trois appels/contrôles, puis
-                    envoyez le dossier à Steve pour la vérification de crédit.
-                    Cela ne crée pas de dossier prospect ni n&apos;approuve le
-                    bail.
+                    {t("appDetailChecksSubtitle")}
                   </p>
                 </div>
                 <div className={`${adminUi.cardPad} space-y-4`}>
@@ -824,17 +836,15 @@ export default function ApplicationDetailPage() {
                         readOnly
                       />
                       <span>
-                        Identité confirmée (rencontre en personne + photo
-                        d&apos;identité correspondante, ou selfie)
+                        {t("reviewIdentityConfirmedCheckbox")}
                         {!identityReady ? (
                           <span className="mt-0.5 block text-[var(--ml-steel)]">
-                            Ouvrez la pièce d&apos;identité, puis indiquez Oui
-                            ou Non ci-dessous.
+                            {t("reviewIdentityOpenThenYesNo")}
                           </span>
                         ) : null}
                       </span>
                     </label>
-                    {CHECKLIST_LABELS.map(({ key, label }) => (
+                    {CHECKLIST_KEYS.map(({ key, labelKey }) => (
                       <label
                         key={key}
                         className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
@@ -851,14 +861,14 @@ export default function ApplicationDetailPage() {
                             }))
                           }
                         />
-                        <span>{label}</span>
+                        <span>{t(labelKey)}</span>
                       </label>
                     ))}
                   </div>
                   {!identityReady ? (
                     <div className="space-y-3 border-t border-[var(--ml-line)] pt-3">
                       <p className="text-sm font-medium text-[var(--ml-ink)]">
-                        Identité des locataires
+                        {t("reviewTenantsIdentity")}
                       </p>
                       {identityUnlockItems.map((item) => (
                         <MemberIdentityPanel
@@ -886,7 +896,7 @@ export default function ApplicationDetailPage() {
                   onClick={() => void onRequestCreditCheck()}
                   className={`${adminUi.btnPrimary} disabled:opacity-50`}
                 >
-                  Prêt pour la vérification de crédit
+                  {t("reviewReadyForCredit")}
                 </button>
                 <button
                   type="button"
@@ -894,7 +904,7 @@ export default function ApplicationDetailPage() {
                   onClick={() => setShowRefuse(true)}
                   className={adminUi.btnDanger}
                 >
-                  Refuser la demande
+                  {t("creditRefuse")}
                 </button>
               </div>
               {showRefuse ? (
@@ -930,7 +940,7 @@ export default function ApplicationDetailPage() {
                   onClick={() => setShowRefuse(true)}
                   className={adminUi.btnDanger}
                 >
-                  Refuser la demande
+                  {t("creditRefuse")}
                 </button>
               </div>
               {showRefuse ? (
@@ -950,12 +960,15 @@ export default function ApplicationDetailPage() {
           {app.status === "rejected" ? (
             <div className="mt-4 space-y-3 rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] p-4">
               {app.rejection_reason ? (
-                <AdminField label="Raison du refus" value={app.rejection_reason} />
+                <AdminField
+                  label={t("reviewRejectReasonLabel")}
+                  value={app.rejection_reason}
+                />
               ) : null}
               {app.rejection_email_subject || app.rejection_email_body ? (
                 <details className="text-sm">
                   <summary className="cursor-pointer font-medium text-[var(--ml-ink)]">
-                    Voir le courriel envoyé
+                    {t("reviewViewSentEmail")}
                     {app.rejection_email_locale
                       ? ` (${app.rejection_email_locale.toUpperCase()})`
                       : ""}
@@ -963,7 +976,10 @@ export default function ApplicationDetailPage() {
                   <div className="mt-2 space-y-2">
                     {app.rejection_email_subject ? (
                       <p className="text-[var(--ml-steel)]">
-                        Objet : {app.rejection_email_subject}
+                        {t("reviewSubjectPrefix").replace(
+                          "{subject}",
+                          app.rejection_email_subject
+                        )}
                       </p>
                     ) : null}
                     {app.rejection_email_body ? (
@@ -981,11 +997,11 @@ export default function ApplicationDetailPage() {
 
       <div className={adminUi.sectionGap}>
         <AdminCollapsible
-          title="Membres du dossier"
+          title={t("appDetailMembersTitle")}
           subtitle={
             sortedMembers.length > 0
               ? `${sortedMembers.length} membre${sortedMembers.length === 1 ? "" : "s"}`
-              : "Informations du demandeur"
+              : t("appDetailApplicantInfo")
           }
         >
           {sortedMembers.length > 0 ? (
@@ -1091,11 +1107,11 @@ export default function ApplicationDetailPage() {
 
         <div id="documents-section">
           <AdminCollapsible
-            title="Documents"
+            title={t("appDetailDocumentsTitle")}
             subtitle={
               documentCount > 0
                 ? `${documentCount} fichier${documentCount === 1 ? "" : "s"}`
-                : "Aucun document pour le moment"
+                : t("appDetailDocumentsEmpty")
             }
           >
             <ApplicationDocuments
@@ -1103,7 +1119,7 @@ export default function ApplicationDetailPage() {
               members={sortedMembers}
               summaryPdfAvailable={Boolean(app.summary_pdf_available)}
               dropboxDossierReady={Boolean(app.dropbox_dossier_ready)}
-              memberRoleLabel={memberRoleLabel}
+              memberRoleLabel={(role) => memberRoleLabel(role, t)}
               memberDisplayName={memberDisplayName}
               onSummaryRegenerated={load}
               reviewRequest={reviewRequest}
@@ -1113,11 +1129,11 @@ export default function ApplicationDetailPage() {
         </div>
 
         <AdminCollapsible
-          title="Screening"
+          title={t("appDetailScreeningTitle")}
           subtitle={
             jobs.length > 0
               ? `${jobs.length} tâche${jobs.length === 1 ? "" : "s"}`
-              : "Aucun résultat pour le moment"
+              : t("appDetailScreeningEmpty")
           }
         >
           <ScreeningJobs

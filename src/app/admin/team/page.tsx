@@ -8,8 +8,10 @@ import {
   updateAdminUser,
 } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
+import { useAdminLocaleContext } from "../AdminLocaleContext";
 
 export default function TeamPage() {
+  const { t } = useAdminLocaleContext();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -20,11 +22,12 @@ export default function TeamPage() {
   const load = () => {
     listAdminUsers()
       .then(setUsers)
-      .catch((e) => setError(e instanceof Error ? e.message : "Erreur"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("teamError")));
   };
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   const onCreate = async (e: FormEvent) => {
@@ -36,51 +39,51 @@ export default function TeamPage() {
       setEmail("");
       setPassword("");
       setIsSuper(false);
-      setMessage("Compte créé — courriel de bienvenue envoyé.");
+      setMessage(t("teamCreated"));
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur");
+      setError(err instanceof Error ? err.message : t("teamError"));
     }
   };
 
   const deactivate = async (user: AdminUser) => {
-    if (!confirm(`Désactiver ${user.email}?`)) return;
+    if (!confirm(t("teamDeactivateConfirm").replace("{email}", user.email))) return;
     try {
       await updateAdminUser(user.id, { active: false });
       load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Erreur");
+      setError(err instanceof Error ? err.message : t("teamError"));
     }
   };
 
   return (
     <>
-      <h1 className={adminUi.pageTitle}>Équipe admin</h1>
-      <p className={adminUi.pageSubtitle}>Super admin seulement</p>
+      <h1 className={adminUi.pageTitle}>{t("teamTitle")}</h1>
+      <p className={adminUi.pageSubtitle}>{t("teamSubtitle")}</p>
 
       {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
       {message ? <p className={`${adminUi.alertSuccess} mt-4`}>{message}</p> : null}
 
       <form onSubmit={onCreate} className={`${adminUi.cardPad} ${adminUi.card} mt-6 space-y-4`}>
-        <h2 className={adminUi.sectionTitle}>Ajouter un admin</h2>
+        <h2 className={adminUi.sectionTitle}>{t("teamAddTitle")}</h2>
         <label className="block text-sm text-[var(--ml-steel)]">
-          Courriel
+          {t("teamEmail")}
           <input
             type="email"
             required
-            placeholder="Courriel"
+            placeholder={t("teamEmail")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={adminUi.input}
           />
         </label>
         <label className="block text-sm text-[var(--ml-steel)]">
-          Mot de passe temporaire
+          {t("teamTempPassword")}
           <input
             type="password"
             required
             minLength={8}
-            placeholder="Mot de passe temporaire"
+            placeholder={t("teamTempPassword")}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={adminUi.input}
@@ -93,10 +96,10 @@ export default function TeamPage() {
             onChange={(e) => setIsSuper(e.target.checked)}
             className="h-4 w-4 rounded border-[var(--ml-line)]"
           />
-          Super admin
+          {t("teamSuperAdmin")}
         </label>
         <button type="submit" className={adminUi.btnPrimary}>
-          Créer et envoyer le courriel
+          {t("teamCreateSubmit")}
         </button>
       </form>
 
@@ -106,8 +109,8 @@ export default function TeamPage() {
             <div>
               <p className="font-semibold text-[var(--ml-ink)]">{u.email}</p>
               <p className="text-xs text-[var(--ml-steel)]">
-                {u.is_super_admin ? "Super admin" : "Admin"}
-                {!u.active && " · Inactif"}
+                {u.is_super_admin ? t("teamSuperAdmin") : t("teamAdmin")}
+                {!u.active && ` · ${t("teamInactive")}`}
               </p>
             </div>
             {u.active && (
@@ -116,7 +119,7 @@ export default function TeamPage() {
                 onClick={() => deactivate(u)}
                 className={adminUi.btnDanger + " !px-3 !py-1.5 !text-xs"}
               >
-                Désactiver
+                {t("teamDeactivate")}
               </button>
             )}
           </li>

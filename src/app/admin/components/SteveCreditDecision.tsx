@@ -5,6 +5,7 @@ import RejectionEmailComposer, {
 } from "./RejectionEmailComposer";
 import type { RejectionEmailDraft } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
+import { useAdminCopy } from "../AdminLocaleContext";
 
 export default function SteveCreditDecision({
   hasGuarantor,
@@ -48,21 +49,19 @@ export default function SteveCreditDecision({
   onCancelRefuse: () => void;
   onConfirmRefuse: (values: RejectionComposeValues) => void | Promise<void>;
 }) {
+  const { locale, t } = useAdminCopy();
   const offerSentLabel = offerSentAt
-    ? new Date(offerSentAt).toLocaleString("fr-CA")
+    ? new Date(offerSentAt).toLocaleString(locale === "en" ? "en-CA" : "fr-CA")
     : null;
 
   const body = (
     <div className="space-y-4">
       <div>
-        <h2 className={adminUi.sectionTitle}>Décision après crédit</h2>
+        <h2 className={adminUi.sectionTitle}>{t("creditDecisionTitle")}</h2>
         <p className={`${adminUi.pageSubtitle} mt-1`}>
-          Si le crédit est acceptable, approuvez pour la signature du bail.
-          {!hasGuarantor
-            ? " Si le crédit n'est pas suffisant, vous pouvez proposer d'ajouter un garant."
-            : ""}{" "}
-          Sinon, refusez. Approuver enregistre la décision et lance la préparation
-          du bail.
+          {t("creditDecisionIntro")}
+          {!hasGuarantor ? t("creditDecisionGuarantorHint") : ""}
+          {t("creditDecisionRefuseHint")}
         </p>
         {acceptDisabled && acceptDisabledReason ? (
           <p className="mt-2 text-sm text-[#7f1d1d]">{acceptDisabledReason}</p>
@@ -75,7 +74,7 @@ export default function SteveCreditDecision({
           className={`${adminUi.btnPrimary} disabled:opacity-50`}
           onClick={onApprove}
         >
-          Approuver pour la signature du bail
+          {t("creditApprove")}
         </button>
         {!hasGuarantor ? (
           <button
@@ -84,9 +83,7 @@ export default function SteveCreditDecision({
             className={`${adminUi.btnSecondary} disabled:opacity-50`}
             onClick={onShowOffer}
           >
-            {offerSentAt
-              ? "Renvoyer le courriel (ajouter un garant)"
-              : "Proposer d'ajouter un garant"}
+            {offerSentAt ? t("creditResendGuarantor") : t("creditOfferGuarantor")}
           </button>
         ) : null}
         <button
@@ -95,24 +92,24 @@ export default function SteveCreditDecision({
           className={`${adminUi.btnDanger} disabled:opacity-50`}
           onClick={onShowRefuse}
         >
-          Refuser la demande
+          {t("creditRefuse")}
         </button>
       </div>
       {!hasGuarantor ? (
         <p className="text-xs text-[var(--ml-steel)]">
-          Ouvre un brouillon du courriel au demandeur (objet, message, FR/EN)
-          avec un lien pour ajouter un garant. S&apos;ils n&apos;en ont pas, ils
-          doivent communiquer avec le concierge. Le dossier reste ouvert.
-          {offerSentLabel ? ` Dernier envoi : ${offerSentLabel}.` : ""}
+          {t("creditOfferHint")}
+          {offerSentLabel
+            ? ` ${t("creditOfferLastSent").replace("{when}", offerSentLabel)}`
+            : ""}
         </p>
       ) : null}
       {showOffer && !hasGuarantor ? (
         <RejectionEmailComposer
-          title="Courriel pour proposer un garant"
-          submitLabel="Envoyer le courriel au demandeur"
+          title={t("offerComposerTitle")}
+          submitLabel={t("offerComposerSubmit")}
           submitClassName={adminUi.btnPrimary}
           showReason={false}
-          loadDraft={({ locale }) => loadOfferDraft({ locale })}
+          loadDraft={({ locale: draftLocale }) => loadOfferDraft({ locale: draftLocale })}
           submitting={submitting}
           onCancel={onCancelOffer}
           onConfirm={onConfirmOffer}
