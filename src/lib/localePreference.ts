@@ -13,7 +13,10 @@ export function readStoredLocale(): Locale | null {
     const stored = window.localStorage.getItem(LOCALE_STORAGE_KEY);
     if (isLocale(stored)) return stored;
     const legacy = window.sessionStorage.getItem(LEGACY_ADMIN_LOCALE_KEY);
-    if (isLocale(legacy)) return legacy;
+    if (isLocale(legacy)) {
+      persistLocale(legacy);
+      return legacy;
+    }
   } catch {
     return null;
   }

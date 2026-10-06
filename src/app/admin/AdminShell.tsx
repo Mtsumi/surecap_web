@@ -232,7 +232,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           showCollapsed ? "items-center" : ""
         }`}
       >
-        <LocaleToggle locale={locale} onChange={setLocale} variant="dark" />
+        <LocaleToggle
+          locale={locale}
+          onChange={setLocale}
+          variant="dark"
+          compact={showCollapsed}
+        />
         <button
           type="button"
           onClick={logout}

@@ -36,13 +36,12 @@ export default function AddGuarantorForm({ token }: { token: string }) {
       .then((data) => {
         if (cancelled) return;
         if (data.status !== "awaiting_credit_check") {
-          setError(t(locale, "addGuarantorExpired"));
           return;
         }
         setContext(data);
       })
       .catch(() => {
-        if (!cancelled) setError(t(locale, "addGuarantorExpired"));
+        /* context stays null; expired copy is rendered with the current locale */
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

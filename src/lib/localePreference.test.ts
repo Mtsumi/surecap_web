@@ -9,4 +9,11 @@ describe("localePreference", () => {
     persistLocale("fr");
     expect(readStoredLocale()).toBe("fr");
   });
+
+  it("migrates a legacy admin session locale into localStorage", () => {
+    localStorage.removeItem(LOCALE_STORAGE_KEY);
+    sessionStorage.setItem("surecap_admin_locale", "en");
+    expect(readStoredLocale()).toBe("en");
+    expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en");
+  });
 });

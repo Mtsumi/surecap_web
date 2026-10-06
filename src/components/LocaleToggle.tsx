@@ -6,10 +6,12 @@ export default function LocaleToggle({
   locale,
   onChange,
   variant = "light",
+  compact = false,
 }: {
   locale: Locale;
   onChange: (next: Locale) => void;
   variant?: "light" | "dark";
+  compact?: boolean;
 }) {
   const selected =
     variant === "dark"
@@ -21,6 +23,25 @@ export default function LocaleToggle({
     variant === "dark"
       ? "border-[#3A4C5E] bg-[#1b2a38]"
       : "border-[#d6d0c4] bg-[#f4f1ec]";
+
+  if (compact) {
+    const next = locale === "fr" ? "en" : "fr";
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(next)}
+        title={next.toUpperCase()}
+        aria-label={`Switch to ${next === "en" ? "English" : "French"}`}
+        className={`flex h-10 w-10 items-center justify-center rounded-lg text-xs font-semibold ${
+          variant === "dark"
+            ? "text-[#9AA7B3] hover:bg-[#243444] hover:text-white"
+            : "text-[#57534e]"
+        }`}
+      >
+        {next.toUpperCase()}
+      </button>
+    );
+  }
 
   return (
     <div
