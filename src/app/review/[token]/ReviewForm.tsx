@@ -21,6 +21,10 @@ import RejectionEmailComposer, {
   type RejectionComposeValues,
 } from "@/app/admin/components/RejectionEmailComposer";
 import SteveCreditDecision from "@/app/admin/components/SteveCreditDecision";
+import MemberIdentityPanel, {
+  IdentityGateBanner,
+  IdentityUnlockStrip,
+} from "@/app/admin/components/MemberIdentityPanel";
 import LocaleToggle from "@/components/LocaleToggle";
 import { useAdminCopy } from "@/app/admin/AdminLocaleContext";
 
