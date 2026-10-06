@@ -72,6 +72,17 @@ export function incomeSlotsForType(type: EmploymentType): readonly string[] {
   return INCOME_DOCUMENT_SLOTS[type];
 }
 
+/**
+ * Slots shown in the main income documents list.
+ * For employed / self-employed, proof_of_income lives in the additional-income
+ * card (not above the job amount fields).
+ */
+export function mainIncomeDocumentSlots(type: EmploymentType): readonly string[] {
+  const slots = incomeSlotsForType(type);
+  if (!employmentAllowsAdditionalIncome(type)) return slots;
+  return slots.filter((slot) => slot !== "proof_of_income");
+}
+
 export type IncomeUploadOptions = {
   /** When true, proof_of_income is required (additional income source). */
   requireAdditionalProof?: boolean;
