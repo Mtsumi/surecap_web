@@ -21,10 +21,8 @@ import RejectionEmailComposer, {
   type RejectionComposeValues,
 } from "@/app/admin/components/RejectionEmailComposer";
 import SteveCreditDecision from "@/app/admin/components/SteveCreditDecision";
-import MemberIdentityPanel, {
-  IdentityGateBanner,
-  IdentityUnlockStrip,
-} from "@/app/admin/components/MemberIdentityPanel";
+import LocaleToggle from "@/components/LocaleToggle";
+import { useAdminCopy } from "@/app/admin/AdminLocaleContext";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   called_landlord: false,
@@ -301,6 +299,7 @@ function MemberCard({
 }
 
 export default function ReviewForm({ token }: { token: string }) {
+  const { locale, setLocale, t } = useAdminCopy();
   const [review, setReview] = useState<JanitorReview | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -454,7 +453,7 @@ export default function ReviewForm({ token }: { token: string }) {
 
   function onRejectCompose(values: RejectionComposeValues) {
     if (!values.email_body.trim()) {
-      setError("Le message du courriel est obligatoire.");
+      setError(t("composerBodyRequired"));
       return;
     }
     if (review?.stage === "janitor" && !allChecked) {
@@ -467,7 +466,7 @@ export default function ReviewForm({ token }: { token: string }) {
 
   function onOfferCompose(values: RejectionComposeValues) {
     if (!values.email_body.trim() || !values.email_subject.trim()) {
-      setError("L'objet et le message du courriel sont obligatoires.");
+      setError(t("composerSubjectBodyRequired"));
       return;
     }
     void runAction("offer_guarantor", values);
@@ -505,9 +504,12 @@ export default function ReviewForm({ token }: { token: string }) {
             </Link>
           </p>
         </div>
-        <span className={applicationStatusClass(review.status)}>
-          {applicationStatusLabel(review.status)}
-        </span>
+        <div className="flex items-center gap-3">
+          <LocaleToggle locale={locale} onChange={setLocale} />
+          <span className={applicationStatusClass(review.status)}>
+            {applicationStatusLabel(review.status)}
+          </span>
+        </div>
       </div>
 
       {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
@@ -744,7 +746,7 @@ export default function ReviewForm({ token }: { token: string }) {
           acceptDisabled={review.identity?.ready_for_accept === false}
           acceptDisabledReason={
             review.identity?.ready_for_accept === false
-              ? "Identité incomplète: la rencontre doit être confirmée pour chaque locataire."
+              ? t("creditIdentityIncomplete")
               : null
           }
           loadRejectionDraft={({ locale, reason: draftReason }) =>
