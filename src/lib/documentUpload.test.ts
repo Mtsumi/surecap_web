@@ -1,30 +1,25 @@
 import { describe, expect, it } from "vitest";
 import {
   ACCEPTED_ID_UPLOAD_TYPES,
-  ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF,
   ACCEPTED_UPLOAD_TYPES,
 } from "./documentUpload";
 
 describe("file-browser accept types", () => {
-  it.each([
-    ["ID browse", ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF],
-    ["income browse", ACCEPTED_UPLOAD_TYPES],
-  ])(
-    "%s lets the OS file picker show images, not PDF-only documents",
-    (_label, accept) => {
-      // Android/iOS treat application/pdf as "documents only" and hide photos.
-      expect(accept.includes("application/pdf")).toBe(false);
-      expect(accept).toMatch(/image\/\*/);
-      expect(accept).toMatch(/\.jpg/);
-      expect(accept).toMatch(/\.png/);
-      expect(accept).toMatch(/\.pdf/);
-      expect(accept).toMatch(/\.heic/);
-    }
-  );
+  it("income browse lets the OS file picker show images, not PDF-only documents", () => {
+    // Android/iOS treat application/pdf as "documents only" and hide photos.
+    expect(ACCEPTED_UPLOAD_TYPES.includes("application/pdf")).toBe(false);
+    expect(ACCEPTED_UPLOAD_TYPES).toMatch(/image\/\*/);
+    expect(ACCEPTED_UPLOAD_TYPES).toMatch(/\.jpg/);
+    expect(ACCEPTED_UPLOAD_TYPES).toMatch(/\.png/);
+    expect(ACCEPTED_UPLOAD_TYPES).toMatch(/\.pdf/);
+    expect(ACCEPTED_UPLOAD_TYPES).toMatch(/\.heic/);
+  });
 
-  it("lets the Take photo picker accept HEIC gallery stills", () => {
+  it("ID capture accepts camera images only (no PDF)", () => {
     expect(ACCEPTED_ID_UPLOAD_TYPES).toMatch(/image\/heic/);
     expect(ACCEPTED_ID_UPLOAD_TYPES).toMatch(/\.heic/);
     expect(ACCEPTED_ID_UPLOAD_TYPES.includes("application/pdf")).toBe(false);
+    expect(ACCEPTED_ID_UPLOAD_TYPES).not.toMatch(/\.pdf/);
+    expect(ACCEPTED_ID_UPLOAD_TYPES).not.toMatch(/image\/\*/);
   });
 });
