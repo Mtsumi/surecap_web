@@ -337,7 +337,7 @@ function MemberCard({
 export default function ApplicationDetailPage() {
   const params = useParams();
   const id = Number(params.id);
-  const { locale } = useAdminLocaleContext();
+  const { locale, t } = useAdminLocaleContext();
   const [app, setApp] = useState<ApplicationDetail | null>(null);
   const [jobs, setJobs] = useState<ApplicationJob[]>([]);
   const [reason, setReason] = useState("");
@@ -549,7 +549,7 @@ export default function ApplicationDetailPage() {
 
   const onReject = async (values: RejectionComposeValues) => {
     if (!values.email_body.trim()) {
-      setError("Le message du courriel est obligatoire.");
+      setError(t("composerBodyRequired"));
       return;
     }
     setBusy(true);
@@ -573,7 +573,7 @@ export default function ApplicationDetailPage() {
 
   const onOfferGuarantor = async (values: RejectionComposeValues) => {
     if (!values.email_body.trim() || !values.email_subject.trim()) {
-      setError("L'objet et le message du courriel sont obligatoires.");
+      setError(t("composerSubjectBodyRequired"));
       return;
     }
     setBusy(true);
@@ -697,9 +697,21 @@ export default function ApplicationDetailPage() {
 
           {app.draft_nudge_sent_at ? (
             <p className={`${adminUi.pageSubtitle} mt-4`}>
-              Relance concierge envoyée le{" "}
-              {new Date(app.draft_nudge_sent_at).toLocaleString(
-                locale === "en" ? "en-CA" : "fr-CA"
+              {t("draftNudgeSent").replace(
+                "{when}",
+                new Date(app.draft_nudge_sent_at).toLocaleString(
+                  locale === "en" ? "en-CA" : "fr-CA"
+                )
+              )}
+            </p>
+          ) : null}
+          {app.applicant_draft_nudge_sent_at ? (
+            <p className={`${adminUi.pageSubtitle} mt-2`}>
+              {t("applicantNudgeSent").replace(
+                "{when}",
+                new Date(app.applicant_draft_nudge_sent_at).toLocaleString(
+                  locale === "en" ? "en-CA" : "fr-CA"
+                )
               )}
             </p>
           ) : null}
@@ -767,9 +779,7 @@ export default function ApplicationDetailPage() {
                 showOffer={showOffer}
                 acceptDisabled={!identityReady}
                 acceptDisabledReason={
-                  !identityReady
-                    ? "Identité incomplète: la rencontre doit être confirmée pour chaque locataire."
-                    : null
+                  !identityReady ? t("creditIdentityIncomplete") : null
                 }
                 loadRejectionDraft={({ locale, reason: draftReason }) =>
                   fetchRejectionEmailDraft(id, { locale, reason: draftReason })
