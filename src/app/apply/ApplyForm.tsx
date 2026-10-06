@@ -2309,6 +2309,25 @@ export default function ApplyForm() {
                 setErrorStep("references");
                 return;
               }
+              // guarantor_pays is chosen here (after housing); send back if contacts missing.
+              if (employmentRequiresGuarantor(form.employment_type)) {
+                setIncludeGuarantor(true);
+                const guarantorErrors = housingFieldErrors({
+                  ...validationInput(),
+                  includeGuarantor: true,
+                  guarantor,
+                });
+                if (Object.keys(guarantorErrors).length) {
+                  applyFieldErrors(guarantorErrors);
+                  setError(t(locale, "guarantorRequiredPaysHint"));
+                  setErrorStep("housing");
+                  persistProgress("housing");
+                  setStep("housing");
+                  const key = firstFieldErrorKey(guarantorErrors);
+                  if (key) scrollToField(key);
+                  return;
+                }
+              }
               setError(null);
               continueToStep("other");
             }}
