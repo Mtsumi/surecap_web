@@ -16,9 +16,12 @@ export const ID_DOCUMENT_SLOTS: Record<IdDocumentKind, readonly string[]> = {
 export const ACCEPTED_UPLOAD_TYPES =
   "image/*,image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif,.pdf";
 
-/** ID / medicare / licence: camera image only (no gallery/PDF browse). */
+/** ID / medicare / licence: camera or image only (for the "Take photo" button). */
 export const ACCEPTED_ID_UPLOAD_TYPES =
   "image/jpeg,image/png,image/webp,image/heic,image/heif,.jpg,.jpeg,.png,.webp,.heic,.heif";
+
+/** ID documents via file browser — images and PDF scans. */
+export const ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF = ACCEPTED_UPLOAD_TYPES;
 
 const ID_TYPES = new Set(
   Object.values(ID_DOCUMENT_SLOTS).flatMap((slots) => [...slots])

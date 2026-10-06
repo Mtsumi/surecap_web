@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   ACCEPTED_ID_UPLOAD_TYPES,
+  ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF,
   ACCEPTED_UPLOAD_TYPES,
 } from "./documentUpload";
 
@@ -21,5 +22,11 @@ describe("file-browser accept types", () => {
     expect(ACCEPTED_ID_UPLOAD_TYPES.includes("application/pdf")).toBe(false);
     expect(ACCEPTED_ID_UPLOAD_TYPES).not.toMatch(/\.pdf/);
     expect(ACCEPTED_ID_UPLOAD_TYPES).not.toMatch(/image\/\*/);
+  });
+
+  it("ID browse accepts images and PDF scans", () => {
+    expect(ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF).toBe(ACCEPTED_UPLOAD_TYPES);
+    expect(ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF).toMatch(/\.pdf/);
+    expect(ACCEPTED_ID_UPLOAD_TYPES_WITH_PDF).toMatch(/image\/\*/);
   });
 });
