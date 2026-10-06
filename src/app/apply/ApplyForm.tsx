@@ -893,10 +893,11 @@ export default function ApplyForm() {
           );
           const dest = guarantorBlocked ? "housing" : FORM_STEPS[i];
           if (
-            stepErrors.guarantor === "guarantor_required_pays" ||
-            stepErrors.guarantor_name === "required" ||
-            stepErrors.guarantor_email === "required" ||
-            stepErrors.guarantor_phone === "required"
+            employmentRequiresGuarantor(form.employment_type) &&
+            (stepErrors.guarantor === "guarantor_required_pays" ||
+              stepErrors.guarantor_name === "required" ||
+              stepErrors.guarantor_email === "required" ||
+              stepErrors.guarantor_phone === "required")
           ) {
             setError(t(locale, "guarantorRequiredPaysHint"));
           }
