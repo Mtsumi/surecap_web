@@ -226,6 +226,8 @@ export default function InviteForm({ token }: Props) {
   const [idKind, setIdKind] = useState<IdDocumentKind>("passport");
   const [idDocuments, setIdDocuments] = useState<MemberDocument[]>([]);
   const [incomeDocuments, setIncomeDocuments] = useState<MemberDocument[]>([]);
+  const [additionalProofHost, setAdditionalProofHost] =
+    useState<HTMLDivElement | null>(null);
   const [consent, setConsent] = useState<CreditConsent | null>(null);
   const [consentSigning, setConsentSigning] = useState(false);
   const [consentError, setConsentError] = useState<string | null>(null);
@@ -1173,6 +1175,9 @@ export default function InviteForm({ token }: Props) {
             inviteToken={token}
             employmentType={form.employment_type}
             requireAdditionalProof={form.include_additional_income}
+            additionalProofHost={
+              form.include_additional_income ? additionalProofHost : null
+            }
             onEmploymentTypeChange={(type) => {
               setForm((prev) => ({
                 ...prev,
@@ -1295,9 +1300,7 @@ export default function InviteForm({ token }: Props) {
                     </div>
                     {fieldHint("additional_monthly_net_income")}
                   </label>
-                  <p className="text-xs text-[#78716c]">
-                    {t(locale, "incomeAdditionalProofUploadHint")}
-                  </p>
+                  <div ref={setAdditionalProofHost} />
                 </>
               ) : null}
             </div>

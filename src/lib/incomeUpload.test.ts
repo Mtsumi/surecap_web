@@ -10,6 +10,7 @@ import {
   incomeSlotsForType,
   incomeUploadComplete,
   isOptionalIncomeSlot,
+  mainIncomeDocumentSlots,
   parseMonthlyNetIncome,
   formatMonthlyNetIncome,
   requiredIncomeSlotsForType,
@@ -32,6 +33,20 @@ describe("incomeUpload", () => {
     ]);
     expect(incomeSlotsForType("other")).toEqual(["proof_of_income"]);
     expect(incomeSlotsForType("no_income")).toEqual([]);
+  });
+
+  it("keeps additional proof out of the main documents list for job types", () => {
+    expect(mainIncomeDocumentSlots("employed")).toEqual([
+      "pay_slip_1",
+      "pay_slip_2",
+      "pay_slip_3",
+    ]);
+    expect(mainIncomeDocumentSlots("self_employed")).toEqual([
+      "notice_of_assessment_year_1",
+      "notice_of_assessment_year_2",
+    ]);
+    expect(mainIncomeDocumentSlots("other")).toEqual(["proof_of_income"]);
+    expect(mainIncomeDocumentSlots("no_income")).toEqual([]);
   });
 
   it("marks optional employed pay slips and additional proof", () => {

@@ -332,6 +332,8 @@ export default function ApplyForm() {
   const [idKind, setIdKind] = useState<IdDocumentKind>("passport");
   const [idDocuments, setIdDocuments] = useState<MemberDocument[]>([]);
   const [incomeDocuments, setIncomeDocuments] = useState<MemberDocument[]>([]);
+  const [additionalProofHost, setAdditionalProofHost] =
+    useState<HTMLDivElement | null>(null);
   const [form, setForm] = useState<FormFields>(emptyForm);
   const [roommates, setRoommates] = useState<RoommateContact[]>([
     { name: "", email: "" },
@@ -2300,6 +2302,9 @@ export default function ApplyForm() {
                 uploadToken={draftSession.uploadToken}
                 employmentType={form.employment_type}
                 requireAdditionalProof={form.include_additional_income}
+                additionalProofHost={
+                  form.include_additional_income ? additionalProofHost : null
+                }
                 onEmploymentTypeChange={(type) => {
                   setForm((prev) => ({
                     ...prev,
@@ -2432,9 +2437,7 @@ export default function ApplyForm() {
                       </label>
                       {fieldHint("additional_monthly_net_income")}
                     </div>
-                    <p className="text-xs text-[#78716c]">
-                      {t(locale, "incomeAdditionalProofUploadHint")}
-                    </p>
+                    <div ref={setAdditionalProofHost} />
                   </>
                 ) : null}
               </div>

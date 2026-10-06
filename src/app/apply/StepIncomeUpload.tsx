@@ -1,17 +1,19 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import {
   ACCEPTED_ID_UPLOAD_TYPES,
   ACCEPTED_UPLOAD_TYPES,
 } from "@/lib/documentUpload";
 import {
   EmploymentType,
+  employmentAllowsAdditionalIncome,
   employmentRequiresIncome,
   incomeSlotSupportsPhotoCapture,
-  incomeSlotsForType,
   incomeUploadComplete,
   isOptionalIncomeSlot,
+  mainIncomeDocumentSlots,
   staleIncomeDocumentTypes,
 } from "@/lib/incomeUpload";
 import IdCameraCapture from "./IdCameraCapture";
@@ -71,6 +73,11 @@ type Props = (MemberMode | InviteMode) & {
   showNoIncomeOption?: boolean;
   /** Require proof_of_income when applicant declared an additional source. */
   requireAdditionalProof?: boolean;
+  /**
+   * Mount point for the additional-income proof slot (inside the checkbox card).
+   * When set with requireAdditionalProof, proof_of_income renders here via portal.
+   */
+  additionalProofHost?: HTMLElement | null;
 };
 
 function documentsEqual(a: MemberDocument[], b: MemberDocument[]): boolean {
@@ -89,6 +96,7 @@ export default function StepIncomeUpload(props: Props) {
     onDocumentsChange,
     showNoIncomeOption = true,
     requireAdditionalProof = false,
+    additionalProofHost = null,
   } = props;
   const incomeOptions = { requireAdditionalProof };
   const isMember = props.mode === "member";
@@ -264,11 +272,136 @@ export default function StepIncomeUpload(props: Props) {
     onEmploymentTypeChange(nextType);
   };
 
-  const slots = incomeSlotsForType(employmentType);
+  const mainSlots = mainIncomeDocumentSlots(employmentType);
   const switchingType = busySlot === "employment_type";
   const incomeDocTypes = documents
     .filter((doc) => INCOME_DOCUMENT_TYPES.has(doc.document_type))
     .map((doc) => doc.document_type);
+  const showAdditionalProofSlot =
+    requireAdditionalProof &&
+    employmentAllowsAdditionalIncome(employmentType) &&
+    additionalProofHost != null;
+
+  const renderSlot = (slot: string, opts?: { requiredInCard?: boolean }): ReactNode => {
+    const labelKey =
+      slot === "proof_of_income" && employmentType !== "other"
+        ? "incomeProofAdditional"
+        : SLOT_LABEL[slot];
+    const uploaded = documents.find((doc) => doc.document_type === slot);
+    const busy = busySlot === slot || switchingType;
+    const optional =
+      !opts?.requiredInCard &&
+      isOptionalIncomeSlot(employmentType, slot, incomeOptions);
+    return (
+      <div
+        key={slot}
+        className="rounded border border-[#e7e0d5] bg-white px-4 py-3"
+      >
+        <p className="text-sm font-medium text-[#292524]">
+          {labelKey ? t(locale, labelKey) : slot}
+          {optional ? (
+            <span className="ml-1 font-normal text-[#78716c]">
+              {t(locale, "incomeOptionalSuffix")}
+            </span>
+          ) : null}
+        </p>
+        {uploaded && (
+          <p className="mt-1 text-xs text-[#3d5a45]">
+            {t(locale, "uploadSaved")}: {uploaded.original_filename}
+          </p>
+        )}
+        {qualityBySlot[slot] && (
+          <p
+            className={`mt-2 rounded px-3 py-2 text-xs leading-relaxed ${
+              uploadQualityTone(qualityBySlot[slot]) === "fail"
+                ? "border border-[#e7c4c4] bg-[#fdf5f5] text-[#7f1d1d]"
+                : "border border-[#f5e6c8] bg-[#fffbeb] text-[#92400e]"
+            }`}
+          >
+            {uploadQualityBanner(qualityBySlot[slot], locale)}
+          </p>
+        )}
+        <div className="mt-2 flex flex-wrap items-center gap-3">
+          {incomeSlotSupportsPhotoCapture(slot) ? (
+            <input
+              ref={(element) => {
+                cameraInputRefs.current[slot] = element;
+              }}
+              type="file"
+              accept={ACCEPTED_ID_UPLOAD_TYPES}
+              capture="environment"
+              disabled={busy}
+              className="sr-only"
+              onChange={(e) => {
+                const file = e.target.files?.[0] ?? null;
+                void handleFile(slot, file);
+                e.target.value = "";
+              }}
+            />
+          ) : null}
+          <input
+            ref={(element) => {
+              fileInputRefs.current[slot] = element;
+            }}
+            type="file"
+            accept={ACCEPTED_UPLOAD_TYPES}
+            disabled={busy}
+            className="sr-only"
+            onChange={(e) => {
+              const file = e.target.files?.[0] ?? null;
+              void handleFile(slot, file);
+              e.target.value = "";
+            }}
+          />
+          {incomeSlotSupportsPhotoCapture(slot) ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => openGuidedCamera(slot)}
+              className="rounded border-0 bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] transition hover:bg-[#d4e4d6] disabled:opacity-60"
+            >
+              {uploaded ? t(locale, "idRetakePhoto") : t(locale, "idTakePhoto")}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => fileInputRefs.current[slot]?.click()}
+            className="rounded border border-[#c8bfb0] bg-white px-3 py-2 text-sm font-medium text-[#3d3229] transition hover:bg-[#f5f0eb] disabled:opacity-60"
+          >
+            {uploaded
+              ? t(
+                  locale,
+                  incomeSlotSupportsPhotoCapture(slot)
+                    ? "idBrowseFile"
+                    : "uploadReplaceFile"
+                )
+              : t(
+                  locale,
+                  incomeSlotSupportsPhotoCapture(slot)
+                    ? "idBrowseFile"
+                    : "uploadChooseFile"
+                )}
+          </button>
+          {uploaded && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => void removeDocument(slot)}
+              className="text-sm text-[#7f1d1d] underline-offset-2 hover:underline disabled:opacity-60"
+            >
+              {t(locale, "uploadRemoveFile")}
+            </button>
+          )}
+        </div>
+        {busy && busySlot === slot && (
+          <p className="mt-1 text-xs text-[#78716c]">
+            {t(locale, "uploadStayOnTab")}
+          </p>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="rounded border border-[#d4e4d6] bg-[#fafcfa] px-4 py-5">
@@ -310,117 +443,9 @@ export default function StepIncomeUpload(props: Props) {
           {t(locale, "incomeNoIncomeHint")}
         </p>
       ) : (
-      <div className="mt-4 space-y-3">
-        {slots.map((slot) => {
-          const labelKey =
-            slot === "proof_of_income" && employmentType !== "other"
-              ? "incomeProofAdditional"
-              : SLOT_LABEL[slot];
-          const uploaded = documents.find((doc) => doc.document_type === slot);
-          const busy = busySlot === slot || switchingType;
-          const optional = isOptionalIncomeSlot(
-            employmentType,
-            slot,
-            incomeOptions
-          );
-          return (
-            <div key={slot} className="rounded border border-[#e7e0d5] bg-white px-4 py-3">
-              <p className="text-sm font-medium text-[#292524]">
-                {labelKey ? t(locale, labelKey) : slot}
-                {optional ? (
-                  <span className="ml-1 font-normal text-[#78716c]">
-                    {t(locale, "incomeOptionalSuffix")}
-                  </span>
-                ) : null}
-              </p>
-              {uploaded && (
-                <p className="mt-1 text-xs text-[#3d5a45]">
-                  {t(locale, "uploadSaved")}: {uploaded.original_filename}
-                </p>
-              )}
-              {qualityBySlot[slot] && (
-                <p
-                  className={`mt-2 rounded px-3 py-2 text-xs leading-relaxed ${
-                    uploadQualityTone(qualityBySlot[slot]) === "fail"
-                      ? "border border-[#e7c4c4] bg-[#fdf5f5] text-[#7f1d1d]"
-                      : "border border-[#f5e6c8] bg-[#fffbeb] text-[#92400e]"
-                  }`}
-                >
-                  {uploadQualityBanner(qualityBySlot[slot], locale)}
-                </p>
-              )}
-              <div className="mt-2 flex flex-wrap items-center gap-3">
-                {incomeSlotSupportsPhotoCapture(slot) ? (
-                  <input
-                    ref={(element) => {
-                      cameraInputRefs.current[slot] = element;
-                    }}
-                    type="file"
-                    accept={ACCEPTED_ID_UPLOAD_TYPES}
-                    capture="environment"
-                    disabled={busy}
-                    className="sr-only"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0] ?? null;
-                      void handleFile(slot, file);
-                      e.target.value = "";
-                    }}
-                  />
-                ) : null}
-                <input
-                  ref={(element) => {
-                    fileInputRefs.current[slot] = element;
-                  }}
-                  type="file"
-                  accept={ACCEPTED_UPLOAD_TYPES}
-                  disabled={busy}
-                  className="sr-only"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0] ?? null;
-                    void handleFile(slot, file);
-                    e.target.value = "";
-                  }}
-                />
-                {incomeSlotSupportsPhotoCapture(slot) ? (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => openGuidedCamera(slot)}
-                    className="rounded border-0 bg-[#e8f0ea] px-3 py-2 text-sm font-medium text-[#1a3d22] transition hover:bg-[#d4e4d6] disabled:opacity-60"
-                  >
-                    {uploaded ? t(locale, "idRetakePhoto") : t(locale, "idTakePhoto")}
-                  </button>
-                ) : null}
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => fileInputRefs.current[slot]?.click()}
-                  className="rounded border border-[#c8bfb0] bg-white px-3 py-2 text-sm font-medium text-[#3d3229] transition hover:bg-[#f5f0eb] disabled:opacity-60"
-                >
-                  {uploaded
-                    ? t(locale, incomeSlotSupportsPhotoCapture(slot) ? "idBrowseFile" : "uploadReplaceFile")
-                    : t(locale, incomeSlotSupportsPhotoCapture(slot) ? "idBrowseFile" : "uploadChooseFile")}
-                </button>
-                {uploaded && (
-                  <button
-                    type="button"
-                    disabled={busy}
-                    onClick={() => void removeDocument(slot)}
-                    className="text-sm text-[#7f1d1d] underline-offset-2 hover:underline disabled:opacity-60"
-                  >
-                    {t(locale, "uploadRemoveFile")}
-                  </button>
-                )}
-              </div>
-              {busy && busySlot === slot && (
-                <p className="mt-1 text-xs text-[#78716c]">
-                  {t(locale, "uploadStayOnTab")}
-                </p>
-              )}
-            </div>
-          );
-        })}
-      </div>
+        <div className="mt-4 space-y-3">
+          {mainSlots.map((slot) => renderSlot(slot))}
+        </div>
       )}
 
       {error && (
@@ -432,8 +457,22 @@ export default function StepIncomeUpload(props: Props) {
       {!loadingList &&
         employmentRequiresIncome(employmentType) &&
         incomeUploadComplete(employmentType, incomeDocTypes, incomeOptions) && (
-        <p className="mt-4 text-sm text-[#3d5a45]">{t(locale, "incomeUploadComplete")}</p>
-      )}
+          <p className="mt-4 text-sm text-[#3d5a45]">
+            {t(locale, "incomeUploadComplete")}
+          </p>
+        )}
+
+      {showAdditionalProofSlot
+        ? createPortal(
+            <div className="space-y-2">
+              <p className="text-xs text-[#78716c]">
+                {t(locale, "incomeAdditionalProofUploadHint")}
+              </p>
+              {renderSlot("proof_of_income", { requiredInCard: true })}
+            </div>,
+            additionalProofHost
+          )
+        : null}
 
       {cameraSlot ? (
         <IdCameraCapture

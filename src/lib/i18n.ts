@@ -94,7 +94,7 @@ export const messages = {
     incomeAdditionalProofRequired:
       "Upload proof of your additional income (photo or PDF) before continuing.",
     incomeAdditionalProofUploadHint:
-      "Required: upload a photo or PDF under Proof of additional income in the documents above.",
+      "Upload a photo or PDF of proof for this additional income.",
     additionalIncomeKind: "Additional income type",
     additionalIncomeGovernment: "Government benefits",
     additionalIncomeOther: "Other income",
@@ -406,7 +406,7 @@ export const messages = {
     incomeAdditionalProofRequired:
       "Téléversez une preuve de votre revenu additionnel (photo ou PDF) avant de continuer.",
     incomeAdditionalProofUploadHint:
-      "Obligatoire : téléversez une photo ou un PDF sous Preuve de revenu additionnel (documents ci-dessus).",
+      "Téléversez une photo ou un PDF de preuve pour ce revenu additionnel.",
     additionalIncomeKind: "Type de revenu additionnel",
     additionalIncomeGovernment: "Prestations gouvernementales",
     additionalIncomeOther: "Autre revenu",
