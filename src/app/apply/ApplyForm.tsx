@@ -811,8 +811,31 @@ export default function ApplyForm() {
         return addressFieldErrors(input);
       case "housing":
         return housingFieldErrors(input);
-      case "references":
-        return incomeFieldErrors(input);
+      case "references": {
+        const errors = incomeFieldErrors(input);
+        // Employment type (incl. guarantor_pays) is chosen on this step.
+        if (employmentRequiresGuarantor(form.employment_type)) {
+          Object.assign(
+            errors,
+            housingFieldErrors({
+              ...input,
+              includeGuarantor: true,
+              guarantor,
+            })
+          );
+        }
+        return errors;
+      }
+      case "other":
+      case "review":
+        if (employmentRequiresGuarantor(form.employment_type)) {
+          return housingFieldErrors({
+            ...input,
+            includeGuarantor: true,
+            guarantor,
+          });
+        }
+        return {};
       default:
         return {};
     }
@@ -865,9 +888,16 @@ export default function ApplyForm() {
       for (let i = currentIdx; i < targetIdx; i++) {
         const stepErrors = fieldErrorsForFormStep(FORM_STEPS[i]);
         if (blockWithFieldErrors(stepErrors)) {
-          setErrorStep(FORM_STEPS[i]);
-          setStep(FORM_STEPS[i]);
-          persistProgress(FORM_STEPS[i]);
+          const guarantorBlocked = Object.keys(stepErrors).some(
+            (k) => k === "guarantor" || k.startsWith("guarantor_")
+          );
+          const dest = guarantorBlocked ? "housing" : FORM_STEPS[i];
+          if (guarantorBlocked) {
+            setError(t(locale, "guarantorRequiredPaysHint"));
+          }
+          setErrorStep(dest);
+          setStep(dest);
+          persistProgress(dest);
           return;
         }
         if (

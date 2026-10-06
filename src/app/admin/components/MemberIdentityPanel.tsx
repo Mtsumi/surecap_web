@@ -130,7 +130,11 @@ export default function MemberIdentityPanel({
       <dd className="admin-field-value mt-1 space-y-2">
         <p className="text-sm text-[var(--ml-ink)]">{statusLabel(identity, t)}</p>
         {matchFail ? (
-          <p className="text-sm text-[#7f1d1d]">{t("identityMatchFailNote")}</p>
+          <p className="text-sm text-[#7f1d1d]">
+            {identity.match_notes?.trim()
+              ? identity.match_notes
+              : t("identityMatchFailNote")}
+          </p>
         ) : null}
         {showOpenId || showOpenSelfie ? (
           <div className="flex flex-col gap-1 sm:flex-row sm:flex-wrap sm:gap-x-4">
