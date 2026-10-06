@@ -1,15 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { type Locale } from "./i18n";
-import { type AdminMessageKey, adminT } from "./adminI18n";
+import type { Locale } from "./i18n";
 import {
   persistLocale,
   resolveInitialLocale,
   syncDocumentLang,
 } from "./localePreference";
 
-export function useAdminLocale() {
+export function useSyncedLocale() {
   const [locale, setLocaleState] = useState<Locale>("fr");
 
   useEffect(() => {
@@ -24,14 +23,5 @@ export function useAdminLocale() {
     setLocaleState(next);
   }, []);
 
-  const toggleLocale = useCallback(() => {
-    setLocale(locale === "fr" ? "en" : "fr");
-  }, [locale, setLocale]);
-
-  const t = useCallback(
-    (key: AdminMessageKey) => adminT(locale, key),
-    [locale]
-  );
-
-  return { locale, setLocale, toggleLocale, t };
+  return { locale, setLocale };
 }

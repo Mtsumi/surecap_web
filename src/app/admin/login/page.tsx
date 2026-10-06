@@ -8,10 +8,11 @@ import { setAdminToken } from "@/lib/adminAuth";
 import { adminUi } from "@/lib/adminUi";
 import { clearCachedAdminUser } from "../AdminShell";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
+import LocaleToggle from "@/components/LocaleToggle";
 
 export default function AdminLoginPage() {
   const router = useRouter();
-  const { t, toggleLocale } = useAdminLocaleContext();
+  const { t, locale, setLocale } = useAdminLocaleContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -48,13 +49,7 @@ export default function AdminLoginPage() {
             <h1 className={adminUi.pageTitle}>{t("loginTitle")}</h1>
             <p className={adminUi.pageSubtitle}>{t("loginSubtitle")}</p>
           </div>
-          <button
-            type="button"
-            onClick={toggleLocale}
-            className="shrink-0 text-sm text-[var(--ml-steel)] hover:underline"
-          >
-            {t("langToggle")}
-          </button>
+          <LocaleToggle locale={locale} onChange={setLocale} />
         </div>
 
         {error && <p className={`${adminUi.alertError} mt-4`}>{error}</p>}

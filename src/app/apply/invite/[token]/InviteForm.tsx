@@ -19,7 +19,9 @@ import {
 } from "@/lib/api";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
 import { incomeUploadComplete, parseMonthlyNetIncome, formatMonthlyNetIncome, employmentRequiresIncome, employmentAllowsAdditionalIncome, type AdditionalIncomeKind } from "@/lib/incomeUpload";
-import { Locale, MessageKey, detectLocale, t } from "@/lib/i18n";
+import { Locale, MessageKey, t } from "@/lib/i18n";
+import { useSyncedLocale } from "@/lib/useSyncedLocale";
+import LocaleToggle from "@/components/LocaleToggle";
 import {
   addressDatePayload,
   formatAddressDateRange,
@@ -215,7 +217,7 @@ function stepLabel(locale: Locale, step: Step): string {
 type Props = { token: string };
 
 export default function InviteForm({ token }: Props) {
-  const [locale, setLocale] = useState<Locale>("fr");
+  const { locale, setLocale } = useSyncedLocale();
   const [context, setContext] = useState<InviteContext | null>(null);
   const [step, setStep] = useState<Step>("personal");
   const [form, setForm] = useState<InviteeFormFields>(emptyFields);
@@ -255,10 +257,6 @@ export default function InviteForm({ token }: Props) {
   );
 
   useEffect(() => {
-    setLocale(detectLocale());
-  }, []);
-
-  useEffect(() => {
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -292,6 +290,7 @@ export default function InviteForm({ token }: Props) {
     return () => {
       cancelled = true;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const setField = <K extends keyof InviteeFormFields>(
@@ -678,7 +677,8 @@ export default function InviteForm({ token }: Props) {
 
   return (
     <div>
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="sticky top-0 z-20 -mx-4 mb-6 border-b border-[#e7e0d5] bg-[#f4f1ec]/95 px-4 py-4 backdrop-blur-sm">
+        <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-lg font-semibold text-[#292524]">{title}</h1>
           <p className="mt-1 text-sm text-[#78716c]">{subtitle}</p>
@@ -686,13 +686,8 @@ export default function InviteForm({ token }: Props) {
             {context.building_address}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => setLocale(locale === "fr" ? "en" : "fr")}
-          className="shrink-0 text-sm text-[#57534e] underline-offset-2 hover:underline"
-        >
-          {t(locale, "langToggle")}
-        </button>
+        <LocaleToggle locale={locale} onChange={setLocale} />
+        </div>
       </div>
 
       <nav className="mb-6 flex flex-wrap items-center gap-1 text-xs text-[#78716c]" aria-label="Invite form steps">
