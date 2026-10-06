@@ -10,6 +10,7 @@ import {
   fetchJanitorReview,
   fetchReviewCreditConsentBlob,
   fetchReviewDocumentBlob,
+  fetchReviewGuarantorOfferEmailDraft,
   fetchReviewRejectionEmailDraft,
   submitJanitorReview,
 } from "@/lib/api";
@@ -305,6 +306,7 @@ export default function ReviewForm({ token }: { token: string }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [showRefuse, setShowRefuse] = useState(false);
+  const [showOffer, setShowOffer] = useState(false);
   const [checklist, setChecklist] = useState<JanitorReviewChecklist>(EMPTY_CHECKLIST);
   const [stripBusy, setStripBusy] = useState(false);
   const [stripIdPreviewUrl, setStripIdPreviewUrl] = useState<string | null>(null);
@@ -426,13 +428,23 @@ export default function ReviewForm({ token }: { token: string }) {
         action,
         checklist: action === "request_credit_check" ? checklist : undefined,
         reason: action === "reject" ? extra?.reason : undefined,
-        locale: action === "reject" ? extra?.locale : undefined,
-        email_subject: action === "reject" ? extra?.email_subject : undefined,
-        email_body: action === "reject" ? extra?.email_body : undefined,
+        locale:
+          action === "reject" || action === "offer_guarantor"
+            ? extra?.locale
+            : undefined,
+        email_subject:
+          action === "reject" || action === "offer_guarantor"
+            ? extra?.email_subject
+            : undefined,
+        email_body:
+          action === "reject" || action === "offer_guarantor"
+            ? extra?.email_body
+            : undefined,
       });
       setReview(updated);
       if (updated.checklist) setChecklist(updated.checklist);
       setShowRefuse(false);
+      setShowOffer(false);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "La mise à jour a échoué");
     } finally {
@@ -451,6 +463,14 @@ export default function ReviewForm({ token }: { token: string }) {
       return;
     }
     void runAction("reject", values);
+  }
+
+  function onOfferCompose(values: RejectionComposeValues) {
+    if (!values.email_body.trim() || !values.email_subject.trim()) {
+      setError("L'objet et le message du courriel sont obligatoires.");
+      return;
+    }
+    void runAction("offer_guarantor", values);
   }
 
   if (loading) {
@@ -720,6 +740,7 @@ export default function ReviewForm({ token }: { token: string }) {
           offerSentAt={review.guarantor_offer_sent_at}
           submitting={submitting}
           showRefuse={showRefuse}
+          showOffer={showOffer}
           acceptDisabled={review.identity?.ready_for_accept === false}
           acceptDisabledReason={
             review.identity?.ready_for_accept === false
@@ -732,17 +753,20 @@ export default function ReviewForm({ token }: { token: string }) {
               reason: draftReason,
             })
           }
+          loadOfferDraft={({ locale }) =>
+            fetchReviewGuarantorOfferEmailDraft(token, { locale })
+          }
           onApprove={() => void runAction("accept")}
-          onOfferGuarantor={() => {
-            const resend = Boolean(review.guarantor_offer_sent_at);
-            const ok = window.confirm(
-              resend
-                ? "Renvoyer le courriel au demandeur pour proposer d'ajouter un garant?"
-                : "Envoyer un courriel au demandeur pour proposer d'ajouter un garant?"
-            );
-            if (ok) void runAction("offer_guarantor");
+          onShowOffer={() => {
+            setShowRefuse(false);
+            setShowOffer(true);
           }}
-          onShowRefuse={() => setShowRefuse(true)}
+          onCancelOffer={() => setShowOffer(false)}
+          onConfirmOffer={onOfferCompose}
+          onShowRefuse={() => {
+            setShowOffer(false);
+            setShowRefuse(true);
+          }}
           onCancelRefuse={() => setShowRefuse(false)}
           onConfirmRefuse={onRejectCompose}
         />

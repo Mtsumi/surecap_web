@@ -837,6 +837,20 @@ export function fetchReviewRejectionEmailDraft(
   );
 }
 
+export function fetchReviewGuarantorOfferEmailDraft(
+  token: string,
+  opts?: { locale?: "fr" | "en" }
+): Promise<RejectionEmailDraft> {
+  const params = new URLSearchParams();
+  if (opts?.locale) params.set("locale", opts.locale);
+  const q = params.toString();
+  return apiFetch<RejectionEmailDraft>(
+    `/admin/janitor-review/${encodeURIComponent(token)}/guarantor-offer-email-draft${
+      q ? `?${q}` : ""
+    }`
+  );
+}
+
 export function reviewCreditConsentPath(token: string, documentId: number): string {
   return `/admin/janitor-review/${encodeURIComponent(token)}/documents/${documentId}/file`;
 }

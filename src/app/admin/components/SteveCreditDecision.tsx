@@ -11,12 +11,16 @@ export default function SteveCreditDecision({
   offerSentAt,
   submitting,
   showRefuse,
+  showOffer,
   embedded = false,
   acceptDisabled = false,
   acceptDisabledReason,
   loadRejectionDraft,
+  loadOfferDraft,
   onApprove,
-  onOfferGuarantor,
+  onShowOffer,
+  onCancelOffer,
+  onConfirmOffer,
   onShowRefuse,
   onCancelRefuse,
   onConfirmRefuse,
@@ -25,6 +29,7 @@ export default function SteveCreditDecision({
   offerSentAt?: string | null;
   submitting: boolean;
   showRefuse: boolean;
+  showOffer: boolean;
   embedded?: boolean;
   acceptDisabled?: boolean;
   acceptDisabledReason?: string | null;
@@ -32,8 +37,13 @@ export default function SteveCreditDecision({
     locale?: "fr" | "en";
     reason: string;
   }) => Promise<RejectionEmailDraft>;
+  loadOfferDraft: (opts: {
+    locale?: "fr" | "en";
+  }) => Promise<RejectionEmailDraft>;
   onApprove: () => void;
-  onOfferGuarantor: () => void;
+  onShowOffer: () => void;
+  onCancelOffer: () => void;
+  onConfirmOffer: (values: RejectionComposeValues) => void | Promise<void>;
   onShowRefuse: () => void;
   onCancelRefuse: () => void;
   onConfirmRefuse: (values: RejectionComposeValues) => void | Promise<void>;
@@ -72,7 +82,7 @@ export default function SteveCreditDecision({
             type="button"
             disabled={submitting}
             className={`${adminUi.btnSecondary} disabled:opacity-50`}
-            onClick={onOfferGuarantor}
+            onClick={onShowOffer}
           >
             {offerSentAt
               ? "Renvoyer le courriel (ajouter un garant)"
@@ -90,11 +100,23 @@ export default function SteveCreditDecision({
       </div>
       {!hasGuarantor ? (
         <p className="text-xs text-[var(--ml-steel)]">
-          Envoie un courriel au demandeur avec un lien pour ajouter un garant à
-          cette même demande. S&apos;ils n&apos;en ont pas, ils doivent
-          communiquer avec le concierge. Le dossier reste ouvert.
+          Ouvre un brouillon du courriel au demandeur (objet, message, FR/EN)
+          avec un lien pour ajouter un garant. S&apos;ils n&apos;en ont pas, ils
+          doivent communiquer avec le concierge. Le dossier reste ouvert.
           {offerSentLabel ? ` Dernier envoi : ${offerSentLabel}.` : ""}
         </p>
+      ) : null}
+      {showOffer && !hasGuarantor ? (
+        <RejectionEmailComposer
+          title="Courriel pour proposer un garant"
+          submitLabel="Envoyer le courriel au demandeur"
+          submitClassName={adminUi.btnPrimary}
+          showReason={false}
+          loadDraft={({ locale }) => loadOfferDraft({ locale })}
+          submitting={submitting}
+          onCancel={onCancelOffer}
+          onConfirm={onConfirmOffer}
+        />
       ) : null}
       {showRefuse ? (
         <RejectionEmailComposer
