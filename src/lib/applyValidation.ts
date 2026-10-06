@@ -69,7 +69,7 @@ export type ApplyValidationInput = {
   date_of_birth?: string;
   roommates: { email: string }[];
   includeGuarantor: boolean;
-  guarantor: { email: string; phone: string } | null;
+  guarantor: { name: string; email: string; phone: string } | null;
   address_not_in_canada?: boolean;
   phone: string;
   landlord_name: string;
@@ -316,8 +316,11 @@ export function validateHousingStep(
   }
   if (input.includeGuarantor && input.guarantor) {
     const email = input.guarantor.email.trim();
+    if (!input.guarantor.name.trim()) return "required";
+    if (!email) return "required";
     if (!isValidEmail(email)) return "invalid_email";
     emails.push(email.toLowerCase());
+    if (!input.guarantor.phone.trim()) return "required";
   }
   if (new Set(emails).size !== emails.length) {
     return "duplicate_email";
@@ -524,6 +527,13 @@ export function findFirstValidationIssue(
     return { code: "guarantor_required_pays", step: "housing" };
   }
 
+  if (input.includeGuarantor) {
+    const g = input.guarantor;
+    if (!g?.name?.trim() || !g.email?.trim() || !g.phone?.trim()) {
+      return { code: "required", step: "housing" };
+    }
+  }
+
   if (input.includeGuarantor && input.guarantor?.phone) {
     const guarantorPhone = validatePhoneFormat(input.guarantor.phone);
     if (guarantorPhone) return { code: guarantorPhone, step: "housing" };
@@ -564,6 +574,19 @@ export function housingFieldErrors(
     !input.includeGuarantor
   ) {
     errors.guarantor = "guarantor_required_pays";
+  }
+
+  if (input.includeGuarantor) {
+    const g = input.guarantor;
+    if (!g?.name?.trim()) {
+      errors.guarantor_name = "required";
+    }
+    if (!g?.email?.trim()) {
+      errors.guarantor_email = "required";
+    }
+    if (!g?.phone?.trim()) {
+      errors.guarantor_phone = "required";
+    }
   }
 
   if (input.move_in_date) {

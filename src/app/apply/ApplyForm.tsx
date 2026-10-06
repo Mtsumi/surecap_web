@@ -2188,17 +2188,21 @@ export default function ApplyForm() {
               {(includeGuarantor ||
                 employmentRequiresGuarantor(form.employment_type)) && (
                 <div className="mt-4 space-y-3">
-                  <label className="block text-sm text-[#57534e]">
-                    {t(locale, "guarantorName")}
-                    <input
-                      required
-                      value={guarantor.name}
-                      onChange={(e) =>
-                        setGuarantor((g) => ({ ...g, name: e.target.value }))
-                      }
-                      className={inputClass}
-                    />
-                  </label>
+                  <div id="apply-field-guarantor_name">
+                    <label className="block text-sm text-[#57534e]">
+                      {t(locale, "guarantorName")}
+                      <input
+                        required
+                        value={guarantor.name}
+                        onChange={(e) => {
+                          clearFieldError("guarantor_name");
+                          setGuarantor((g) => ({ ...g, name: e.target.value }));
+                        }}
+                        className={inputClassFor("guarantor_name")}
+                      />
+                    </label>
+                    {fieldHint("guarantor_name")}
+                  </div>
                   <div id="apply-field-guarantor_email">
                   <label className="block text-sm text-[#57534e]">
                     {t(locale, "email")}

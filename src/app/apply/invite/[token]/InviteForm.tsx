@@ -1201,6 +1201,7 @@ export default function InviteForm({ token }: Props) {
             }}
             onDocumentsChange={setIncomeDocuments}
             showNoIncomeOption={role === "roommate"}
+            showGuarantorPaysOption={role === "roommate"}
           />
           {employmentRequiresIncome(form.employment_type) && (
           <>

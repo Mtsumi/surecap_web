@@ -135,7 +135,7 @@ describe("email validation", () => {
     const input = baseInput({
       roommates: [{ email: "roommate@example.com" }],
       includeGuarantor: true,
-      guarantor: { email: "guarantor@example.com", phone: "5145550199" },
+      guarantor: { name: "Garant", email: "guarantor@example.com", phone: "5145550199" },
     });
     expect(otherEmailsForPrimary(input)).toEqual([
       "roommate@example.com",
@@ -439,13 +439,30 @@ describe("field error maps", () => {
       email: "dup@example.com",
       roommates: [{ email: "dup@example.com" }],
       includeGuarantor: true,
-      guarantor: { email: "guarantor@example.com", phone: "bad" },
+      guarantor: { name: "Garant", email: "guarantor@example.com", phone: "bad" },
       phone: "5145550100",
       employment_type: "employed",
     });
     expect(errors.email).toBe("duplicate_email");
     expect(errors.roommate_email_0).toBe("duplicate_email");
     expect(errors.guarantor_phone).toBe("invalid_phone");
+  });
+
+  it("housingFieldErrors requires guarantor contacts when included", () => {
+    const errors = housingFieldErrors({
+      move_in_date: "2026-06-04",
+      unit_earliest_move_in: "2026-06-04",
+      unit_available_date: null,
+      email: "primary@example.com",
+      roommates: [],
+      includeGuarantor: true,
+      guarantor: { name: "", email: "", phone: "" },
+      phone: "5145550100",
+      employment_type: "guarantor_pays",
+    });
+    expect(errors.guarantor_name).toBe("required");
+    expect(errors.guarantor_email).toBe("required");
+    expect(errors.guarantor_phone).toBe("required");
   });
 
   it("personalFieldErrors and referencesFieldErrors surface field keys", () => {

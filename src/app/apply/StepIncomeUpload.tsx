@@ -71,6 +71,8 @@ type Props = (MemberMode | InviteMode) & {
   onEmploymentTypeChange: (type: EmploymentType) => void;
   onDocumentsChange?: (documents: MemberDocument[]) => void;
   showNoIncomeOption?: boolean;
+  /** Guarantor-pays is for applicants only (primary / roommate), not invitee guarantors. */
+  showGuarantorPaysOption?: boolean;
   /** When set, guarantor_pays is only allowed if the household already has a guarantor. */
   householdHasGuarantor?: boolean | null;
   /** Require proof_of_income when applicant declared an additional source. */
@@ -97,6 +99,7 @@ export default function StepIncomeUpload(props: Props) {
     onEmploymentTypeChange,
     onDocumentsChange,
     showNoIncomeOption = true,
+    showGuarantorPaysOption = true,
     householdHasGuarantor = null,
     requireAdditionalProof = false,
     additionalProofHost = null,
@@ -438,7 +441,9 @@ export default function StepIncomeUpload(props: Props) {
           {showNoIncomeOption ? (
             <option value="no_income">{t(locale, "employmentNoIncome")}</option>
           ) : null}
-          <option value="guarantor_pays">{t(locale, "employmentGuarantorPays")}</option>
+          {showGuarantorPaysOption ? (
+            <option value="guarantor_pays">{t(locale, "employmentGuarantorPays")}</option>
+          ) : null}
         </select>
       </label>
 
