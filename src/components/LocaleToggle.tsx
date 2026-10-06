@@ -15,14 +15,14 @@ export default function LocaleToggle({
 }) {
   const selected =
     variant === "dark"
-      ? "bg-[#243444] font-semibold text-white"
-      : "bg-white font-semibold text-[#1c1917] shadow-sm";
+      ? "bg-white font-semibold text-[#1b2a38]"
+      : "bg-[#1c1917] font-semibold text-white";
   const idle =
     variant === "dark" ? "text-[#9AA7B3] hover:text-white" : "text-[#57534e] hover:text-[#1c1917]";
   const wrap =
     variant === "dark"
-      ? "border-[#3A4C5E] bg-[#1b2a38]"
-      : "border-[#d6d0c4] bg-[#f4f1ec]";
+      ? "border-[#5A6C7E] bg-[#15202b]"
+      : "border-[#d6d0c4] bg-[#e8e2d8]";
 
   if (compact) {
     const next = locale === "fr" ? "en" : "fr";

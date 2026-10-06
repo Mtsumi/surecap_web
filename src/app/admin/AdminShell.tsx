@@ -226,36 +226,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           {sidebarCollapsed ? "→" : "← Réduire"}
         </button>
       ) : null}
-
-      <div
-        className={`mt-2 flex flex-col gap-2 border-t border-[#3A4C5E] pt-4 ${
-          showCollapsed ? "items-center" : ""
-        }`}
-      >
-        <LocaleToggle
-          locale={locale}
-          onChange={setLocale}
-          variant="dark"
-          compact={showCollapsed}
-        />
-        <button
-          type="button"
-          onClick={logout}
-          title={showCollapsed ? t("logout") : undefined}
-          className={`rounded-lg text-sm text-[#9AA7B3] hover:bg-[#243444] hover:text-white ${
-            showCollapsed ? "flex h-10 w-10 items-center justify-center text-xs" : "px-3 py-2 text-left"
-          }`}
-        >
-          {showCollapsed ? "Out" : t("logout")}
-        </button>
-      </div>
     </>
   );
 
   return (
-    <div className="admin-app flex min-h-screen bg-[var(--ml-paper)] text-[var(--ml-ink)]">
+    <div className="admin-app flex h-dvh overflow-hidden bg-[var(--ml-paper)] text-[var(--ml-ink)] print:h-auto print:overflow-visible">
       <aside
-        className={`hidden shrink-0 flex-col overflow-y-auto bg-[var(--ml-ink)] p-4 transition-[width] duration-200 print:hidden md:flex ${
+        className={`hidden h-full shrink-0 flex-col overflow-y-auto bg-[var(--ml-ink)] p-4 transition-[width] duration-200 print:hidden md:flex ${
           sidebarCollapsed ? "w-[72px]" : "w-[220px]"
         }`}
       >
@@ -276,17 +253,17 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
       )}
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-[var(--ml-line)] bg-[var(--ml-card)] px-4 py-3 print:hidden md:hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="flex shrink-0 items-center gap-3 border-b border-[var(--ml-line)] bg-[var(--ml-card)] px-4 py-3 print:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="rounded-md border border-[var(--ml-line)] px-2.5 py-1.5 text-sm text-[var(--ml-ink)]"
+            className="rounded-md border border-[var(--ml-line)] px-2.5 py-1.5 text-sm text-[var(--ml-ink)] md:hidden"
             aria-label="Open menu"
           >
             Menu
           </button>
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 md:hidden">
             <p className="truncate font-[family-name:var(--font-admin-display)] text-sm font-extrabold tracking-wide">
               {t("brand")}
             </p>
@@ -294,6 +271,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
               {t("slogan")}
             </p>
           </div>
+          <div className="hidden min-w-0 flex-1 md:block" />
           <LocaleToggle locale={locale} onChange={setLocale} />
           <button
             type="button"
@@ -304,7 +282,9 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
           </button>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl flex-1 px-5 py-8">{children}</main>
+        <main className="mx-auto w-full max-w-5xl min-h-0 flex-1 overflow-y-auto px-5 py-8 print:overflow-visible">
+          {children}
+        </main>
       </div>
     </div>
   );
