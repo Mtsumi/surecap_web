@@ -892,7 +892,12 @@ export default function ApplyForm() {
             (k) => k === "guarantor" || k.startsWith("guarantor_")
           );
           const dest = guarantorBlocked ? "housing" : FORM_STEPS[i];
-          if (guarantorBlocked) {
+          if (
+            stepErrors.guarantor === "guarantor_required_pays" ||
+            stepErrors.guarantor_name === "required" ||
+            stepErrors.guarantor_email === "required" ||
+            stepErrors.guarantor_phone === "required"
+          ) {
             setError(t(locale, "guarantorRequiredPaysHint"));
           }
           setErrorStep(dest);
