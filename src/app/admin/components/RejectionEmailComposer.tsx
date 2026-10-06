@@ -41,6 +41,8 @@ export default function RejectionEmailComposer({
   hint,
 }: Props) {
   const { t } = useAdminCopy();
+  const tRef = useRef(t);
+  tRef.current = t;
   const [reason, setReason] = useState(initialReason);
   const [locale, setLocale] = useState<"fr" | "en">("fr");
   const [subject, setSubject] = useState("");
@@ -76,13 +78,13 @@ export default function RejectionEmailComposer({
         applyDraft(draft);
       } catch (e) {
         setDraftError(
-          e instanceof Error ? e.message : t("composerDraftError")
+          e instanceof Error ? e.message : tRef.current("composerDraftError")
         );
       } finally {
         setLoadingDraft(false);
       }
     },
-    [applyDraft, t]
+    [applyDraft]
   );
 
   useEffect(() => {
@@ -96,7 +98,7 @@ export default function RejectionEmailComposer({
       } catch (e) {
         if (!cancelled) {
           setDraftError(
-            e instanceof Error ? e.message : t("composerDraftError")
+            e instanceof Error ? e.message : tRef.current("composerDraftError")
           );
         }
       } finally {
@@ -106,7 +108,7 @@ export default function RejectionEmailComposer({
     return () => {
       cancelled = true;
     };
-  }, [applyDraft, initialReason, t]);
+  }, [applyDraft, initialReason]);
 
   const onLocaleChange = async (next: "fr" | "en") => {
     setLocale(next);
