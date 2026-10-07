@@ -16,41 +16,54 @@ export default function TeamPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSuper, setIsSuper] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
 
-  const load = () => {
-    listAdminUsers()
-      .then(setUsers)
-      .catch((e) => setError(e instanceof Error ? e.message : t("teamError")));
+  const load = async () => {
+    setUsers(await listAdminUsers());
   };
 
   useEffect(() => {
-    load();
+    load().catch((e) => setError(e instanceof Error ? e.message : t("teamError")));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
   const onCreate = async (e: FormEvent) => {
     e.preventDefault();
+    if (busy) return;
+    setBusy(true);
     setError(null);
     setMessage(null);
     try {
-      await createAdminUser({ email: email.trim(), password, is_super_admin: isSuper });
+      await createAdminUser({
+        email: email.trim(),
+        password,
+        is_super_admin: isSuper,
+      });
       setEmail("");
       setPassword("");
       setIsSuper(false);
       setMessage(t("teamCreated"));
-      load();
+      try {
+        await load();
+      } catch {
+        // Account + welcome email already succeeded; list refresh is best-effort.
+      }
     } catch (err) {
+      setMessage(null);
       setError(err instanceof Error ? err.message : t("teamError"));
+    } finally {
+      setBusy(false);
     }
   };
 
   const deactivate = async (user: AdminUser) => {
     if (!confirm(t("teamDeactivateConfirm").replace("{email}", user.email))) return;
     try {
+      setError(null);
       await updateAdminUser(user.id, { active: false });
-      load();
+      await load();
     } catch (err) {
       setError(err instanceof Error ? err.message : t("teamError"));
     }
@@ -75,6 +88,7 @@ export default function TeamPage() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className={adminUi.input}
+            disabled={busy}
           />
         </label>
         <label className="block text-sm text-[var(--ml-steel)]">
@@ -87,6 +101,7 @@ export default function TeamPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className={adminUi.input}
+            disabled={busy}
           />
         </label>
         <label className="flex items-center gap-2 text-sm text-[var(--ml-ink)]">
@@ -95,10 +110,11 @@ export default function TeamPage() {
             checked={isSuper}
             onChange={(e) => setIsSuper(e.target.checked)}
             className="h-4 w-4 rounded border-[var(--ml-line)]"
+            disabled={busy}
           />
           {t("teamSuperAdmin")}
         </label>
-        <button type="submit" className={adminUi.btnPrimary}>
+        <button type="submit" className={adminUi.btnPrimary} disabled={busy}>
           {t("teamCreateSubmit")}
         </button>
       </form>
