@@ -20,8 +20,7 @@ const DOCUMENT_TYPE_LABELS: Record<string, string> = {
   id_driver_licence_back: "Permis canadien (verso)",
   id_medicare: "Carte RAMQ",
   id_passport: "Passeport",
-  id_pr_card_front: "Carte de résident permanent (recto)",
-  id_pr_card_back: "Carte de résident permanent (verso)",
+  id_pr_card_front: "Carte de résident permanent",
   id_refugee_claimant: "Document de demandeur d'asile",
   id_other: "Autre pièce d'identité avec photo",
   pay_slip_1: "Talons de paie (1)",
@@ -44,7 +43,6 @@ export const ID_REVIEW_DOCUMENT_TYPES = [
   "id_medicare",
   "id_passport",
   "id_pr_card_front",
-  "id_pr_card_back",
   "id_refugee_claimant",
   "id_other",
 ];

@@ -12,7 +12,7 @@ describe("adminDocuments", () => {
   it("labels known document types in French", () => {
     expect(documentTypeLabel("id_passport")).toBe("Passeport");
     expect(documentTypeLabel("id_pr_card_front")).toBe(
-      "Carte de résident permanent (recto)"
+      "Carte de résident permanent"
     );
     expect(documentTypeLabel("id_refugee_claimant")).toBe(
       "Document de demandeur d'asile"

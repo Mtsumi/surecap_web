@@ -12,7 +12,7 @@ export const ID_DOCUMENT_SLOTS: Record<IdDocumentKind, readonly string[]> = {
   driver_licence: ["id_driver_licence_front", "id_driver_licence_back"],
   medicare: ["id_medicare"],
   passport: ["id_passport"],
-  pr_card: ["id_pr_card_front", "id_pr_card_back"],
+  pr_card: ["id_pr_card_front"],
   refugee_claimant: ["id_refugee_claimant"],
   other: ["id_other"],
 };
