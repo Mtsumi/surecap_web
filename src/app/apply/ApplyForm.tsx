@@ -36,6 +36,7 @@ import {
   loadLatestApplyProgress,
   saveApplyProgress,
 } from "@/lib/applyStorage";
+import { buildingLabel } from "@/lib/buildingLabel";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
 import {
   AdditionalIncomeKind,
@@ -1418,7 +1419,7 @@ export default function ApplyForm() {
                     className="group w-full rounded border border-[#e7e0d5] bg-[#fffef9] px-4 py-4 text-left transition hover:border-[#3d5a45]"
                   >
                     <span className="block font-medium text-[#292524] group-hover:text-[#3d5a45]">
-                      {b.name}
+                      {buildingLabel(b.name, b.address)}
                     </span>
                     <span className="mt-1 block text-sm leading-snug text-[#78716c]">
                       {b.address}
@@ -1449,7 +1450,7 @@ export default function ApplyForm() {
             {t(locale, "selectUnit")}
           </h2>
           <p className="mb-5 mt-1 text-sm text-[#78716c]">
-            {selectedBuilding.name}
+            {buildingLabel(selectedBuilding.name, selectedBuilding.address)}
           </p>
           <ul className="space-y-2.5">
             {units.map((u) => {
@@ -2645,7 +2646,7 @@ export default function ApplyForm() {
                 {t(locale, "building")}
               </dt>
               <dd className="mt-1 font-medium text-[#292524]">
-                {selectedBuilding.name}
+                {buildingLabel(selectedBuilding.name, selectedBuilding.address)}
               </dd>
             </div>
             <div className="px-4 py-3">
