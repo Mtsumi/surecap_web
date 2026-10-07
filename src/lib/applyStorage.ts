@@ -16,7 +16,13 @@ export type StoredApplyProgress = {
   includeGuarantor: boolean;
   guarantor: { name: string; email: string; phone: string };
   draftSession?: DraftSession | null;
-  idKind?: "driver_licence" | "medicare" | "passport";
+  idKind?:
+    | "driver_licence"
+    | "medicare"
+    | "passport"
+    | "pr_card"
+    | "refugee_claimant"
+    | "other";
   updatedAt: string;
 };
 

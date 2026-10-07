@@ -36,6 +36,10 @@ const SLOT_LABEL: Record<string, MessageKey> = {
   id_medicare: "idMedicare",
   id_driver_licence_front: "idDriverLicenceFront",
   id_driver_licence_back: "idDriverLicenceBack",
+  id_pr_card_front: "idPrCardFront",
+  id_pr_card_back: "idPrCardBack",
+  id_refugee_claimant: "idRefugeeClaimant",
+  id_other: "idOther",
 };
 
 type MemberMode = {
@@ -269,11 +273,24 @@ export default function StepDocumentUpload(props: Props) {
           <option value="driver_licence">{t(locale, "idDriverLicence")}</option>
           <option value="medicare">{t(locale, "idMedicare")}</option>
           <option value="passport">{t(locale, "idPassport")}</option>
+          <option value="pr_card">{t(locale, "idPrCard")}</option>
+          <option value="refugee_claimant">{t(locale, "idRefugeeClaimant")}</option>
+          <option value="other">{t(locale, "idOther")}</option>
         </select>
       </label>
       {idKind === "driver_licence" && (
         <p className="mt-2 text-sm leading-relaxed text-[#78716c]">
           {t(locale, "idDriverLicenceHint")}
+        </p>
+      )}
+      {idKind === "pr_card" && (
+        <p className="mt-2 text-sm leading-relaxed text-[#78716c]">
+          {t(locale, "idPrCardHint")}
+        </p>
+      )}
+      {idKind === "other" && (
+        <p className="mt-2 text-sm leading-relaxed text-[#78716c]">
+          {t(locale, "idOtherHint")}
         </p>
       )}
 
@@ -377,8 +394,8 @@ export default function StepDocumentUpload(props: Props) {
       )}
 
       {!loadingList &&
-        idKind === "driver_licence" &&
-        ID_DOCUMENT_SLOTS.driver_licence.every((slot) => uploadedTypes.has(slot)) && (
+        (idKind === "driver_licence" || idKind === "pr_card") &&
+        ID_DOCUMENT_SLOTS[idKind].every((slot) => uploadedTypes.has(slot)) && (
           <p className="mt-4 text-sm text-[#3d5a45]">{t(locale, "idUploadComplete")}</p>
         )}
 

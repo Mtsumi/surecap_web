@@ -152,6 +152,14 @@ export const messages = {
       "Provincial driver's licence issued in Canada (e.g. Quebec SAAQ). Foreign licences are not accepted here — use passport instead.",
     idDriverLicenceFront: "Front of Canadian licence",
     idDriverLicenceBack: "Back of Canadian licence",
+    idPrCard: "Permanent resident card",
+    idPrCardHint: "Upload the front and back of your permanent resident card.",
+    idPrCardFront: "Front of permanent resident card",
+    idPrCardBack: "Back of permanent resident card",
+    idRefugeeClaimant: "Refugee protection claimant document",
+    idOther: "Other government photo ID",
+    idOtherHint:
+      "Any government ID with your photo (not a bill or bank statement).",
     uploadChooseFile: "Choose file",
     uploadReplaceFile: "Replace file",
     uploadRemoveFile: "Remove",
@@ -159,7 +167,7 @@ export const messages = {
     uploadSaved: "Uploaded",
     uploadFailed: "Upload failed. Please try again.",
     uploadedFiles: "Files on file",
-    idUploadComplete: "Both sides of your licence are saved.",
+    idUploadComplete: "Both sides of your ID are saved.",
     idUploadRequired: "Please upload your ID before submitting.",
     idUploadLaterHint:
       "Don't have your ID with you? Continue for now — come back on this phone/browser to take a photo before you submit.",
@@ -472,6 +480,15 @@ export const messages = {
       "Permis de conduire provincial délivré au Canada (p. ex. permis SAAQ du Québec). Les permis étrangers ne sont pas acceptés ici — choisissez passeport.",
     idDriverLicenceFront: "Recto du permis canadien",
     idDriverLicenceBack: "Verso du permis canadien",
+    idPrCard: "Carte de résident permanent",
+    idPrCardHint:
+      "Téléversez le recto et le verso de votre carte de résident permanent.",
+    idPrCardFront: "Recto de la carte de résident permanent",
+    idPrCardBack: "Verso de la carte de résident permanent",
+    idRefugeeClaimant: "Document de demandeur d'asile",
+    idOther: "Autre pièce d'identité gouvernementale avec photo",
+    idOtherHint:
+      "Toute pièce d'identité officielle avec photo (pas une facture ni un relevé).",
     uploadChooseFile: "Choisir un fichier",
     uploadReplaceFile: "Remplacer le fichier",
     uploadRemoveFile: "Retirer",
@@ -479,7 +496,7 @@ export const messages = {
     uploadSaved: "Téléversé",
     uploadFailed: "Échec du téléversement. Veuillez réessayer.",
     uploadedFiles: "Fichiers enregistrés",
-    idUploadComplete: "Les deux côtés de votre permis sont enregistrés.",
+    idUploadComplete: "Les deux côtés de votre pièce d'identité sont enregistrés.",
     idUploadRequired:
       "Veuillez téléverser votre pièce d'identité avant d'envoyer la demande.",
     idUploadLaterHint:
