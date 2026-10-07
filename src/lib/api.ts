@@ -535,6 +535,7 @@ export type InviteeSubmitPayload = {
   additional_income_kind?: "government_benefits" | "other";
   additional_monthly_net_income?: number;
   preferred_locale?: "en" | "fr";
+  identity_visited_or_met?: boolean;
 };
 
 export type InviteeSubmitResult = {
@@ -735,8 +736,10 @@ export type MemberIdentityStatus = {
   selfie_document_id?: number | null;
   id_viewed: boolean;
   met_in_person?: boolean | null;
+  visited_or_met?: boolean | null;
   selfie_requested: boolean;
   selfie_uploaded: boolean;
+  selfie_accepted?: boolean;
   match_status?: string | null;
   match_notes?: string | null;
   blocking_reason?: string | null;
@@ -774,7 +777,6 @@ export type JanitorReviewMember = {
 };
 
 export type JanitorReviewChecklist = {
-  called_landlord: boolean;
   called_employer: boolean;
   checked_social: boolean;
 };
@@ -915,17 +917,18 @@ export function confirmReviewMemberIdentity(
   token: string,
   memberId: number,
   metInPerson: boolean,
-  options?: { idPhotoMatches?: boolean }
+  options?: { idPhotoMatches?: boolean; selfieMatches?: boolean }
 ): Promise<JanitorReview> {
   return apiFetch<JanitorReview>(
     `/admin/janitor-review/${encodeURIComponent(token)}/members/${memberId}/identity`,
     {
       method: "POST",
       body: JSON.stringify({
-        met_in_person: metInPerson,
-        ...(metInPerson
+        met_in_person: options?.selfieMatches ? false : metInPerson,
+        ...(metInPerson && !options?.selfieMatches
           ? { id_photo_matches: options?.idPhotoMatches === true }
           : {}),
+        ...(options?.selfieMatches ? { selfie_matches: true } : {}),
       }),
     }
   );

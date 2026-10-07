@@ -269,6 +269,21 @@ export const adminMessages = {
     identitySelfiePending: "Selfie reçu - analyse en cours",
     identitySelfieReceived: "Selfie reçu - confirmez la rencontre",
     identitySelfieRequested: "Selfie demandé - courriel envoyé au demandeur",
+    identitySelfieRequestedGuarantor:
+      "Selfie demandé - courriel envoyé au garant",
+    identitySelfieMatched: "Selfie reçu - la photo correspond à la pièce d'identité",
+    identitySelfieNeedsReview:
+      "Selfie reçu - la correspondance doit être confirmée",
+    identityGuarantorClaimsVisit:
+      "Le garant dit avoir visité le logement ou rencontré l'administrateur. Confirmez la rencontre.",
+    identityMetQuestionGuarantor: "Rencontré le garant en personne :",
+    identitySelfieWillEmailGuarantor:
+      "Un courriel avec un lien de selfie sera envoyé au garant.",
+    identityConfirmSelfieMatch: "Confirmer que le selfie correspond à la pièce d'identité",
+    identitySelfieMatchWillClear:
+      "La correspondance automatique n'a pas confirmé le visage. Ouvrez la pièce d'identité et le selfie, puis confirmez, ou envoyez un nouveau lien.",
+    identityNextSelfieMatchReview:
+      "Pour {name} : ouvrez la pièce d'identité et le selfie, puis confirmez que la photo correspond.",
     identityIdMissing: "Pièce d'identité manquante",
     identityOpenIdFirst: "Ouvrir la pièce d'identité d'abord",
     identityAwaitingConfirm: "En attente de confirmation",
@@ -288,7 +303,7 @@ export const adminMessages = {
     identityButtonsLocked:
       "Les boutons restent désactivés tant que la pièce d'identité n'a pas été ouverte.",
     identityGateBlocked:
-      "Acceptation bloquée: complétez l'identité des locataires ci-dessous.",
+      "Acceptation bloquée: complétez l'identité ci-dessous.",
     identityGoTo: "Aller à l'identité",
     identityMatchFlags: "Correspondance selfie à vérifier: {names}.",
     identityStripTitle: "Identité à compléter",
@@ -326,10 +341,10 @@ export const adminMessages = {
     appDetailAcceptNote: "Note d'acceptation: {note}",
     appDetailJanitorChecksTitle: "Vérifications du concierge",
     appDetailJanitorChecksSubtitle:
-      "Contrôles déjà faits avant la demande de crédit (appels, Facebook, identité).",
+      "Contrôles déjà faits avant la demande de crédit (employeur, Facebook, identité).",
     appDetailChecksTitle: "Vérifications",
     appDetailChecksSubtitle:
-      "Complétez identité et les trois appels/contrôles, puis envoyez le dossier à Steve pour la vérification de crédit. Cela ne crée pas de dossier prospect ni n'approuve le bail.",
+      "Complétez l'identité, l'appel à l'employeur et la vérification Facebook, puis envoyez le dossier à Steve pour la vérification de crédit. Cela ne crée pas de dossier prospect ni n'approuve le bail.",
     appDetailCreditRequested:
       "Vérification de crédit demandée: Steve a été notifié. Aucun dossier prospect créé.",
     appDetailMembersTitle: "Membres du dossier",
@@ -353,6 +368,7 @@ export const adminMessages = {
     reviewMetFlash: "Rencontre confirmée pour {name}.",
     reviewSelfieFlash:
       "Selfie demandé pour {name}: un courriel avec le lien de vérification a été envoyé au demandeur.",
+    reviewSelfieMatchFlash: "Selfie confirmé pour {name}.",
     reviewIdDocAlt: "Document d'identité",
     reviewLandlord: "Locateur",
     reviewLandlordPhone: "Téléphone locateur",
@@ -378,20 +394,20 @@ export const adminMessages = {
     reviewSubjectPrefix: "Objet : {subject}",
     reviewChecksTitle: "Vérifications",
     reviewChecksJanitor:
-      "Complétez identité et les trois appels/contrôles avant d'envoyer le dossier à Steve.",
+      "Complétez l'identité, l'appel à l'employeur et la vérification Facebook avant d'envoyer le dossier à Steve.",
     reviewChecksSteve:
       "Contrôles déjà faits par le concierge. Après le crédit, choisissez ci-dessous.",
     reviewIdentityConfirmedCheckbox:
       "Identité confirmée (rencontre en personne + photo d'identité correspondante, ou selfie)",
     reviewIdentityOpenThenYesNo:
       "Ouvrez la pièce d'identité, puis indiquez Oui ou Non ci-dessous.",
-    reviewCheckLandlord: "J'ai appelé le(s) locateur(s)",
     reviewCheckEmployer: "J'ai appelé l'employeur / les RH",
     reviewCheckSocial: "J'ai vérifié Facebook",
-    reviewTenantsIdentity: "Identité des locataires",
+    reviewTenantsIdentity: "Identité",
     reviewReadyForCredit: "Prêt pour la vérification de crédit",
     reviewRefuse: "Refuser",
-    reviewRejectNeedChecks: "Cochez les trois vérifications avant de refuser.",
+    reviewRejectNeedChecks:
+      "Cochez l'appel à l'employeur et la vérification Facebook avant de refuser.",
     reviewUpdateFailed: "La mise à jour a échoué",
     reviewTenantFallback: "le locataire",
     reviewStripIdAlt: "Pièce d'identité",
@@ -661,6 +677,19 @@ export const adminMessages = {
     identitySelfiePending: "Selfie received - analysis in progress",
     identitySelfieReceived: "Selfie received - confirm the meeting",
     identitySelfieRequested: "Selfie requested - email sent to the applicant",
+    identitySelfieRequestedGuarantor: "Selfie requested - email sent to the guarantor",
+    identitySelfieMatched: "Selfie received - the photo matches the ID",
+    identitySelfieNeedsReview: "Selfie received - the match needs confirmation",
+    identityGuarantorClaimsVisit:
+      "The guarantor says they visited the apartment or met the building administrator. Confirm the meeting.",
+    identityMetQuestionGuarantor: "Met the guarantor in person:",
+    identitySelfieWillEmailGuarantor:
+      "An email with a selfie link will be sent to the guarantor.",
+    identityConfirmSelfieMatch: "Confirm the selfie matches the ID",
+    identitySelfieMatchWillClear:
+      "The automatic match did not confirm the face. Open the ID and the selfie, then confirm, or send a new link.",
+    identityNextSelfieMatchReview:
+      "For {name}: open the ID and the selfie, then confirm the photo matches.",
     identityIdMissing: "ID document missing",
     identityOpenIdFirst: "Open the ID document first",
     identityAwaitingConfirm: "Waiting for confirmation",
@@ -680,7 +709,7 @@ export const adminMessages = {
     identityButtonsLocked:
       "Buttons stay disabled until the ID document has been opened.",
     identityGateBlocked:
-      "Accept blocked: complete tenant identity below.",
+      "Accept blocked: complete identity below.",
     identityGoTo: "Go to identity",
     identityMatchFlags: "Selfie match to review: {names}.",
     identityStripTitle: "Identity to complete",
@@ -718,10 +747,10 @@ export const adminMessages = {
     appDetailAcceptNote: "Acceptance note: {note}",
     appDetailJanitorChecksTitle: "Janitor checks",
     appDetailJanitorChecksSubtitle:
-      "Checks already done before the credit request (calls, Facebook, identity).",
+      "Checks already done before the credit request (employer, Facebook, identity).",
     appDetailChecksTitle: "Checks",
     appDetailChecksSubtitle:
-      "Complete identity and the three calls/checks, then send the file to Steve for the credit check. This does not create a prospect folder or approve the lease.",
+      "Complete identity, the employer call, and the Facebook check, then send the file to Steve for the credit check. This does not create a prospect folder or approve the lease.",
     appDetailCreditRequested:
       "Credit check requested: Steve was notified. No prospect folder created.",
     appDetailMembersTitle: "Household members",
@@ -745,6 +774,7 @@ export const adminMessages = {
     reviewMetFlash: "Meeting confirmed for {name}.",
     reviewSelfieFlash:
       "Selfie requested for {name}: an email with the verification link was sent to the applicant.",
+    reviewSelfieMatchFlash: "Selfie confirmed for {name}.",
     reviewIdDocAlt: "ID document",
     reviewLandlord: "Landlord",
     reviewLandlordPhone: "Landlord phone",
@@ -770,20 +800,20 @@ export const adminMessages = {
     reviewSubjectPrefix: "Subject: {subject}",
     reviewChecksTitle: "Checks",
     reviewChecksJanitor:
-      "Complete identity and the three calls/checks before sending the file to Steve.",
+      "Complete identity, the employer call, and the Facebook check before sending the file to Steve.",
     reviewChecksSteve:
       "Checks already done by the janitor. After credit, choose below.",
     reviewIdentityConfirmedCheckbox:
       "Identity confirmed (in-person meeting + matching ID photo, or selfie)",
     reviewIdentityOpenThenYesNo:
       "Open the ID document, then select Yes or No below.",
-    reviewCheckLandlord: "I called the landlord(s)",
     reviewCheckEmployer: "I called the employer / HR",
     reviewCheckSocial: "I checked Facebook",
-    reviewTenantsIdentity: "Tenant identity",
+    reviewTenantsIdentity: "Identity",
     reviewReadyForCredit: "Ready for credit check",
     reviewRefuse: "Refuse",
-    reviewRejectNeedChecks: "Check all three items before refusing.",
+    reviewRejectNeedChecks:
+      "Check the employer call and the Facebook check before refusing.",
     reviewUpdateFailed: "Update failed",
     reviewTenantFallback: "the tenant",
     reviewStripIdAlt: "ID document",

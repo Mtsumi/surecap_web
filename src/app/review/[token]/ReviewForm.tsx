@@ -30,7 +30,6 @@ import { useAdminCopy } from "@/app/admin/AdminLocaleContext";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
-  called_landlord: false,
   called_employer: false,
   checked_social: false,
 };
@@ -206,14 +205,17 @@ function MemberCard({
     await openDoc(member.identity?.selfie_document_id, t("reviewSelfieOpenError"));
   }
 
-  async function confirm(met: boolean) {
+  async function confirm(met: boolean, selfieMatches = false) {
     setIdentityBusy(true);
     try {
       const updated = await confirmReviewMemberIdentity(token, member.id, met, {
         idPhotoMatches: met ? true : undefined,
+        selfieMatches,
       });
       onIdentityUpdated(updated);
-      if (met) {
+      if (selfieMatches) {
+        onIdentityFlash?.(t("reviewSelfieMatchFlash").replace("{name}", member.name));
+      } else if (met) {
         onIdentityFlash?.(t("reviewMetFlash").replace("{name}", member.name));
       } else {
         onIdentityFlash?.(t("reviewSelfieFlash").replace("{name}", member.name));
@@ -246,6 +248,8 @@ function MemberCard({
           onOpenSelfie={openSelfie}
           onConfirmMet={() => confirm(true)}
           onConfirmNotMet={() => confirm(false)}
+          onConfirmSelfieMatch={() => confirm(false, true)}
+          guarantor={member.role === "guarantor"}
         />
         {idError ? (
           <div className="sm:col-span-2 text-sm text-[#7f1d1d]">{idError}</div>
@@ -352,7 +356,7 @@ export default function ReviewForm({ token }: { token: string }) {
 
   const allChecked = useMemo(
     () =>
-      checklist.called_landlord && checklist.called_employer && checklist.checked_social,
+      checklist.called_employer && checklist.checked_social,
     [checklist]
   );
 
@@ -387,18 +391,21 @@ export default function ReviewForm({ token }: { token: string }) {
     await openStripDoc(member.identity?.selfie_document_id, t("reviewSelfieOpenError"));
   }
 
-  async function confirmStrip(memberId: number, met: boolean) {
+  async function confirmStrip(memberId: number, met: boolean, selfieMatches = false) {
     setStripBusy(true);
     setStripIdError(null);
     setIdentityFlash(null);
     try {
       const updated = await confirmReviewMemberIdentity(token, memberId, met, {
         idPhotoMatches: met ? true : undefined,
+        selfieMatches,
       });
       setReview(updated);
       const member = updated.members.find((m) => m.id === memberId);
       const name = member?.name || t("reviewTenantFallback");
-      if (met) {
+      if (selfieMatches) {
+        setIdentityFlash(t("reviewSelfieMatchFlash").replace("{name}", name));
+      } else if (met) {
         setIdentityFlash(t("reviewMetFlash").replace("{name}", name));
       } else {
         setIdentityFlash(t("reviewSelfieFlash").replace("{name}", name));
@@ -544,6 +551,8 @@ export default function ReviewForm({ token }: { token: string }) {
                   onOpenSelfie: () => openStripSelfie(m),
                   onConfirmMet: () => confirmStrip(m.id, true),
                   onConfirmNotMet: () => confirmStrip(m.id, false),
+                  onConfirmSelfieMatch: () => confirmStrip(m.id, false, true),
+                  guarantor: m.role === "guarantor",
                 }))}
             />
           ) : null}
@@ -661,7 +670,6 @@ export default function ReviewForm({ token }: { token: string }) {
               </label>
               {(
                 [
-                  ["called_landlord", "reviewCheckLandlord"],
                   ["called_employer", "reviewCheckEmployer"],
                   ["checked_social", "reviewCheckSocial"],
                 ] as const
@@ -713,6 +721,8 @@ export default function ReviewForm({ token }: { token: string }) {
                       onOpenSelfie={() => openStripSelfie(m)}
                       onConfirmMet={() => confirmStrip(m.id, true)}
                       onConfirmNotMet={() => confirmStrip(m.id, false)}
+                      onConfirmSelfieMatch={() => confirmStrip(m.id, false, true)}
+                      guarantor={m.role === "guarantor"}
                     />
                   ))}
               </div>
