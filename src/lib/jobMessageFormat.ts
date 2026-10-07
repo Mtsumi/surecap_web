@@ -8,6 +8,7 @@ export type CorpiqJobPayload = {
   stage_label?: string;
   summary?: string;
   error?: string;
+  error_code?: string;
   paid?: boolean;
   score?: number | null;
   risk_band?: string | null;
@@ -21,6 +22,103 @@ export function parseCorpiqJobMessage(message: string | null): CorpiqJobPayload 
   } catch {
     return null;
   }
+}
+
+/** Admin-facing CORPIQ failure title + body (FR/EN). Prefer error_code over raw Playwright. */
+export function formatCorpiqFailure(
+  payload: CorpiqJobPayload | null,
+  locale: Locale = "fr"
+): { title: string; detail: string } | null {
+  if (!payload) return null;
+  const code = payload.error_code || payload.error || "";
+  const fr = locale === "fr";
+
+  const byCode: Record<string, { title: string; detail: string }> = {
+    step_unchanged: {
+      title: fr ? "Bloqué à l'étape candidat" : "Stuck on applicant step",
+      detail: fr
+        ? "Le portail n'a pas avancé après le formulaire. Ne relancez pas avant qu'un ops vérifie la session CORPIQ."
+        : "The portal did not advance after the applicant form. Do not re-run until support checks the CORPIQ session.",
+    },
+    portal_navigation: {
+      title: fr ? "Portail encore en chargement" : "Portal still loading",
+      detail: fr
+        ? "Le portail chargeait encore. Vérifiez facture ou rapport dans CORPIQ avant de relancer (évitez une deuxième enquête)."
+        : "The portal was still loading. Check CORPIQ for invoice or report status before Re-run (avoid a second inquiry).",
+    },
+    paid_no_report: {
+      title: fr ? "Payé sans rapport" : "Paid but report missing",
+      detail: fr
+        ? "Des points PROPRIO ont été débités mais le rapport n'a pas chargé. Ne relancez pas (double facturation). Demandez un backfill du rapport."
+        : "PROPRIO points were deducted but the report did not load. Do not Re-run (that can charge again). Ask support to backfill the report.",
+    },
+    invoice_not_unpaid: {
+      title: fr ? "Facture déjà réglée" : "Invoice already settled",
+      detail: fr
+        ? "La facture CORPIQ n'est pas impayée (déjà payée ou fermée). Ne payez pas à nouveau. Demandez d'attacher le rapport existant si besoin."
+        : "CORPIQ opened an invoice that is not unpaid (already paid or closed). Do not pay again. Ask support to attach the existing report if needed.",
+    },
+    unpaid_invoice: {
+      title: fr ? "Facture impayée" : "Unpaid invoice",
+      detail: fr
+        ? "Une facture CORPIQ est ouverte. Relancez pour la payer lorsque le mode live est activé."
+        : "An unpaid CORPIQ invoice is open. Use Re-run to pay that invoice when live submit is armed.",
+    },
+    consent_missing: {
+      title: fr ? "PDF de consentement manquant" : "Consent PDF missing",
+      detail: fr
+        ? "Le PDF de consentement crédit n'a pas pu être chargé. Vérifiez les documents du membre."
+        : "Credit consent PDF could not be loaded. Check the member documents.",
+    },
+    portal_login: {
+      title: fr ? "Connexion au portail échouée" : "Portal login failed",
+      detail: fr
+        ? "Connexion à ProprioEnquête impossible. Vérifiez les identifiants CORPIQ."
+        : "Could not sign in to ProprioEnquête. Check CORPIQ credentials.",
+    },
+    points_unreadable: {
+      title: fr ? "Solde de points illisible" : "Points balance unread",
+      detail: fr
+        ? "Impossible de lire le solde de points PROPRIO avant paiement. Paiement live refusé."
+        : "Could not read the PROPRIO points balance before pay. Live submit refused.",
+    },
+    stopped_before_pay: {
+      title: fr ? "Arrêté avant paiement" : "Stopped before payment",
+      detail: fr
+        ? "Confirmation atteinte sans paiement."
+        : "Reached confirmation but did not complete payment.",
+    },
+    invoice_stuck: {
+      title: fr ? "Étape facture incomplète" : "Invoice step incomplete",
+      detail: fr
+        ? "Arrêt sur l'étape facture. Vérifiez si la facture est impayée avant de relancer."
+        : "Stopped on the invoice step. Check whether the invoice is unpaid before Re-run.",
+    },
+    portal_error: {
+      title: fr ? "Erreur portail" : "Portal error",
+      detail: fr
+        ? "ProprioEnquête s'est arrêté avant la fin. Vérifiez l'état du portail avant de relancer pour éviter une double facturation."
+        : "ProprioEnquête stopped before finishing. Check the portal status before Re-run so you do not double-charge.",
+    },
+    worker_crash: {
+      title: fr ? "Erreur technique" : "Technical error",
+      detail: fr
+        ? "Le worker s'est arrêté de façon inattendue. Vérifiez s'il existe une facture impayée avant de relancer."
+        : "The credit check worker stopped unexpectedly. Check whether an unpaid invoice exists before Re-run.",
+    },
+  };
+
+  if (code && byCode[code]) return byCode[code];
+
+  // Prefer API stage_label/summary when already friendly; strip em dashes if any.
+  const title = (payload.stage_label || (fr ? "Échec de la vérification" : "Credit check failed"))
+    .replace(/\u2014/g, "-")
+    .replace(/—/g, "-");
+  const detail = (payload.summary || payload.error || "")
+    .replace(/\u2014/g, "-")
+    .replace(/—/g, "-");
+  if (!detail && !payload.stage_label) return null;
+  return { title, detail: detail || title };
 }
 
 export type TalMatchedParty = {
