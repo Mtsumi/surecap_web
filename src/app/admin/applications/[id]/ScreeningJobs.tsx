@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  formatCorpiqFailure,
   formatJobMessagePreview,
   parseCorpiqJobMessage,
   formatSearchAddress,
@@ -863,6 +864,7 @@ function CorpiqMemberControls({
   const failed = job?.status === "failed";
   const needsForce = completed || failed;
   const corpiq = parseCorpiqJobMessage(job?.message ?? null);
+  const failureCopy = formatCorpiqFailure(corpiq, locale);
   const resultLine = formatJobMessagePreview(
     "corpiq_screening",
     job?.message ?? null,
@@ -886,7 +888,16 @@ function CorpiqMemberControls({
       await startCorpiqScreening(applicationId, memberId, { force });
       onStarted?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      const raw = e instanceof Error ? e.message : "Error";
+      const network =
+        /failed to fetch|networkerror|load failed|network request failed/i.test(raw);
+      setError(
+        network
+          ? locale === "fr"
+            ? "Connexion à l'API admin impossible. Vérifiez le réseau puis réessayez."
+            : "Could not reach the admin API. Check your network, then try again."
+          : raw
+      );
     } finally {
       setBusy(false);
     }
@@ -918,7 +929,16 @@ function CorpiqMemberControls({
       window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
     } catch (e) {
       tab?.close();
-      setError(e instanceof Error ? e.message : "Error");
+      const raw = e instanceof Error ? e.message : "Error";
+      const network =
+        /failed to fetch|networkerror|load failed|network request failed/i.test(raw);
+      setError(
+        network
+          ? locale === "fr"
+            ? "Impossible de télécharger le rapport. Vérifiez le réseau puis réessayez."
+            : "Could not download the report. Check your network, then try again."
+          : raw
+      );
     } finally {
       setReportBusy(false);
     }
@@ -1032,16 +1052,13 @@ function CorpiqMemberControls({
       {failed && !inFlight ? (
         <div className="mt-2 rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-950">
           <p className="font-medium">
-            {corpiq?.stage_label ||
+            {failureCopy?.title ||
               (locale === "fr" ? "La vérification a échoué" : "Credit check failed")}
           </p>
-          {corpiq?.summary ? (
-            <p className="mt-0.5 text-xs">{corpiq.summary}</p>
+          {failureCopy?.detail ? (
+            <p className="mt-0.5 text-xs">{failureCopy.detail}</p>
           ) : null}
-          {corpiq?.error ? (
-            <p className="mt-1 font-mono text-[11px] text-red-800">{corpiq.error}</p>
-          ) : null}
-          {!corpiq?.summary && !corpiq?.error && job?.message ? (
+          {!failureCopy && job?.message ? (
             <p className="mt-0.5 text-xs">{resultLine}</p>
           ) : null}
         </div>
@@ -1061,12 +1078,7 @@ function CorpiqMemberControls({
         </div>
       ) : null}
       {error ? (
-        <p className={`${adminUi.alertError} mt-2`}>
-          {locale === "fr"
-            ? "Impossible de joindre l’API (relancez ou rafraîchissez la page). "
-            : "Could not reach the API (retry or refresh the page). "}
-          {error}
-        </p>
+        <p className={`${adminUi.alertError} mt-2`}>{error}</p>
       ) : null}
     </div>
   );

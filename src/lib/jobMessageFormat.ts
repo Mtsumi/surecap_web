@@ -8,6 +8,7 @@ export type CorpiqJobPayload = {
   stage_label?: string;
   summary?: string;
   error?: string;
+  error_code?: string;
   paid?: boolean;
   score?: number | null;
   risk_band?: string | null;
@@ -21,6 +22,91 @@ export function parseCorpiqJobMessage(message: string | null): CorpiqJobPayload 
   } catch {
     return null;
   }
+}
+
+/** Admin-facing CORPIQ failure title + body (FR/EN). Prefer error_code over raw Playwright. */
+export function formatCorpiqFailure(
+  payload: CorpiqJobPayload | null,
+  locale: Locale = "fr"
+): { title: string; detail: string } | null {
+  if (!payload) return null;
+  const code = payload.error_code || payload.error || "";
+  const fr = locale === "fr";
+
+  const byCode: Record<string, { title: string; detail: string }> = {
+    step_unchanged: {
+      title: fr ? "Bloqué à l'étape candidat" : "Stuck on applicant step",
+      detail: fr
+        ? "Le portail n'a pas avancé après le formulaire. Ne relancez pas avant qu'un ops vérifie la session CORPIQ."
+        : "The portal did not advance after the applicant form. Do not re-run until support checks the CORPIQ session.",
+    },
+    portal_navigation: {
+      title: fr ? "Portail encore en chargement" : "Portal still loading",
+      detail: fr
+        ? "La confirmation a démarré mais le portail chargeait encore. Une facture impayée peut exister. Relancez pour terminer le paiement (ne démarrez pas une nouvelle enquête)."
+        : "Confirm started but the portal was still loading. An unpaid invoice may already exist. Use Re-run to finish payment (do not start a new inquiry).",
+    },
+    unpaid_invoice: {
+      title: fr ? "Facture impayée" : "Unpaid invoice",
+      detail: fr
+        ? "Une facture CORPIQ est ouverte. Relancez pour la payer lorsque le mode live est activé."
+        : "An unpaid CORPIQ invoice is open. Use Re-run to pay that invoice when live submit is armed.",
+    },
+    consent_missing: {
+      title: fr ? "PDF de consentement manquant" : "Consent PDF missing",
+      detail: fr
+        ? "Le PDF de consentement crédit n'a pas pu être chargé. Vérifiez les documents du membre."
+        : "Credit consent PDF could not be loaded. Check the member documents.",
+    },
+    portal_login: {
+      title: fr ? "Connexion au portail échouée" : "Portal login failed",
+      detail: fr
+        ? "Connexion à ProprioEnquête impossible. Vérifiez les identifiants CORPIQ."
+        : "Could not sign in to ProprioEnquête. Check CORPIQ credentials.",
+    },
+    points_unreadable: {
+      title: fr ? "Solde de points illisible" : "Points balance unread",
+      detail: fr
+        ? "Impossible de lire le solde de points PROPRIO avant paiement. Paiement live refusé."
+        : "Could not read the PROPRIO points balance before pay. Live submit refused.",
+    },
+    stopped_before_pay: {
+      title: fr ? "Arrêté avant paiement" : "Stopped before payment",
+      detail: fr
+        ? "Confirmation atteinte sans paiement."
+        : "Reached confirmation but did not complete payment.",
+    },
+    invoice_stuck: {
+      title: fr ? "Étape facture incomplète" : "Invoice step incomplete",
+      detail: fr
+        ? "Arrêt sur l'étape facture. Vérifiez si la facture est impayée avant de relancer."
+        : "Stopped on the invoice step. Check whether the invoice is unpaid before Re-run.",
+    },
+    portal_error: {
+      title: fr ? "Erreur portail" : "Portal error",
+      detail: fr
+        ? "ProprioEnquête s'est arrêté avant la fin. Vérifiez le portail (et toute facture impayée) avant de relancer."
+        : "ProprioEnquête stopped before finishing. Check the portal (and any unpaid invoice) before Re-run.",
+    },
+    worker_crash: {
+      title: fr ? "Erreur technique" : "Technical error",
+      detail: fr
+        ? "Le worker s'est arrêté de façon inattendue. Vérifiez s'il existe une facture impayée avant de relancer."
+        : "The credit check worker stopped unexpectedly. Check whether an unpaid invoice exists before Re-run.",
+    },
+  };
+
+  if (code && byCode[code]) return byCode[code];
+
+  // Prefer API stage_label/summary when already friendly; strip em dashes if any.
+  const title = (payload.stage_label || (fr ? "Échec de la vérification" : "Credit check failed"))
+    .replace(/\u2014/g, "-")
+    .replace(/—/g, "-");
+  const detail = (payload.summary || payload.error || "")
+    .replace(/\u2014/g, "-")
+    .replace(/—/g, "-");
+  if (!detail && !payload.stage_label) return null;
+  return { title, detail: detail || title };
 }
 
 export type TalMatchedParty = {
