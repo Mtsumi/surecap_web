@@ -7,6 +7,7 @@ import CreditConsentSection from "../../CreditConsentSection";
 import PhoneField from "../../PhoneField";
 import StepDocumentUpload from "../../StepDocumentUpload";
 import StepIncomeUpload from "../../StepIncomeUpload";
+import GuarantorVisitQuestion from "./GuarantorVisitQuestion";
 import {
   type CreditConsent,
   InviteContext,
@@ -14,6 +15,7 @@ import {
   MemberDocument,
   fetchInvite,
   fetchInviteCreditConsent,
+  listInviteDocuments,
   signInviteCreditConsent,
   submitInvite,
 } from "@/lib/api";
@@ -130,7 +132,8 @@ function emptyFields(): InviteeFormFields {
 function buildInviteePayload(
   role: InviteeRole,
   form: InviteeFormFields,
-  locale: Locale
+  locale: Locale,
+  visitedOrMet: boolean | null = null
 ): InviteeSubmitPayload {
   const payload: InviteeSubmitPayload = {
     given_name: form.given_name.trim(),
@@ -201,6 +204,9 @@ function buildInviteePayload(
     payload.hr_name = form.hr_name.trim();
     payload.hr_phone = form.hr_phone.trim();
   }
+  if (role === "guarantor" && visitedOrMet !== null) {
+    payload.identity_visited_or_met = visitedOrMet;
+  }
   return payload;
 }
 
@@ -238,6 +244,10 @@ export default function InviteForm({ token }: Props) {
     useState(false);
   const [pendingAfterLandlordConfirm, setPendingAfterLandlordConfirm] =
     useState<Step | null>(null);
+  const [visitedOrMet, setVisitedOrMet] = useState<boolean | null>(null);
+  const [selfieUploaded, setSelfieUploaded] = useState(false);
+  const [selfieListFailed, setSelfieListFailed] = useState(false);
+  const [selfieListChecking, setSelfieListChecking] = useState(false);
   const signedIdentityRef = useRef<string | null>(null);
   const identityVoidedRef = useRef(false);
 
@@ -264,7 +274,7 @@ export default function InviteForm({ token }: Props) {
     setLoading(true);
     setError(null);
     fetchInvite(token)
-      .then((data) => {
+      .then(async (data) => {
         if (cancelled) return;
         // Invitee ID/income uploads auth via the invite link itself (mode=invite).
         // Do not reissue member upload tokens here — that revoked other sessions and
@@ -273,6 +283,17 @@ export default function InviteForm({ token }: Props) {
         if (data.member_status === "submitted") {
           setStep("done");
           return;
+        }
+        if (data.role === "guarantor") {
+          try {
+            const docs = await listInviteDocuments(token);
+            if (!cancelled && docs.some((doc) => doc.document_type === "selfie")) {
+              setSelfieUploaded(true);
+            }
+            if (!cancelled) setSelfieListFailed(false);
+          } catch {
+            if (!cancelled) setSelfieListFailed(true);
+          }
         }
         const names = splitInvitedName(data.invited_name);
         setForm((prev) => ({
@@ -428,6 +449,30 @@ export default function InviteForm({ token }: Props) {
       );
       return false;
     }
+    if (current === "personal" && role === "guarantor") {
+      if (
+        !idUploadComplete(
+          idKind,
+          idDocuments.map((doc) => doc.document_type)
+        )
+      ) {
+        setError(t(locale, "idUploadRequired"));
+        return false;
+      }
+      if (visitedOrMet === null) {
+        setError(t(locale, "guarantorVisitRequired"));
+        return false;
+      }
+      if (visitedOrMet === false && !selfieUploaded) {
+        setError(
+          t(
+            locale,
+            selfieListFailed ? "guarantorSelfieCheckFailed" : "guarantorSelfieRequired"
+          )
+        );
+        return false;
+      }
+    }
     return true;
   };
 
@@ -540,7 +585,7 @@ export default function InviteForm({ token }: Props) {
       return;
     }
 
-    const payload = buildInviteePayload(role, form, locale);
+    const payload = buildInviteePayload(role, form, locale, visitedOrMet);
 
     setSubmitting(true);
     setError(null);
@@ -589,7 +634,7 @@ export default function InviteForm({ token }: Props) {
       try {
         const result = await signInviteCreditConsent(
           token,
-          buildInviteePayload(role, form, locale),
+          buildInviteePayload(role, form, locale, visitedOrMet),
           pngDataUrl
         );
         identityVoidedRef.current = false;
@@ -603,7 +648,7 @@ export default function InviteForm({ token }: Props) {
         setConsentSigning(false);
       }
     },
-    [role, form, locale, token]
+    [role, form, locale, token, visitedOrMet]
   );
 
   useEffect(() => {
@@ -836,6 +881,46 @@ export default function InviteForm({ token }: Props) {
             onIdKindChange={setIdKind}
             onDocumentsChange={setIdDocuments}
           />
+          {role === "guarantor" ? (
+            <GuarantorVisitQuestion
+              locale={locale}
+              inviteToken={token}
+              idReady={idUploadComplete(
+                idKind,
+                idDocuments.map((doc) => doc.document_type)
+              )}
+              visited={visitedOrMet}
+              selfieUploaded={selfieUploaded}
+              onVisited={setVisitedOrMet}
+              onSelfieUploaded={(uploaded) => {
+                setSelfieUploaded(uploaded);
+                if (uploaded) setSelfieListFailed(false);
+              }}
+            />
+          ) : null}
+          {role === "guarantor" && selfieListFailed && !selfieUploaded ? (
+            <button
+              type="button"
+              className="text-sm text-[#3d5a45] underline disabled:opacity-50"
+              disabled={selfieListChecking}
+              onClick={() => {
+                setSelfieListChecking(true);
+                listInviteDocuments(token)
+                  .then((docs) => {
+                    setSelfieUploaded(docs.some((doc) => doc.document_type === "selfie"));
+                    setSelfieListFailed(false);
+                    setError(null);
+                  })
+                  .catch(() => {
+                    setSelfieListFailed(true);
+                    setError(t(locale, "guarantorSelfieCheckFailed"));
+                  })
+                  .finally(() => setSelfieListChecking(false));
+              }}
+            >
+              {t(locale, selfieListChecking ? "guarantorSelfieChecking" : "guarantorSelfieRetry")}
+            </button>
+          ) : null}
           <button
             type="submit"
             className="rounded bg-[#3d5a45] px-4 py-2.5 text-sm font-medium text-white"

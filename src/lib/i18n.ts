@@ -260,6 +260,25 @@ export const messages = {
       "A Quebec address is recommended for guarantors (easier to enforce), but you can still submit if your guarantor lives elsewhere.",
     guarantorQcAddressNudge:
       "This address is outside Quebec. You can still submit — our team will review whether the guarantor is acceptable.",
+    guarantorVisitQuestion:
+      "Did you visit the apartment and/or meet the building administrator?",
+    guarantorVisitYes: "Yes",
+    guarantorVisitNo: "No",
+    guarantorVisitHint:
+      "If you have not visited or met anyone, take a selfie so we can match it to your ID.",
+    guarantorVisitRequired: "Please answer whether you visited or met the administrator.",
+    guarantorSelfieRequired: "A selfie is required when you have not visited or met anyone.",
+    guarantorSelfieIntro:
+      "Take a clear selfie. We compare it to the ID you uploaded. This photo is used only to verify your identity.",
+    guarantorSelfieTake: "Take selfie",
+    guarantorSelfieChoose: "Choose from gallery",
+    guarantorSelfieSending: "Sending…",
+    guarantorSelfieSaved: "Selfie saved.",
+    guarantorSelfieNeedId: "Upload your ID first, then take the selfie.",
+    guarantorSelfieCheckFailed:
+      "We could not check whether a selfie is already saved. Retry, or take the selfie again.",
+    guarantorSelfieRetry: "Check again",
+    guarantorSelfieChecking: "Checking…",
     validationGuarantorAddressQuebec:
       "A Quebec guarantor address is recommended (not required). You can still submit for review.",
     inviteTitleRoommate: "Co-tenant application",
@@ -594,6 +613,27 @@ export const messages = {
       "Une adresse au Québec est recommandée pour les garants (poursuites plus simples), mais vous pouvez soumettre si le garant habite ailleurs.",
     guarantorQcAddressNudge:
       "Cette adresse est hors du Québec. Vous pouvez quand même soumettre — notre équipe évaluera si le garant est acceptable.",
+    guarantorVisitQuestion:
+      "Avez-vous visité le logement et/ou rencontré l'administrateur de l'immeuble?",
+    guarantorVisitYes: "Oui",
+    guarantorVisitNo: "Non",
+    guarantorVisitHint:
+      "Si vous n'avez pas visité ni rencontré personne, prenez un selfie pour le comparer à votre pièce d'identité.",
+    guarantorVisitRequired:
+      "Indiquez si vous avez visité le logement ou rencontré l'administrateur.",
+    guarantorSelfieRequired:
+      "Un selfie est requis si vous n'avez pas visité ni rencontré personne.",
+    guarantorSelfieIntro:
+      "Prenez un selfie clair. Nous le comparons à la pièce d'identité téléversée. Cette photo sert uniquement à vérifier votre identité.",
+    guarantorSelfieTake: "Prendre un selfie",
+    guarantorSelfieChoose: "Choisir dans la galerie",
+    guarantorSelfieSending: "Envoi…",
+    guarantorSelfieSaved: "Selfie enregistré.",
+    guarantorSelfieNeedId: "Téléversez d'abord votre pièce d'identité, puis prenez le selfie.",
+    guarantorSelfieCheckFailed:
+      "Impossible de vérifier si un selfie est déjà enregistré. Réessayez, ou prenez-le à nouveau.",
+    guarantorSelfieRetry: "Vérifier à nouveau",
+    guarantorSelfieChecking: "Vérification…",
     validationGuarantorAddressQuebec:
       "Une adresse de garant au Québec est recommandée (pas obligatoire). Vous pouvez soumettre pour révision.",
     inviteTitleRoommate: "Demande de colocation",

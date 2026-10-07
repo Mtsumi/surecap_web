@@ -89,8 +89,10 @@ export type MemberIdentityStatus = {
   selfie_document_id?: number | null;
   id_viewed: boolean;
   met_in_person?: boolean | null;
+  visited_or_met?: boolean | null;
   selfie_requested: boolean;
   selfie_uploaded: boolean;
+  selfie_accepted?: boolean;
   match_status?: string | null;
   match_notes?: string | null;
   blocking_reason?: string | null;
@@ -112,7 +114,6 @@ export type HouseholdAffordability = {
 };
 
 export type JanitorReviewChecklist = {
-  called_landlord: boolean;
   called_employer: boolean;
   checked_social: boolean;
 };
@@ -447,17 +448,18 @@ export function confirmMemberIdentity(
   applicationId: number,
   memberId: number,
   metInPerson: boolean,
-  options?: { idPhotoMatches?: boolean }
+  options?: { idPhotoMatches?: boolean; selfieMatches?: boolean }
 ) {
   return adminFetch<ApplicationDetail>(
     `/admin/applications/${applicationId}/members/${memberId}/identity`,
     {
       method: "POST",
       body: JSON.stringify({
-        met_in_person: metInPerson,
-        ...(metInPerson
+        met_in_person: options?.selfieMatches ? false : metInPerson,
+        ...(metInPerson && !options?.selfieMatches
           ? { id_photo_matches: options?.idPhotoMatches === true }
           : {}),
+        ...(options?.selfieMatches ? { selfie_matches: true } : {}),
       }),
     }
   );

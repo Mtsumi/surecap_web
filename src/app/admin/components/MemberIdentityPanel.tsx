@@ -18,10 +18,31 @@ export function scrollToIdentityMember(memberId: number): void {
 
 function statusLabel(
   identity: MemberIdentityStatus,
-  t: (key: AdminMessageKey) => string
+  t: (key: AdminMessageKey) => string,
+  guarantor = false
 ): string {
   if (!identity.applies) return t("identityNAguarantor");
   if (identity.met_in_person === true) return t("identityMetConfirmed");
+  if (guarantor) {
+    const onSelfiePath =
+      identity.visited_or_met === false || identity.met_in_person === false;
+    if (onSelfiePath && identity.selfie_document_id && !identity.selfie_uploaded) {
+      return t("identitySelfiePending");
+    }
+    if (onSelfiePath && identity.selfie_uploaded) {
+      if (identity.match_status === "pass" || identity.selfie_accepted) {
+        return t("identitySelfieMatched");
+      }
+      if (identity.match_status === "pending") return t("identitySelfiePending");
+      return t("identitySelfieNeedsReview");
+    }
+    if (onSelfiePath) return t("identitySelfieRequestedGuarantor");
+    if (!identity.id_document_id) return t("identityIdMissing");
+    if (identity.visited_or_met === true && !identity.id_viewed) {
+      return t("identityOpenIdFirst");
+    }
+    if (identity.visited_or_met === true) return t("identityGuarantorClaimsVisit");
+  }
   if (identity.selfie_uploaded) {
     if (identity.match_status === "fail") {
       return t("identitySelfieFailReview");
@@ -57,6 +78,8 @@ export function identityNextStep(
       return withName("identityNextSelfiePending");
     case "selfie_awaiting_met":
       return withName("identityNextSelfieAwaiting");
+    case "selfie_match_review":
+      return withName("identityNextSelfieMatchReview");
     case "id_missing":
       return withName("identityNextIdMissing");
     default:
@@ -77,6 +100,8 @@ export default function MemberIdentityPanel({
   onOpenSelfie,
   onConfirmMet,
   onConfirmNotMet,
+  onConfirmSelfieMatch,
+  guarantor = false,
 }: {
   memberId?: number;
   memberName?: string;
@@ -89,6 +114,8 @@ export default function MemberIdentityPanel({
   onOpenSelfie?: () => void | Promise<void>;
   onConfirmMet: () => void | Promise<void>;
   onConfirmNotMet: () => void | Promise<void>;
+  onConfirmSelfieMatch?: () => void | Promise<void>;
+  guarantor?: boolean;
 }) {
   const { t } = useAdminCopy();
   const [choice, setChoice] = useState<MeetChoice>(null);
@@ -98,14 +125,30 @@ export default function MemberIdentityPanel({
 
   const canConfirm = Boolean(identity.id_viewed) && !disabled;
   const metConfirmed = identity.met_in_person === true;
+  const onSelfiePath =
+    guarantor &&
+    !metConfirmed &&
+    (identity.visited_or_met === false || identity.met_in_person === false);
+  const selfieClears =
+    onSelfiePath &&
+    identity.selfie_uploaded &&
+    (identity.match_status === "pass" || identity.selfie_accepted === true);
   const matchFail =
-    identity.match_status === "fail" && !metConfirmed;
+    identity.match_status === "fail" && !metConfirmed && !selfieClears;
   // Met stays available after selfie; credit/Accept wait on met confirmation.
-  const showActions = canConfirm && !metConfirmed;
+  const showActions = canConfirm && !metConfirmed && !selfieClears && !identity.ready_for_accept;
+  const showMeetQuestion = showActions && !onSelfiePath;
   const showRequestSelfie =
-    showActions &&
+    showMeetQuestion &&
     !identity.selfie_uploaded &&
     identity.met_in_person !== false;
+  const showSelfieReview = showActions && onSelfiePath && identity.selfie_uploaded;
+  const showSendSelfie =
+    showActions &&
+    onSelfiePath &&
+    !identity.selfie_uploaded &&
+    !identity.selfie_document_id &&
+    !identity.selfie_requested;
   const showOpenId =
     Boolean(identity.id_document_id && onOpenId) && !metConfirmed;
   const showOpenSelfie =
@@ -128,7 +171,9 @@ export default function MemberIdentityPanel({
     >
       <dt className="admin-field-label">{title}</dt>
       <dd className="admin-field-value mt-1 space-y-2">
-        <p className="text-sm text-[var(--ml-ink)]">{statusLabel(identity, t)}</p>
+        <p className="text-sm text-[var(--ml-ink)]">
+          {statusLabel(identity, t, guarantor)}
+        </p>
         {matchFail ? (
           <p className="text-sm text-[#7f1d1d]">
             {identity.match_notes?.trim()
@@ -160,10 +205,15 @@ export default function MemberIdentityPanel({
             ) : null}
           </div>
         ) : null}
-        {showActions ? (
+        {showMeetQuestion ? (
           <div className="space-y-3">
+            {guarantor && identity.visited_or_met === true ? (
+              <p className="text-sm text-[var(--ml-steel)]">
+                {t("identityGuarantorClaimsVisit")}
+              </p>
+            ) : null}
             <p className="text-sm font-medium text-[var(--ml-ink)]">
-              {t("identityMetQuestion")}
+              {guarantor ? t("identityMetQuestionGuarantor") : t("identityMetQuestion")}
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
               <button
@@ -220,7 +270,9 @@ export default function MemberIdentityPanel({
             {choice === "non" && showRequestSelfie ? (
               <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white/60 p-3">
                 <p className="text-sm text-[var(--ml-steel)]">
-                  {t("identitySelfieWillEmail")}
+                  {guarantor
+                    ? t("identitySelfieWillEmailGuarantor")
+                    : t("identitySelfieWillEmail")}
                 </p>
                 <button
                   type="button"
@@ -232,6 +284,46 @@ export default function MemberIdentityPanel({
                 </button>
               </div>
             ) : null}
+          </div>
+        ) : null}
+        {showSelfieReview ? (
+          <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white/60 p-3">
+            <p className="text-sm text-[var(--ml-steel)]">
+              {t("identitySelfieMatchWillClear")}
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+              <button
+                type="button"
+                disabled={submitting}
+                className={`${adminUi.btnPrimary} disabled:opacity-50`}
+                onClick={() => void onConfirmSelfieMatch?.()}
+              >
+                {t("identityConfirmSelfieMatch")}
+              </button>
+              <button
+                type="button"
+                disabled={submitting}
+                className={`${adminUi.btnSecondary} disabled:opacity-50`}
+                onClick={() => void onConfirmNotMet()}
+              >
+                {t("identitySendSelfieRequest")}
+              </button>
+            </div>
+          </div>
+        ) : null}
+        {showSendSelfie ? (
+          <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white/60 p-3">
+            <p className="text-sm text-[var(--ml-steel)]">
+              {t("identitySelfieWillEmailGuarantor")}
+            </p>
+            <button
+              type="button"
+              disabled={submitting}
+              className={`${adminUi.btnPrimary} disabled:opacity-50`}
+              onClick={() => void onConfirmNotMet()}
+            >
+              {t("identitySendSelfieRequest")}
+            </button>
           </div>
         ) : null}
         {!identity.id_viewed && identity.id_document_id && showActions ? (
@@ -256,6 +348,8 @@ export type IdentityUnlockItem = {
   onOpenSelfie?: () => void | Promise<void>;
   onConfirmMet: () => void | Promise<void>;
   onConfirmNotMet: () => void | Promise<void>;
+  onConfirmSelfieMatch?: () => void | Promise<void>;
+  guarantor?: boolean;
 };
 
 export function IdentityGateBanner({
@@ -359,6 +453,8 @@ export function IdentityUnlockStrip({
             onOpenSelfie={item.onOpenSelfie}
             onConfirmMet={item.onConfirmMet}
             onConfirmNotMet={item.onConfirmNotMet}
+            onConfirmSelfieMatch={item.onConfirmSelfieMatch}
+            guarantor={item.guarantor}
           />
         ))}
       </div>

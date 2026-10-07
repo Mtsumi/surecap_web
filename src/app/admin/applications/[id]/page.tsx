@@ -46,7 +46,6 @@ import MemberIdentityPanel, {
 } from "../../components/MemberIdentityPanel";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
-  called_landlord: false,
   called_employer: false,
   checked_social: false,
 };
@@ -55,7 +54,6 @@ const CHECKLIST_KEYS: Array<{
   key: keyof JanitorReviewChecklist;
   labelKey: AdminMessageKey;
 }> = [
-  { key: "called_landlord", labelKey: "reviewCheckLandlord" },
   { key: "called_employer", labelKey: "reviewCheckEmployer" },
   { key: "checked_social", labelKey: "reviewCheckSocial" },
 ];
@@ -97,6 +95,7 @@ function MemberCard({
   onOpenId,
   onOpenSelfie,
   onConfirmIdentity,
+  onConfirmSelfieMatch,
 }: {
   member: ApplicationMember;
   disabled?: boolean;
@@ -104,6 +103,7 @@ function MemberCard({
   onOpenId?: () => void;
   onOpenSelfie?: () => void;
   onConfirmIdentity?: (met: boolean) => void | Promise<void>;
+  onConfirmSelfieMatch?: () => void | Promise<void>;
 }) {
   const { t, locale } = useAdminLocaleContext();
   const email = member.email || member.invited_email;
@@ -129,6 +129,8 @@ function MemberCard({
             onOpenSelfie={onOpenSelfie}
             onConfirmMet={() => onConfirmIdentity(true)}
             onConfirmNotMet={() => onConfirmIdentity(false)}
+            onConfirmSelfieMatch={onConfirmSelfieMatch}
+            guarantor={member.role === "guarantor"}
           />
         ) : null}
         <AdminField label="Courriel" value={email} />
@@ -370,7 +372,6 @@ export default function ApplicationDetailPage() {
         setJobs(j);
         if (a.janitor_review_checklist) {
           setChecklist({
-            called_landlord: Boolean(a.janitor_review_checklist.called_landlord),
             called_employer: Boolean(a.janitor_review_checklist.called_employer),
             checked_social: Boolean(a.janitor_review_checklist.checked_social),
           });
@@ -436,20 +437,14 @@ export default function ApplicationDetailPage() {
 
   const members = app?.members ?? [];
   const identityReady = useMemo(() => {
-    const tenants = members.filter(
-      (m) => m.role === "primary" || m.role === "roommate"
-    );
-    if (tenants.length === 0) return true;
-    return tenants.every((m) => m.identity?.ready_for_accept !== false);
+    const applicable = members.filter((m) => m.identity?.applies);
+    if (applicable.length === 0) return true;
+    return applicable.every((m) => m.identity?.ready_for_accept !== false);
   }, [members]);
   const identityBlockers = useMemo(
     () =>
       members
-        .filter(
-          (m) =>
-            (m.role === "primary" || m.role === "roommate") &&
-            m.identity?.ready_for_accept === false
-        )
+        .filter((m) => m.identity?.applies && m.identity?.ready_for_accept === false)
         .map((m) => ({
           member_id: m.id,
           name: memberDisplayName(m),
@@ -463,6 +458,7 @@ export default function ApplicationDetailPage() {
         .filter(
           (m) =>
             m.identity?.match_status === "fail" &&
+            m.identity.ready_for_accept !== true &&
             m.identity.met_in_person !== true
         )
         .map((m) => ({
@@ -474,20 +470,27 @@ export default function ApplicationDetailPage() {
     [members]
   );
 
-  const onConfirmIdentity = async (memberId: number, met: boolean) => {
+  const onConfirmIdentity = async (
+    memberId: number,
+    met: boolean,
+    selfieMatches = false
+  ) => {
     setBusy(true);
     setError(null);
     setIdentityFlash(null);
     try {
       const updated = await confirmMemberIdentity(id, memberId, met, {
         idPhotoMatches: met ? true : undefined,
+        selfieMatches,
       });
       setApp(updated);
       setReviewRequest(null);
       const member = updated.members?.find((m) => m.id === memberId);
       const name = member ? memberDisplayName(member) : "le locataire";
       const email = member?.email || member?.invited_email;
-      if (met) {
+      if (selfieMatches) {
+        setIdentityFlash(`Selfie confirmé pour ${name}.`);
+      } else if (met) {
         setIdentityFlash(`Rencontre confirmée pour ${name}.`);
       } else if (email) {
         setIdentityFlash(
@@ -520,9 +523,7 @@ export default function ApplicationDetailPage() {
   };
 
   const checklistComplete =
-    checklist.called_landlord &&
-    checklist.called_employer &&
-    checklist.checked_social;
+    checklist.called_employer && checklist.checked_social;
 
   const onRequestCreditCheck = async () => {
     setBusy(true);
@@ -656,6 +657,8 @@ export default function ApplicationDetailPage() {
       },
       onConfirmMet: () => onConfirmIdentity(m.id, true),
       onConfirmNotMet: () => onConfirmIdentity(m.id, false),
+      onConfirmSelfieMatch: () => onConfirmIdentity(m.id, false, true),
+      guarantor: m.role === "guarantor",
     }));
 
   return (
@@ -883,6 +886,8 @@ export default function ApplicationDetailPage() {
                           onOpenSelfie={item.onOpenSelfie}
                           onConfirmMet={item.onConfirmMet}
                           onConfirmNotMet={item.onConfirmNotMet}
+                          onConfirmSelfieMatch={item.onConfirmSelfieMatch}
+                          guarantor={item.guarantor}
                         />
                       ))}
                     </div>
@@ -1033,6 +1038,7 @@ export default function ApplicationDetailPage() {
                       ?.scrollIntoView({ behavior: "smooth" });
                   }}
                   onConfirmIdentity={(met) => onConfirmIdentity(member.id, met)}
+                  onConfirmSelfieMatch={() => onConfirmIdentity(member.id, false, true)}
                 />
               ))}
             </div>
