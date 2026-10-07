@@ -152,6 +152,11 @@ export const messages = {
       "Provincial driver's licence issued in Canada (e.g. Quebec SAAQ). Foreign licences are not accepted here — use passport instead.",
     idDriverLicenceFront: "Front of Canadian licence",
     idDriverLicenceBack: "Back of Canadian licence",
+    idPrCard: "Permanent resident card",
+    idRefugeeClaimant: "Refugee protection claimant document",
+    idOther: "Other government photo ID",
+    idOtherHint:
+      "Any government ID with your photo (not a bill or bank statement).",
     uploadChooseFile: "Choose file",
     uploadReplaceFile: "Replace file",
     uploadRemoveFile: "Remove",
@@ -472,6 +477,11 @@ export const messages = {
       "Permis de conduire provincial délivré au Canada (p. ex. permis SAAQ du Québec). Les permis étrangers ne sont pas acceptés ici — choisissez passeport.",
     idDriverLicenceFront: "Recto du permis canadien",
     idDriverLicenceBack: "Verso du permis canadien",
+    idPrCard: "Carte de résident permanent",
+    idRefugeeClaimant: "Document de demandeur d'asile",
+    idOther: "Autre pièce d'identité gouvernementale avec photo",
+    idOtherHint:
+      "Toute pièce d'identité officielle avec photo (pas une facture ni un relevé).",
     uploadChooseFile: "Choisir un fichier",
     uploadReplaceFile: "Remplacer le fichier",
     uploadRemoveFile: "Retirer",

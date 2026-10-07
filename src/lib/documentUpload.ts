@@ -1,11 +1,20 @@
 /** ID document upload slots (personal step + invite flow). */
 
-export type IdDocumentKind = "driver_licence" | "medicare" | "passport";
+export type IdDocumentKind =
+  | "driver_licence"
+  | "medicare"
+  | "passport"
+  | "pr_card"
+  | "refugee_claimant"
+  | "other";
 
 export const ID_DOCUMENT_SLOTS: Record<IdDocumentKind, readonly string[]> = {
-  passport: ["id_passport"],
-  medicare: ["id_medicare"],
   driver_licence: ["id_driver_licence_front", "id_driver_licence_back"],
+  medicare: ["id_medicare"],
+  passport: ["id_passport"],
+  pr_card: ["id_pr_card_front"],
+  refugee_claimant: ["id_refugee_claimant"],
+  other: ["id_other"],
 };
 
 /**

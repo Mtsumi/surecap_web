@@ -11,6 +11,12 @@ import {
 describe("adminDocuments", () => {
   it("labels known document types in French", () => {
     expect(documentTypeLabel("id_passport")).toBe("Passeport");
+    expect(documentTypeLabel("id_pr_card_front")).toBe(
+      "Carte de résident permanent"
+    );
+    expect(documentTypeLabel("id_refugee_claimant")).toBe(
+      "Document de demandeur d'asile"
+    );
     expect(documentTypeLabel("pay_slip_1")).toBe("Talons de paie (1)");
     expect(documentTypeLabel("corpiq_report_pdf")).toBe("Rapport ProprioEnquête");
     expect(documentTypeLabel("corpiq_report")).toBe("Rapport ProprioEnquête (HTML)");
