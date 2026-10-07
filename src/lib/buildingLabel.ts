@@ -22,5 +22,5 @@ export function buildingLabel(
   if (trimmedName.toLowerCase().includes(civic.toLowerCase())) {
     return trimmedName;
   }
-  return `${trimmedName} — ${civic}`;
+  return `${trimmedName} - ${civic}`;
 }

@@ -16,9 +16,9 @@ describe("buildingLabel", () => {
   it("joins nickname and short civic", () => {
     expect(
       buildingLabel("Linton", "3400 Av. Linton, Montréal, QC H3S 1T2")
-    ).toBe("Linton — 3400 Av. Linton");
+    ).toBe("Linton - 3400 Av. Linton");
     expect(buildingLabel("Goyer", "3270 Rue Goyer, Montréal, QC")).toBe(
-      "Goyer — 3270 Rue Goyer"
+      "Goyer - 3270 Rue Goyer"
     );
   });
 
