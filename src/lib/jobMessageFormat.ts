@@ -43,8 +43,20 @@ export function formatCorpiqFailure(
     portal_navigation: {
       title: fr ? "Portail encore en chargement" : "Portal still loading",
       detail: fr
-        ? "La confirmation a démarré mais le portail chargeait encore. Une facture impayée peut exister. Relancez pour terminer le paiement (ne démarrez pas une nouvelle enquête)."
-        : "Confirm started but the portal was still loading. An unpaid invoice may already exist. Use Re-run to finish payment (do not start a new inquiry).",
+        ? "Le portail chargeait encore. Vérifiez facture ou rapport dans CORPIQ avant de relancer (évitez une deuxième enquête)."
+        : "The portal was still loading. Check CORPIQ for invoice or report status before Re-run (avoid a second inquiry).",
+    },
+    paid_no_report: {
+      title: fr ? "Payé sans rapport" : "Paid but report missing",
+      detail: fr
+        ? "Des points PROPRIO ont été débités mais le rapport n'a pas chargé. Ne relancez pas (double facturation). Demandez un backfill du rapport."
+        : "PROPRIO points were deducted but the report did not load. Do not Re-run (that can charge again). Ask support to backfill the report.",
+    },
+    invoice_not_unpaid: {
+      title: fr ? "Facture déjà réglée" : "Invoice already settled",
+      detail: fr
+        ? "La facture CORPIQ n'est pas impayée (déjà payée ou fermée). Ne payez pas à nouveau. Demandez d'attacher le rapport existant si besoin."
+        : "CORPIQ opened an invoice that is not unpaid (already paid or closed). Do not pay again. Ask support to attach the existing report if needed.",
     },
     unpaid_invoice: {
       title: fr ? "Facture impayée" : "Unpaid invoice",
@@ -85,8 +97,8 @@ export function formatCorpiqFailure(
     portal_error: {
       title: fr ? "Erreur portail" : "Portal error",
       detail: fr
-        ? "ProprioEnquête s'est arrêté avant la fin. Vérifiez le portail (et toute facture impayée) avant de relancer."
-        : "ProprioEnquête stopped before finishing. Check the portal (and any unpaid invoice) before Re-run.",
+        ? "ProprioEnquête s'est arrêté avant la fin. Vérifiez l'état du portail avant de relancer pour éviter une double facturation."
+        : "ProprioEnquête stopped before finishing. Check the portal status before Re-run so you do not double-charge.",
     },
     worker_crash: {
       title: fr ? "Erreur technique" : "Technical error",

@@ -22,12 +22,18 @@ describe("formatCorpiqFailure", () => {
       {
         error_code: "portal_navigation",
         stage_label: "Portal still loading",
-        summary: "Confirm started but the portal was still loading.",
+        summary: "The portal was still loading.",
       },
       "en"
     );
     expect(copy?.title).toBe("Portal still loading");
-    expect(copy?.detail.toLowerCase()).toMatch(/unpaid invoice/);
+    expect(copy?.detail.toLowerCase()).toMatch(/before re-run/);
+  });
+
+  it("maps paid_no_report without encouraging re-run pay", () => {
+    const copy = formatCorpiqFailure({ error_code: "paid_no_report" }, "en");
+    expect(copy?.title).toMatch(/Paid/);
+    expect(copy?.detail.toLowerCase()).toMatch(/do not re-run/);
   });
 
   it("localizes FR", () => {
