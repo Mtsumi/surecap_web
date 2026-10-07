@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchListings, type Listing } from "@/lib/api";
+import { buildingLabel } from "@/lib/buildingLabel";
 import { t } from "@/lib/i18n";
 import { useSyncedLocale } from "@/lib/useSyncedLocale";
 import LocaleToggle from "@/components/LocaleToggle";
@@ -289,7 +290,7 @@ export default function ListingsBrowser({ areaSlug }: Props) {
               onClick={() => replaceQuery({ building: String(building.id) })}
               className={chipClass(buildingId === building.id)}
             >
-              {building.name}
+              {buildingLabel(building.name, building.address)}
             </button>
           ))}
         </div>
@@ -432,7 +433,10 @@ export default function ListingsBrowser({ areaSlug }: Props) {
                 <div className="space-y-3 px-4 py-4">
                   <div>
                     <h2 className="text-base font-semibold text-[#292524]">
-                      {listing.building.name}
+                      {buildingLabel(
+                        listing.building.name,
+                        listing.building.address
+                      )}
                       <span className="font-medium text-[#78716c]"> · {listing.unit_number}</span>
                     </h2>
                     <p className="mt-1 text-sm leading-snug text-[#78716c]">
