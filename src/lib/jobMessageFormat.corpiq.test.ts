@@ -40,4 +40,13 @@ describe("formatCorpiqFailure", () => {
     const copy = formatCorpiqFailure({ error_code: "unpaid_invoice" }, "fr");
     expect(copy?.title).toMatch(/Facture/);
   });
+
+  it("maps worker_timeout and stale_running", () => {
+    expect(formatCorpiqFailure({ error_code: "worker_timeout" }, "en")?.title).toBe(
+      "Timed out"
+    );
+    expect(
+      formatCorpiqFailure({ error_code: "stale_running" }, "en")?.detail.toLowerCase()
+    ).toMatch(/unpaid invoice/);
+  });
 });

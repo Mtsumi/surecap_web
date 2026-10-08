@@ -106,6 +106,18 @@ export function formatCorpiqFailure(
         ? "Le worker s'est arrêté de façon inattendue. Vérifiez s'il existe une facture impayée avant de relancer."
         : "The credit check worker stopped unexpectedly. Check whether an unpaid invoice exists before Re-run.",
     },
+    worker_timeout: {
+      title: fr ? "Délai dépassé" : "Timed out",
+      detail: fr
+        ? "Le worker a atteint sa limite de temps. Vérifiez s'il existe une facture impayée dans CORPIQ avant de relancer."
+        : "The credit check worker hit its time limit. Check CORPIQ for an unpaid invoice before Re-run.",
+    },
+    stale_running: {
+      title: fr ? "Worker interrompu" : "Worker lost",
+      detail: fr
+        ? "La vérification était encore marquée en cours après l'arrêt du worker. Vérifiez s'il existe une facture impayée avant de relancer."
+        : "This credit check was still marked running after the worker stopped. Check CORPIQ for an unpaid invoice before Re-run.",
+    },
   };
 
   if (code && byCode[code]) return byCode[code];
