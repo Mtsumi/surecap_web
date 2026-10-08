@@ -19,6 +19,7 @@ import {
   signInviteCreditConsent,
   submitInvite,
 } from "@/lib/api";
+import { formatClientFetchError } from "@/lib/clientFetchError";
 import { IdDocumentKind, idUploadComplete } from "@/lib/documentUpload";
 import { incomeUploadComplete, parseMonthlyNetIncome, formatMonthlyNetIncome, employmentRequiresIncome, employmentRequiresGuarantor, employmentAllowsAdditionalIncome, type AdditionalIncomeKind } from "@/lib/incomeUpload";
 import { Locale, MessageKey, t } from "@/lib/i18n";
@@ -606,8 +607,7 @@ export default function InviteForm({ token }: Props) {
         setError(t(locale, mapped.messageKey));
         setStep(mapped.step);
       } else {
-        const message = e instanceof Error ? e.message : t(locale, "error");
-        setError(message);
+        setError(formatClientFetchError(e, locale, t(locale, "error")));
       }
     } finally {
       setSubmitting(false);
@@ -621,7 +621,7 @@ export default function InviteForm({ token }: Props) {
       setConsentError(null);
     } catch (err) {
       setConsentError(
-        err instanceof Error && err.message ? err.message : t(locale, "consentError")
+        formatClientFetchError(err, locale, t(locale, "consentError"))
       );
     }
   }, [locale, token]);
@@ -642,7 +642,7 @@ export default function InviteForm({ token }: Props) {
         setConsentError(null);
       } catch (err) {
         setConsentError(
-          err instanceof Error && err.message ? err.message : t(locale, "consentError")
+          formatClientFetchError(err, locale, t(locale, "consentError"))
         );
       } finally {
         setConsentSigning(false);

@@ -24,6 +24,7 @@ import {
   submitApplicationById,
   updateApplication,
 } from "@/lib/api";
+import { formatClientFetchError } from "@/lib/clientFetchError";
 import {
   addressDatePayload,
   formatAddressDateRange,
@@ -483,7 +484,7 @@ export default function ApplyForm() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "error"));
+      setError(formatClientFetchError(e, locale, t(locale, "error")));
     } finally {
       setLoading(false);
     }
@@ -502,7 +503,7 @@ export default function ApplyForm() {
     fetchUnits(selectedBuilding.id)
       .then(setUnits)
       .catch((e) =>
-        setError(e instanceof Error ? e.message : t(locale, "error"))
+        setError(formatClientFetchError(e, locale, t(locale, "error")))
       )
       .finally(() => setLoading(false));
   }, [selectedBuilding, locale]);
@@ -666,7 +667,7 @@ export default function ApplyForm() {
         });
         return true;
       } catch (e) {
-        setError(e instanceof Error ? e.message : t(locale, "error"));
+        setError(formatClientFetchError(e, locale, t(locale, "error")));
         setSelectedUnit(null);
         setDraftSession(null);
         return false;
@@ -715,7 +716,7 @@ export default function ApplyForm() {
       }
       return ok;
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "error"));
+      setError(formatClientFetchError(e, locale, t(locale, "error")));
       return false;
     } finally {
       setLoading(false);
@@ -1031,7 +1032,7 @@ export default function ApplyForm() {
         updatedAt: new Date().toISOString(),
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "error"));
+      setError(formatClientFetchError(e, locale, t(locale, "error")));
       setSelectedUnit(null);
       setDraftSession(null);
     } finally {
@@ -1194,7 +1195,7 @@ export default function ApplyForm() {
         const key = firstFieldErrorKey(mapped.fieldErrors);
         if (key) scrollToField(key);
       } else {
-        setError(message || t(locale, "error"));
+        setError(formatClientFetchError(err, locale, t(locale, "error")));
       }
     } finally {
       setSubmitting(false);
@@ -1223,7 +1224,7 @@ export default function ApplyForm() {
       setConsentError(null);
     } catch (err) {
       setConsentError(
-        err instanceof Error && err.message ? err.message : t(locale, "consentError")
+        formatClientFetchError(err, locale, t(locale, "consentError"))
       );
     }
   }, [locale]);
@@ -1253,7 +1254,7 @@ export default function ApplyForm() {
         setConsentError(null);
       } catch (err) {
         setConsentError(
-          err instanceof Error && err.message ? err.message : t(locale, "consentError")
+          formatClientFetchError(err, locale, t(locale, "consentError"))
         );
       } finally {
         setConsentSigning(false);
@@ -1528,7 +1529,7 @@ export default function ApplyForm() {
                   );
                   continueToStep("addresses");
                 } catch (err) {
-                  setError(err instanceof Error ? err.message : t(locale, "error"));
+                  setError(formatClientFetchError(err, locale, t(locale, "error")));
                 } finally {
                   setSubmitting(false);
                 }

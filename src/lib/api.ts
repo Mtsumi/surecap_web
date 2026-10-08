@@ -1,7 +1,7 @@
+import { ClientNetworkError, isClientNetworkError } from "./clientFetchError";
 import {
   isRetryableUploadError,
   sleep,
-  uploadNetworkErrorMessage,
   uploadTimeoutErrorMessage,
 } from "./uploadErrors";
 
@@ -229,24 +229,16 @@ function apiHeaders(init?: RequestInit): HeadersInit {
 
 /** Safari/WebKit often surfaces network/body-limit failures as "Load failed". */
 function isNetworkFetchError(error: unknown): boolean {
-  if (!(error instanceof Error)) return false;
-  const msg = error.message.toLowerCase();
-  return (
-    msg.includes("failed to fetch") ||
-    msg.includes("load failed") ||
-    msg.includes("networkerror") ||
-    msg.includes("network request failed")
-  );
+  return isClientNetworkError(error);
 }
 
 function jsonNetworkError(): Error {
-  return new Error(
-    "Impossible de joindre le serveur. Vérifiez la connexion, puis réessayez."
-  );
+  return new ClientNetworkError();
 }
 
-function networkFetchError(detail?: string): Error {
-  return new Error(uploadNetworkErrorMessage(detail));
+function networkFetchError(_detail?: string): Error {
+  // Upload-specific wording is applied in the UI via formatClientFetchError + fallback.
+  return new ClientNetworkError();
 }
 
 /** Map stale-backend upload errors to a clearer message on mobile. */
@@ -870,8 +862,9 @@ export async function fetchReviewDocumentBlob(
   let res: Response;
   try {
     res = await fetch(url.toString(), { headers });
-  } catch {
-    throw new Error("Impossible de joindre le serveur. Vérifiez la connexion, puis réessayez.");
+  } catch (error) {
+    if (isClientNetworkError(error)) throw new ClientNetworkError();
+    throw error;
   }
   if (!res.ok) {
     throw new Error("Impossible d'ouvrir le document.");

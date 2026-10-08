@@ -8,6 +8,7 @@ import {
   submitAddGuarantor,
 } from "@/lib/api";
 import { t } from "@/lib/i18n";
+import { formatClientFetchError } from "@/lib/clientFetchError";
 import { useSyncedLocale } from "@/lib/useSyncedLocale";
 import LocaleToggle from "@/components/LocaleToggle";
 import {
@@ -78,7 +79,7 @@ export default function AddGuarantorForm({ token }: { token: string }) {
       });
       setDone(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t(locale, "addGuarantorExpired"));
+      setError(formatClientFetchError(err, locale, t(locale, "addGuarantorExpired")));
     } finally {
       setSubmitting(false);
     }

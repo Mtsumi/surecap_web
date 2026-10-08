@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchListings, type Listing } from "@/lib/api";
+import { formatClientFetchError } from "@/lib/clientFetchError";
 import { buildingLabel } from "@/lib/buildingLabel";
 import { t } from "@/lib/i18n";
 import { useSyncedLocale } from "@/lib/useSyncedLocale";
@@ -81,7 +82,7 @@ export default function ListingsBrowser({ areaSlug }: Props) {
       })
       .catch((e) => {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : t(locale, "error"));
+          setError(formatClientFetchError(e, locale, t(locale, "error")));
         }
       })
       .finally(() => {
