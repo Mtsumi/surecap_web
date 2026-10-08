@@ -15,6 +15,7 @@ import {
   applicationStatusLabel,
   type ApplicationStatus,
 } from "@/lib/adminStatus";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 
 /** Empty string = omit status (API hides drafts). */
 type StatusFilter = "" | ApplicationStatus;
@@ -72,7 +73,7 @@ export default function ApplicationsPage() {
         if (cancelled) return;
         setItems([]);
         setTotal(0);
-        setError(e instanceof Error ? e.message : t("applicationsError"));
+        setError(formatAdminFetchError(e, locale, t("applicationsError")));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -81,7 +82,7 @@ export default function ApplicationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [statusFilter, buildingId, t]);
+  }, [statusFilter, buildingId, locale, t]);
 
   const subtitleTemplate = statusFilter
     ? t("applicationsSubtitleFiltered")

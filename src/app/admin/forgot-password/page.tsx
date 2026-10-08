@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { requestPasswordReset } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 import LocaleToggle from "@/components/LocaleToggle";
 
 export default function AdminForgotPasswordPage() {
@@ -23,7 +24,7 @@ export default function AdminForgotPasswordPage() {
       await requestPasswordReset(email.trim());
       setMessage(t("forgotSuccess"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("loginError"));
+      setError(formatAdminFetchError(err, locale, t("loginError")));
     } finally {
       setLoading(false);
     }

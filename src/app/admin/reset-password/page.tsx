@@ -6,12 +6,13 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { resetPassword } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 import LocaleToggle from "@/components/LocaleToggle";
 
 function ResetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useAdminLocaleContext();
+  const { t, locale } = useAdminLocaleContext();
   const token = searchParams.get("token");
 
   const [newPassword, setNewPassword] = useState("");
@@ -50,8 +51,8 @@ function ResetPasswordForm() {
     try {
       await resetPassword(token, newPassword);
       setSuccess(true);
-    } catch {
-      setError(t("resetInvalidToken"));
+    } catch (err) {
+      setError(formatAdminFetchError(err, locale, t("resetInvalidToken")));
     } finally {
       setLoading(false);
     }

@@ -5,11 +5,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { changeAdminPassword } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 
 function AccountForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { t } = useAdminLocaleContext();
+  const { t, locale } = useAdminLocaleContext();
   const required = searchParams.get("required") === "1";
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -36,7 +37,7 @@ function AccountForm() {
       await changeAdminPassword(currentPassword, newPassword);
       router.replace("/admin/applications");
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("accountGenericError"));
+      setError(formatAdminFetchError(err, locale, t("accountGenericError")));
     } finally {
       setLoading(false);
     }

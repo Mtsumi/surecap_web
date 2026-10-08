@@ -21,6 +21,7 @@ import { validatePhoneFormat } from "@/lib/applyValidation";
 import PhoneField from "@/app/apply/PhoneField";
 
 import { adminUi } from "@/lib/adminUi";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 
 const inputClass = adminUi.input + " min-w-0 !px-2 !py-2";
 
@@ -140,7 +141,7 @@ function BuildingJanitorSection({
       onUpdated(updated);
       setIsEditing(false);
     } catch (e) {
-      onError(e instanceof Error ? e.message : t("buildingsGenericError"));
+      onError(formatAdminFetchError(e, locale, t("buildingsGenericError")));
     } finally {
       setSaving(false);
     }
@@ -259,6 +260,7 @@ function UnitPhotoStrip({
   onError: (message: string) => void;
   t: (key: AdminMessageKey) => string;
 }) {
+  const { locale } = useAdminLocaleContext();
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const photos = unit.photos ?? [];
@@ -281,7 +283,7 @@ function UnitPhotoStrip({
       }
       onUpdated(current);
     } catch (e) {
-      onError(e instanceof Error ? e.message : t("buildingsGenericError"));
+      onError(formatAdminFetchError(e, locale, t("buildingsGenericError")));
     } finally {
       setBusy(false);
       if (inputRef.current) inputRef.current.value = "";
@@ -298,7 +300,7 @@ function UnitPhotoStrip({
     try {
       onUpdated(await reorderUnitPhotos(unit.id, ids));
     } catch (e) {
-      onError(e instanceof Error ? e.message : t("buildingsGenericError"));
+      onError(formatAdminFetchError(e, locale, t("buildingsGenericError")));
     } finally {
       setBusy(false);
     }
@@ -310,7 +312,7 @@ function UnitPhotoStrip({
     try {
       onUpdated(await deleteUnitPhoto(unit.id, photoId));
     } catch (e) {
-      onError(e instanceof Error ? e.message : t("buildingsGenericError"));
+      onError(formatAdminFetchError(e, locale, t("buildingsGenericError")));
     } finally {
       setBusy(false);
     }
@@ -461,7 +463,7 @@ function UnitRow({
       });
       onUpdated(updated);
     } catch (e) {
-      onError(e instanceof Error ? e.message : t("buildingsGenericError"));
+      onError(formatAdminFetchError(e, locale, t("buildingsGenericError")));
     } finally {
       setSaving(false);
     }
@@ -620,7 +622,7 @@ export default function BuildingsAdminPage() {
         if (b.length) setSelectedId(b[0].id);
       })
       .catch((e) =>
-        setError(e instanceof Error ? e.message : t("buildingsGenericError"))
+        setError(formatAdminFetchError(e, locale, t("buildingsGenericError")))
       );
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -632,7 +634,7 @@ export default function BuildingsAdminPage() {
     listUnitsAdmin(selectedId)
       .then(setUnits)
       .catch((e) =>
-        setError(e instanceof Error ? e.message : t("buildingsGenericError"))
+        setError(formatAdminFetchError(e, locale, t("buildingsGenericError")))
       )
       .finally(() => setLoadingUnits(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -8,10 +8,11 @@ import {
   updateAdminUser,
 } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 
 export default function TeamPage() {
-  const { t } = useAdminLocaleContext();
+  const { t, locale } = useAdminLocaleContext();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +26,7 @@ export default function TeamPage() {
   };
 
   useEffect(() => {
-    load().catch((e) => setError(e instanceof Error ? e.message : t("teamError")));
+    load().catch((e) => setError(formatAdminFetchError(e, locale, t("teamError"))));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once on mount
   }, []);
 
@@ -52,7 +53,7 @@ export default function TeamPage() {
       }
     } catch (err) {
       setMessage(null);
-      setError(err instanceof Error ? err.message : t("teamError"));
+      setError(formatAdminFetchError(err, locale, t("teamError")));
     } finally {
       setBusy(false);
     }
@@ -65,7 +66,7 @@ export default function TeamPage() {
       await updateAdminUser(user.id, { active: false });
       await load();
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("teamError"));
+      setError(formatAdminFetchError(err, locale, t("teamError")));
     }
   };
 

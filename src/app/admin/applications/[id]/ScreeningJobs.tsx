@@ -45,6 +45,7 @@ import {
   corpiqPreflightLabel,
 } from "@/lib/corpiqPreflight";
 import { adminUi } from "@/lib/adminUi";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 import type { Locale } from "@/lib/i18n";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import { useState } from "react";
@@ -888,16 +889,7 @@ function CorpiqMemberControls({
       await startCorpiqScreening(applicationId, memberId, { force });
       onStarted?.();
     } catch (e) {
-      const raw = e instanceof Error ? e.message : "Error";
-      const network =
-        /failed to fetch|networkerror|load failed|network request failed/i.test(raw);
-      setError(
-        network
-          ? locale === "fr"
-            ? "Connexion à l'API admin impossible. Vérifiez le réseau puis réessayez."
-            : "Could not reach the admin API. Check your network, then try again."
-          : raw
-      );
+      setError(formatAdminFetchError(e, locale));
     } finally {
       setBusy(false);
     }
@@ -929,15 +921,14 @@ function CorpiqMemberControls({
       window.setTimeout(() => URL.revokeObjectURL(url), 120_000);
     } catch (e) {
       tab?.close();
-      const raw = e instanceof Error ? e.message : "Error";
-      const network =
-        /failed to fetch|networkerror|load failed|network request failed/i.test(raw);
       setError(
-        network
-          ? locale === "fr"
-            ? "Impossible de télécharger le rapport. Vérifiez le réseau puis réessayez."
-            : "Could not download the report. Check your network, then try again."
-          : raw
+        formatAdminFetchError(
+          e,
+          locale,
+          locale === "fr"
+            ? "Impossible de télécharger le rapport. Réessayez."
+            : "Could not download the report. Try again."
+        )
       );
     } finally {
       setReportBusy(false);
