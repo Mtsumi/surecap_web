@@ -118,6 +118,12 @@ export function formatCorpiqFailure(
         ? "La vérification était encore marquée en cours après l'arrêt du worker. Vérifiez s'il existe une facture impayée avant de relancer."
         : "This credit check was still marked running after the worker stopped. Check CORPIQ for an unpaid invoice before Re-run.",
     },
+    confirm_hung: {
+      title: fr ? "Confirmation bloquée" : "Confirm hung",
+      detail: fr
+        ? "ProprioEnquête est resté sur la confirmation avec un spinner. Vérifiez le portail avant de relancer (évitez une deuxième enquête)."
+        : "ProprioEnquête stayed on confirmation with a loading spinner. Check the portal before Re-run (avoid a second inquiry).",
+    },
   };
 
   if (code && byCode[code]) return byCode[code];

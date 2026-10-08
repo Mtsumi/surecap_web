@@ -49,4 +49,10 @@ describe("formatCorpiqFailure", () => {
       formatCorpiqFailure({ error_code: "stale_running" }, "en")?.detail.toLowerCase()
     ).toMatch(/unpaid invoice/);
   });
+
+  it("maps confirm_hung", () => {
+    expect(formatCorpiqFailure({ error_code: "confirm_hung" }, "en")?.title).toBe(
+      "Confirm hung"
+    );
+  });
 });
