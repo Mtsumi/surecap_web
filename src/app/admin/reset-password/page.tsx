@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { resetPassword } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
-import { formatAdminFetchError } from "@/lib/adminFetchError";
+import { formatAdminFetchError, isAdminNetworkError } from "@/lib/adminFetchError";
 import LocaleToggle from "@/components/LocaleToggle";
 
 function ResetPasswordForm() {
@@ -52,7 +52,12 @@ function ResetPasswordForm() {
       await resetPassword(token, newPassword);
       setSuccess(true);
     } catch (err) {
-      setError(formatAdminFetchError(err, locale, t("resetInvalidToken")));
+      // Prefer localized invalid-token copy; still map true network failures.
+      setError(
+        isAdminNetworkError(err)
+          ? formatAdminFetchError(err, locale)
+          : t("resetInvalidToken")
+      );
     } finally {
       setLoading(false);
     }
