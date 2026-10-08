@@ -5,6 +5,7 @@ import IdCameraCapture from "../../IdCameraCapture";
 import { uploadInviteDocument } from "@/lib/api";
 import { ACCEPTED_ID_UPLOAD_TYPES } from "@/lib/documentUpload";
 import { t, type Locale } from "@/lib/i18n";
+import { formatClientFetchError } from "@/lib/clientFetchError";
 
 export default function GuarantorVisitQuestion({
   locale,
@@ -43,7 +44,7 @@ export default function GuarantorVisitQuestion({
       await uploadInviteDocument(inviteToken, "selfie", file);
       onSelfieUploaded(true);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t(locale, "error"));
+      setError(formatClientFetchError(err, locale, t(locale, "error")));
     } finally {
       setSending(false);
     }

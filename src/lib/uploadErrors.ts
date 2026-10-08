@@ -30,6 +30,14 @@ export function uploadTimeoutErrorMessage(fileDetail?: string): string {
 export function isRetryableUploadError(error: unknown): boolean {
   if (error instanceof DOMException && error.name === "AbortError") return true;
   if (!(error instanceof Error)) return false;
+  if (
+    error.name === "ClientNetworkError" ||
+    error.name === "AdminNetworkError" ||
+    error.message === "CLIENT_NETWORK" ||
+    error.message === "ADMIN_NETWORK"
+  ) {
+    return true;
+  }
   const msg = error.message.toLowerCase();
   return (
     msg.includes("failed to fetch") ||

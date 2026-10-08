@@ -20,6 +20,7 @@ import {
   uploadMemberDocument,
 } from "@/lib/api";
 import { Locale, MessageKey, t } from "@/lib/i18n";
+import { formatClientFetchError } from "@/lib/clientFetchError";
 import { normalizeUploadFile } from "@/lib/normalizeUploadFile";
 import {
   uploadQualityBanner,
@@ -118,7 +119,7 @@ export default function StepDocumentUpload(props: Props) {
         : await listInviteDocuments(inviteToken);
       publishDocuments(list);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "uploadFailed"));
+      setError(formatClientFetchError(e, locale, t(locale, "uploadFailed")));
     } finally {
       setLoadingList(false);
     }
@@ -152,7 +153,7 @@ export default function StepDocumentUpload(props: Props) {
       }
       applyDocumentUpdate((prev) => removeMemberDocumentType(prev, documentType));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "uploadFailed"));
+      setError(formatClientFetchError(e, locale, t(locale, "uploadFailed")));
     } finally {
       setBusySlot(null);
     }
@@ -190,7 +191,7 @@ export default function StepDocumentUpload(props: Props) {
       };
       applyDocumentUpdate((prev) => mergeMemberDocument(prev, saved));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t(locale, "uploadFailed"));
+      setError(formatClientFetchError(e, locale, t(locale, "uploadFailed")));
     } finally {
       setBusySlot(null);
     }
@@ -231,7 +232,7 @@ export default function StepDocumentUpload(props: Props) {
           prev.filter((doc) => !stale.includes(doc.document_type))
         );
       } catch (e) {
-        setError(e instanceof Error ? e.message : t(locale, "uploadFailed"));
+        setError(formatClientFetchError(e, locale, t(locale, "uploadFailed")));
         setBusySlot(null);
         return;
       }

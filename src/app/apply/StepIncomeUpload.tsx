@@ -30,6 +30,7 @@ import {
 } from "@/lib/api";
 import { normalizeUploadFile } from "@/lib/normalizeUploadFile";
 import { Locale, MessageKey, t } from "@/lib/i18n";
+import { formatClientFetchError } from "@/lib/clientFetchError";
 import {
   uploadQualityBanner,
   uploadQualityTone,
@@ -120,8 +121,15 @@ export default function StepIncomeUpload(props: Props) {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const cameraInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const uploadErrorMessage = (e: unknown) =>
-    e instanceof Error ? formatUploadErrorMessage(e.message) : t(locale, "uploadFailed");
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+
+  const uploadErrorMessage = (e: unknown) => {
+    if (e instanceof Error && e.message.includes("Unknown document type: pay_slip_3")) {
+      return formatUploadErrorMessage(e.message);
+    }
+    return formatClientFetchError(e, locale, t(locale, "uploadFailed"));
+  };
 
   const onDocumentsChangeRef = useRef(onDocumentsChange);
   onDocumentsChangeRef.current = onDocumentsChange;
@@ -156,7 +164,9 @@ export default function StepIncomeUpload(props: Props) {
         : await listInviteDocuments(inviteToken);
       publishDocuments(list);
     } catch (e) {
-      setError(LIST_LOAD_FAILED);
+      setError(
+        formatClientFetchError(e, localeRef.current, LIST_LOAD_FAILED)
+      );
     } finally {
       setLoadingList(false);
     }

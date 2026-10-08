@@ -9,6 +9,7 @@ import {
 import { ACCEPTED_ID_UPLOAD_TYPES } from "@/lib/documentUpload";
 import IdCameraCapture from "@/app/apply/IdCameraCapture";
 import type { Locale } from "@/lib/i18n";
+import { formatClientFetchError } from "@/lib/clientFetchError";
 
 export default function IdentitySelfieForm({ token }: { token: string }) {
   const [ctx, setCtx] = useState<IdentitySelfieContext | null>(null);
@@ -32,7 +33,9 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Lien invalide ou expiré");
+          setError(
+            formatClientFetchError(err, "fr", "Lien invalide ou expiré")
+          );
         }
       })
       .finally(() => {
@@ -100,7 +103,7 @@ export default function IdentitySelfieForm({ token }: { token: string }) {
       setCtx(updated);
       onPick(null);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Upload failed");
+      setError(formatClientFetchError(err, locale, locale === "en" ? "Upload failed" : "Échec de l'envoi"));
     } finally {
       setSubmitting(false);
     }

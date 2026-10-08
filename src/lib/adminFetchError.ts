@@ -12,8 +12,15 @@ const GENERIC_TECH_RE =
 
 export function isAdminNetworkError(error: unknown): boolean {
   if (!(error instanceof Error)) return false;
-  if (error.name === "AdminNetworkError") return true;
-  if (error.message === "ADMIN_NETWORK") return true;
+  if (
+    error.name === "AdminNetworkError" ||
+    error.name === "ClientNetworkError"
+  ) {
+    return true;
+  }
+  if (error.message === "ADMIN_NETWORK" || error.message === "CLIENT_NETWORK") {
+    return true;
+  }
   return NETWORK_RE.test(error.message);
 }
 

@@ -15,6 +15,7 @@ import {
   submitJanitorReview,
 } from "@/lib/api";
 import { applicationStatusLabel } from "@/lib/adminStatus";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
 import { facebookLink } from "@/lib/facebookSearch";
 import RejectionEmailComposer, {
@@ -88,9 +89,11 @@ function CreditConsentPreview({
   token: string;
   documentId: number;
 }) {
-  const { t } = useAdminCopy();
+  const { locale, t } = useAdminCopy();
   const tRef = useRef(t);
   tRef.current = t;
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -105,7 +108,13 @@ function CreditConsentPreview({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : tRef.current("reviewPdfOpenError"));
+        setError(
+          formatAdminFetchError(
+            err,
+            localeRef.current,
+            tRef.current("reviewPdfOpenError")
+          )
+        );
       });
     return () => {
       cancelled = true;
@@ -124,7 +133,7 @@ function CreditConsentPreview({
       anchor.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 0);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("reviewPdfDownloadError"));
+      setError(formatAdminFetchError(err, locale, t("reviewPdfDownloadError")));
     }
   };
 
@@ -165,7 +174,7 @@ function MemberCard({
   onIdentityUpdated: (review: JanitorReview) => void;
   onIdentityFlash?: (message: string) => void;
 }) {
-  const { t } = useAdminCopy();
+  const { locale, t } = useAdminCopy();
   const [idPreviewUrl, setIdPreviewUrl] = useState<string | null>(null);
   const [idIsPdf, setIdIsPdf] = useState(false);
   const [idError, setIdError] = useState<string | null>(null);
@@ -193,7 +202,7 @@ function MemberCard({
       const refreshed = await fetchJanitorReview(token);
       onIdentityUpdated(refreshed);
     } catch (err: unknown) {
-      setIdError(err instanceof Error ? err.message : failMessage);
+      setIdError(formatAdminFetchError(err, locale, failMessage));
     }
   }
 
@@ -221,7 +230,7 @@ function MemberCard({
         onIdentityFlash?.(t("reviewSelfieFlash").replace("{name}", member.name));
       }
     } catch (err: unknown) {
-      setIdError(err instanceof Error ? err.message : t("reviewIdentityConfirmFail"));
+      setIdError(formatAdminFetchError(err, locale, t("reviewIdentityConfirmFail")));
     } finally {
       setIdentityBusy(false);
     }
@@ -344,7 +353,7 @@ export default function ReviewForm({ token }: { token: string }) {
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : t("reviewInvalidLink"));
+        setError(formatAdminFetchError(err, locale, t("reviewInvalidLink")));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -377,7 +386,7 @@ export default function ReviewForm({ token }: { token: string }) {
       const refreshed = await fetchJanitorReview(token);
       setReview(refreshed);
     } catch (err: unknown) {
-      setStripIdError(err instanceof Error ? err.message : failMessage);
+      setStripIdError(formatAdminFetchError(err, locale, failMessage));
     } finally {
       setStripBusy(false);
     }
@@ -412,7 +421,7 @@ export default function ReviewForm({ token }: { token: string }) {
       }
     } catch (err: unknown) {
       setStripIdError(
-        err instanceof Error ? err.message : t("reviewIdentityConfirmFail")
+        formatAdminFetchError(err, locale, t("reviewIdentityConfirmFail"))
       );
     } finally {
       setStripBusy(false);
@@ -453,7 +462,7 @@ export default function ReviewForm({ token }: { token: string }) {
       setShowRefuse(false);
       setShowOffer(false);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("reviewUpdateFailed"));
+      setError(formatAdminFetchError(err, locale, t("reviewUpdateFailed")));
     } finally {
       setSubmitting(false);
     }
