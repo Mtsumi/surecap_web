@@ -24,6 +24,50 @@ export function parseCorpiqJobMessage(message: string | null): CorpiqJobPayload 
   }
 }
 
+/** Live progress labels for the in-flight ProprioEnquête banner (FR/EN). */
+const CORPIQ_STAGE_COPY: Record<string, { en: string; fr: string }> = {
+  queued: { en: "Starting", fr: "Démarrage" },
+  starting: { en: "Starting", fr: "Démarrage" },
+  login: { en: "Signing in", fr: "Connexion" },
+  invoice: { en: "Resuming unpaid invoice", fr: "Reprise facture impayée" },
+  package: { en: "Selecting Basic package", fr: "Choix forfait Basic" },
+  applicant: { en: "Filling applicant and consent", fr: "Candidat et consentement" },
+  address: { en: "Filling current address", fr: "Adresse actuelle" },
+  confirm: { en: "Confirming screening", fr: "Confirmation" },
+  confirm_wait: { en: "Waiting after confirm", fr: "Attente après confirmation" },
+  confirm_stop: { en: "Confirmation reached (no pay)", fr: "Confirmation (sans paiement)" },
+  pay: { en: "Paying with PROPRIO points", fr: "Paiement points PROPRIO" },
+  pay_wait: { en: "Waiting for report", fr: "Attente du rapport" },
+  report: { en: "Reading report", fr: "Lecture du rapport" },
+  mock: { en: "Mock ProprioEnquête", fr: "ProprioEnquête (simulation)" },
+};
+
+export function localizeCorpiqStageLabel(
+  payload: CorpiqJobPayload | null,
+  locale: Locale = "fr"
+): string | null {
+  if (!payload) return null;
+  const mapped = payload.stage ? CORPIQ_STAGE_COPY[payload.stage] : undefined;
+  if (mapped) return locale === "fr" ? mapped.fr : mapped.en;
+  const raw = payload.stage_label?.trim();
+  if (!raw) return null;
+  return raw.replace(/\u2014/g, "-").replace(/—/g, "-");
+}
+
+/** Failures where Relancer is OK after a portal check (no double-charge risk from our side). */
+export function corpiqSafeToRerunAfterPortalCheck(
+  payload: CorpiqJobPayload | null
+): boolean {
+  const code = payload?.error_code || payload?.error || "";
+  return (
+    code === "stale_running" ||
+    code === "worker_timeout" ||
+    code === "confirm_hung" ||
+    code === "portal_navigation" ||
+    code === "stopped_before_pay"
+  );
+}
+
 /** Admin-facing CORPIQ failure title + body (FR/EN). Prefer error_code over raw Playwright. */
 export function formatCorpiqFailure(
   payload: CorpiqJobPayload | null,

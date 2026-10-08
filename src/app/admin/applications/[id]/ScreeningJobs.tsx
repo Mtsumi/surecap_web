@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  corpiqSafeToRerunAfterPortalCheck,
   formatCorpiqFailure,
   formatJobMessagePreview,
+  localizeCorpiqStageLabel,
   parseCorpiqJobMessage,
   formatSearchAddress,
   formatTalScreeningPreview,
@@ -866,6 +868,8 @@ function CorpiqMemberControls({
   const needsForce = completed || failed;
   const corpiq = parseCorpiqJobMessage(job?.message ?? null);
   const failureCopy = formatCorpiqFailure(corpiq, locale);
+  const liveStage = localizeCorpiqStageLabel(corpiq, locale);
+  const safeRerunHint = corpiqSafeToRerunAfterPortalCheck(corpiq);
   const resultLine = formatJobMessagePreview(
     "corpiq_screening",
     job?.message ?? null,
@@ -986,9 +990,11 @@ function CorpiqMemberControls({
                 ? locale === "fr"
                   ? "En file…"
                   : "Queued…"
-                : locale === "fr"
-                  ? "En cours…"
-                  : "Running…"}
+                : liveStage
+                  ? liveStage
+                  : locale === "fr"
+                    ? "En cours…"
+                    : "Running…"}
             </span>
           ) : null}
           {reportDocumentId != null ? (
@@ -1051,6 +1057,13 @@ function CorpiqMemberControls({
           ) : null}
           {!failureCopy && job?.message ? (
             <p className="mt-0.5 text-xs">{resultLine}</p>
+          ) : null}
+          {safeRerunHint ? (
+            <p className="mt-1 text-xs font-medium text-red-900">
+              {locale === "fr"
+                ? "Après vérification du portail CORPIQ, Relancer est possible."
+                : "After checking the CORPIQ portal, Re-run is OK."}
+            </p>
           ) : null}
         </div>
       ) : null}
@@ -1132,7 +1145,10 @@ export default function ScreeningJobs({
         <div className="rounded-lg border border-[var(--ml-line)] bg-[var(--ml-paper)] px-4 py-3 text-sm text-[var(--ml-ink)]">
           {corpiqRunning.map((job) => {
             const name = jobMemberLabel(job.application_member_id);
-            const stage = parseCorpiqJobMessage(job.message)?.stage_label;
+            const stage = localizeCorpiqStageLabel(
+              parseCorpiqJobMessage(job.message),
+              locale
+            );
             return (
               <p key={job.id}>
                 {locale === "fr" ? "ProprioEnquête" : "ProprioEnquête"}{" "}

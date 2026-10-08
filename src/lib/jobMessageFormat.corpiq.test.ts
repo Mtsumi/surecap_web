@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatCorpiqFailure } from "./jobMessageFormat";
+import {
+  corpiqSafeToRerunAfterPortalCheck,
+  formatCorpiqFailure,
+  localizeCorpiqStageLabel,
+} from "./jobMessageFormat";
 
 describe("formatCorpiqFailure", () => {
   it("maps step_unchanged without em dashes", () => {
@@ -54,5 +58,19 @@ describe("formatCorpiqFailure", () => {
     expect(formatCorpiqFailure({ error_code: "confirm_hung" }, "en")?.title).toBe(
       "Confirm hung"
     );
+  });
+
+  it("localizes live stage labels", () => {
+    expect(
+      localizeCorpiqStageLabel({ stage: "confirm", stage_label: "Confirming screening" }, "fr")
+    ).toBe("Confirmation");
+    expect(
+      localizeCorpiqStageLabel({ stage: "pay_wait", stage_label: "Waiting for report" }, "en")
+    ).toBe("Waiting for report");
+  });
+
+  it("flags safe re-run failures", () => {
+    expect(corpiqSafeToRerunAfterPortalCheck({ error_code: "stale_running" })).toBe(true);
+    expect(corpiqSafeToRerunAfterPortalCheck({ error_code: "paid_no_report" })).toBe(false);
   });
 });
