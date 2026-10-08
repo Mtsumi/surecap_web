@@ -1,12 +1,18 @@
-/** Compact ID / payslip rows for the admin screening glance table. */
+/** Compact ID / payslip / TAL / SOQUIJ rows for the admin screening glance table. */
 
 import type { Locale } from "./i18n";
 import {
   formatIdPhotoQuality,
+  formatSoquijFailure,
+  formatSoquijScreeningPreview,
+  formatTalFailure,
+  formatTalScreeningPreview,
   incomeExtractFlagLabel,
   uniqueIncomeFlags,
   type IdDocumentExtractPayload,
   type IncomeDocumentExtractPayload,
+  type SoquijScreeningPayload,
+  type TalScreeningPayload,
 } from "./jobMessageFormat";
 import {
   isIdExtractInconclusive,
@@ -17,7 +23,7 @@ import { nameSimilarity, documentHasExtraName } from "./names";
 export type GlanceTone = "ok" | "warn" | "bad" | "pending" | "neutral";
 
 export type ScreeningGlanceRow = {
-  key: "id" | "income" | "household";
+  key: "id" | "income" | "household" | "tal" | "soquij";
   tone: GlanceTone;
   checkLabel: string;
   summary: string;
@@ -72,6 +78,13 @@ function jobTone(status: string): GlanceTone | null {
   return null;
 }
 
+function pendingSummary(status: string, locale: Locale): string {
+  if (status === "pending") {
+    return locale === "fr" ? "En file" : "Queued";
+  }
+  return locale === "fr" ? "En cours" : "Running";
+}
+
 export function idScreeningGlance(
   payload: IdDocumentExtractPayload | null,
   status: string,
@@ -81,7 +94,13 @@ export function idScreeningGlance(
   const checkLabel = locale === "fr" ? "Pièce d'identité" : "ID";
   const fromJob = jobTone(status);
   if (fromJob === "pending") {
-    return { key: "id", tone: "pending", checkLabel, summary: status, issues: [] };
+    return {
+      key: "id",
+      tone: "pending",
+      checkLabel,
+      summary: pendingSummary(status, locale),
+      issues: [],
+    };
   }
   if (fromJob === "bad") {
     return {
@@ -89,6 +108,19 @@ export function idScreeningGlance(
       tone: "bad",
       checkLabel,
       summary: locale === "fr" ? "Lecture échouée" : "Extract failed",
+      issues: [
+        locale === "fr"
+          ? "Relancez l'extraction ou vérifiez les photos"
+          : "Re-run extract or check the ID photos",
+      ],
+    };
+  }
+  if (fromJob === "neutral" && !payload) {
+    return {
+      key: "id",
+      tone: "neutral",
+      checkLabel,
+      summary: locale === "fr" ? "Ignoré" : "Skipped",
       issues: [],
     };
   }
@@ -183,7 +215,13 @@ export function incomeScreeningGlance(
   const checkLabel = locale === "fr" ? "Talon de paie" : "Pay stub";
   const fromJob = jobTone(status);
   if (fromJob === "pending") {
-    return { key: "income", tone: "pending", checkLabel, summary: status, issues: [] };
+    return {
+      key: "income",
+      tone: "pending",
+      checkLabel,
+      summary: pendingSummary(status, locale),
+      issues: [],
+    };
   }
   if (fromJob === "bad") {
     return {
@@ -191,6 +229,19 @@ export function incomeScreeningGlance(
       tone: "bad",
       checkLabel,
       summary: locale === "fr" ? "Lecture échouée" : "Extract failed",
+      issues: [
+        locale === "fr"
+          ? "Relancez l'extraction ou vérifiez les talons de paie"
+          : "Re-run extract or check the pay stubs",
+      ],
+    };
+  }
+  if (fromJob === "neutral" && !payload) {
+    return {
+      key: "income",
+      tone: "neutral",
+      checkLabel,
+      summary: locale === "fr" ? "Ignoré" : "Skipped",
       issues: [],
     };
   }
@@ -285,6 +336,147 @@ function asGlanceTone(value: string): GlanceTone {
     return value;
   }
   return "neutral";
+}
+
+export function talScreeningGlance(
+  payload: TalScreeningPayload | null,
+  status: string,
+  locale: Locale
+): ScreeningGlanceRow {
+  const checkLabel = "TAL";
+  const fromJob = jobTone(status);
+  if (fromJob === "pending") {
+    return {
+      key: "tal",
+      tone: "pending",
+      checkLabel,
+      summary: pendingSummary(status, locale),
+      issues: [],
+    };
+  }
+  if (fromJob === "bad" || fromJob === "neutral") {
+    const failure = formatTalFailure(payload, locale);
+    const fallback =
+      fromJob === "neutral"
+        ? locale === "fr"
+          ? "Ignoré"
+          : "Skipped"
+        : locale === "fr"
+          ? "Échec"
+          : "Failed";
+    return {
+      key: "tal",
+      tone: fromJob === "bad" ? "bad" : "neutral",
+      checkLabel,
+      summary: failure?.title || fallback,
+      issues: failure?.detail ? [failure.detail] : [],
+    };
+  }
+  if (!payload) {
+    return {
+      key: "tal",
+      tone: status === "completed" ? "warn" : "neutral",
+      checkLabel,
+      summary: locale === "fr" ? "Résultat indisponible" : "No TAL result",
+      issues: [],
+    };
+  }
+  const searches = payload.searches || [];
+  const tenantHits = searches.reduce((sum, s) => sum + (s.name_match_count ?? 0), 0);
+  const landlordHits = searches.reduce(
+    (sum, s) => sum + (s.landlord_mention_count ?? 0),
+    0
+  );
+  const issues: string[] = [];
+  if (tenantHits > 0) {
+    issues.push(
+      locale === "fr"
+        ? `${tenantHits} correspondance(s) locataire`
+        : `${tenantHits} tenant match(es)`
+    );
+  }
+  if (landlordHits > 0) {
+    issues.push(
+      locale === "fr"
+        ? `${landlordHits} mention(s) locateur`
+        : `${landlordHits} landlord mention(s)`
+    );
+  }
+  return {
+    key: "tal",
+    tone: tenantHits > 0 ? "warn" : landlordHits > 0 ? "warn" : "ok",
+    checkLabel,
+    summary: formatTalScreeningPreview(payload, locale),
+    issues,
+  };
+}
+
+export function soquijScreeningGlance(
+  payload: SoquijScreeningPayload | null,
+  status: string,
+  locale: Locale
+): ScreeningGlanceRow {
+  const checkLabel = "SOQUIJ";
+  const fromJob = jobTone(status);
+  if (fromJob === "pending") {
+    return {
+      key: "soquij",
+      tone: "pending",
+      checkLabel,
+      summary: pendingSummary(status, locale),
+      issues: [],
+    };
+  }
+  if (fromJob === "bad" || fromJob === "neutral") {
+    const failure = formatSoquijFailure(payload, locale);
+    const fallback =
+      fromJob === "neutral"
+        ? locale === "fr"
+          ? "Ignoré"
+          : "Skipped"
+        : locale === "fr"
+          ? "Échec"
+          : "Failed";
+    return {
+      key: "soquij",
+      tone: fromJob === "bad" ? "bad" : "neutral",
+      checkLabel,
+      summary: failure?.title || fallback,
+      issues: failure?.detail ? [failure.detail] : [],
+    };
+  }
+  if (!payload) {
+    return {
+      key: "soquij",
+      tone: status === "completed" ? "warn" : "neutral",
+      checkLabel,
+      summary: locale === "fr" ? "Résultat indisponible" : "No SOQUIJ result",
+      issues: [],
+    };
+  }
+  const respondents = payload.respondent_count ?? 0;
+  const strong = payload.strong_match_count ?? 0;
+  const issues: string[] = [];
+  if (respondents > 0) {
+    issues.push(
+      locale === "fr"
+        ? `${respondents} comme défendeur`
+        : `${respondents} as respondent`
+    );
+  } else if (strong > 0) {
+    issues.push(
+      locale === "fr"
+        ? `${strong} correspondance(s) forte(s)`
+        : `${strong} strong match(es)`
+    );
+  }
+  return {
+    key: "soquij",
+    tone: respondents > 0 ? "bad" : strong > 0 ? "warn" : "ok",
+    checkLabel,
+    summary: formatSoquijScreeningPreview(payload, locale),
+    issues,
+  };
 }
 
 export function householdAffordabilityGlance(

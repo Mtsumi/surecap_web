@@ -3,6 +3,8 @@ import {
   householdAffordabilityGlance,
   idScreeningGlance,
   incomeScreeningGlance,
+  soquijScreeningGlance,
+  talScreeningGlance,
 } from "./screeningGlance";
 
 describe("screeningGlance", () => {
@@ -150,6 +152,45 @@ describe("screeningGlance", () => {
       "en"
     );
     expect(row.tone).toBe("bad");
+  });
+
+  it("localizes pending ID status", () => {
+    const row = idScreeningGlance(null, "running", "en");
+    expect(row.tone).toBe("pending");
+    expect(row.summary).toBe("Running");
+  });
+
+  it("shows TAL skip with structured copy", () => {
+    const row = talScreeningGlance(
+      {
+        error_code: "not_in_canada",
+        stage_label: "Outside Canada",
+        summary: "Skipped: address not in Canada.",
+        searches: [],
+      },
+      "skipped",
+      "en"
+    );
+    expect(row.tone).toBe("neutral");
+    expect(row.summary).toBe("Outside Canada");
+    expect(row.issues[0]).toMatch(/Quebec/);
+    expect(row.summary).not.toMatch(/—/);
+  });
+
+  it("flags SOQUIJ respondents as bad", () => {
+    const row = soquijScreeningGlance(
+      {
+        status: "completed",
+        decision_count: 2,
+        strong_match_count: 2,
+        respondent_count: 1,
+        decisions: [],
+      },
+      "completed",
+      "en"
+    );
+    expect(row.tone).toBe("bad");
+    expect(row.issues.some((issue) => /respondent/i.test(issue))).toBe(true);
   });
 
   it("shows income vs rent from the shared API snapshot", () => {

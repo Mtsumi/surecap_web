@@ -228,6 +228,9 @@ export type TalScreeningPayload = {
   applicant_name?: string;
   searches?: TalSearch[];
   id_extract?: IdExtractSummary;
+  error_code?: string;
+  stage_label?: string;
+  error?: string;
 };
 
 export type IdAddressCandidate = {
@@ -538,14 +541,18 @@ export function pluralCount(count: number, one: string, other: string): string {
   return `${count} ${count === 1 ? one : other}`;
 }
 
-/** Locale-aware TAL preview — avoid raw English API summaries when searches exist. */
+/** Locale-aware TAL preview. Prefer structured fail/skip copy when there are no searches. */
 export function formatTalScreeningPreview(
   payload: TalScreeningPayload,
   locale: Locale = "fr"
 ): string {
   const searches = payload.searches || [];
   if (searches.length === 0) {
-    if (payload.summary?.trim()) return payload.summary.trim();
+    const failure = formatTalFailure(payload, locale);
+    if (failure) {
+      return failure.detail ? `${failure.title}: ${failure.detail}` : failure.title;
+    }
+    if (payload.summary?.trim()) return stripEmDashes(payload.summary.trim());
     return locale === "fr" ? "Aucun résultat TAL" : "No TAL results";
   }
   const completed = searches.filter((s) => s.status === "completed").length;
@@ -560,6 +567,37 @@ export function formatTalScreeningPreview(
   return `${pluralCount(searches.length, "address", "addresses")} · ${completed}/${searches.length} completed · ${pluralCount(dossiers, "dossier", "dossiers")}${tenantHits ? ` · ${pluralCount(tenantHits, "tenant match", "tenant matches")}` : ""}`;
 }
 
+/** Locale-aware SOQUIJ one-line preview for job list / glance. */
+export function formatSoquijScreeningPreview(
+  payload: SoquijScreeningPayload,
+  locale: Locale = "fr"
+): string {
+  const failure = formatSoquijFailure(payload, locale);
+  if (
+    failure &&
+    (payload.error_code ||
+      payload.status === "failed" ||
+      payload.status === "skipped")
+  ) {
+    return failure.detail ? `${failure.title}: ${failure.detail}` : failure.title;
+  }
+  const strong = payload.strong_match_count ?? 0;
+  const respondents = payload.respondent_count ?? 0;
+  const decisions = payload.decision_count ?? payload.decisions?.length ?? 0;
+  if (locale === "fr") {
+    if (decisions === 0) return "0 décision publiée";
+    const bits = [pluralCount(decisions, "décision", "décisions")];
+    if (strong) bits.push(`${strong} forte(s)`);
+    if (respondents) bits.push(`${respondents} défendeur`);
+    return bits.join(" · ");
+  }
+  if (decisions === 0) return "0 published decisions";
+  const bits = [pluralCount(decisions, "decision", "decisions")];
+  if (strong) bits.push(`${strong} strong`);
+  if (respondents) bits.push(`${respondents} respondent`);
+  return bits.join(" · ");
+}
+
 export function formatJobMessagePreview(
   jobType: string,
   message: string | null,
@@ -569,6 +607,10 @@ export function formatJobMessagePreview(
   if (jobType === "tal_screening") {
     const tal = parseTalScreeningMessage(message);
     if (tal) return formatTalScreeningPreview(tal, locale);
+  }
+  if (jobType === "soquij_screening") {
+    const soquij = parseSoquijScreeningMessage(message);
+    if (soquij) return formatSoquijScreeningPreview(soquij, locale);
   }
   if (jobType === "id_document_extract") {
     const idExtract = parseIdDocumentExtractMessage(message);
@@ -834,7 +876,7 @@ export type SoquijScreeningPayload = {
   strong_match_count?: number;
   /** Decisions where the family name matched in parties (includes strong). */
   name_match_count?: number;
-  /** Corporate / full-text SOQUIJ hits — open decision to verify. */
+  /** Corporate / full-text SOQUIJ hits: open decision to verify. */
   related_count?: number;
   /** Decisions where the applicant appears as respondent/defendant. */
   respondent_count?: number;
@@ -845,12 +887,155 @@ export type SoquijScreeningPayload = {
   mock?: boolean;
   summary?: string;
   reason?: string;
+  error_code?: string;
+  stage_label?: string;
+  error?: string;
 };
 
 /** Fields that must be a string (or absent) in a SOQUIJ payload. */
 const SOQUIJ_STRING_FIELDS = [
-  "query", "status", "note", "reason", "summary",
+  "query", "status", "note", "reason", "summary", "error_code", "stage_label", "error",
 ] as const;
+
+function stripEmDashes(value: string): string {
+  return value.replace(/\u2014/g, "-").replace(/—/g, "-");
+}
+
+/** Admin-facing TAL fail/skip title + body (FR/EN). Prefer error_code over raw stacks. */
+export function formatTalFailure(
+  payload: TalScreeningPayload | null,
+  locale: Locale = "fr"
+): { title: string; detail: string } | null {
+  if (!payload) return null;
+  const code = payload.error_code || "";
+  const fr = locale === "fr";
+  const byCode: Record<string, { title: string; detail: string }> = {
+    not_in_canada: {
+      title: fr ? "Hors Canada" : "Outside Canada",
+      detail: fr
+        ? "Adresse hors Canada. TAL ne couvre que le Québec."
+        : "Address is outside Canada. TAL only covers Quebec addresses.",
+    },
+    not_configured: {
+      title: fr ? "TAL non configuré" : "TAL not configured",
+      detail: fr
+        ? "CAPTCHA_API_KEY ou worker Playwright manquant. Vérifiez la config avant de relancer."
+        : "CAPTCHA_API_KEY or Playwright worker missing. Check config before Re-run.",
+    },
+    no_addresses: {
+      title: fr ? "Aucune adresse" : "No addresses",
+      detail: fr
+        ? "Aucune adresse au dossier pour une recherche TAL."
+        : "No addresses on file for TAL search.",
+    },
+    no_usable_address: {
+      title: fr ? "Adresse inutilisable" : "No usable address",
+      detail: fr
+        ? "Aucune adresse Québec utilisable. Corrigez l'adresse puis relancez."
+        : "No usable Quebec address. Fix the address, then Re-run.",
+    },
+    addresses_skipped: {
+      title: fr ? "Adresses ignorées" : "Addresses skipped",
+      detail: fr
+        ? "Les adresses disponibles n'ont pas été recherchées (hors Québec ou incomplètes)."
+        : "Available addresses were not searched (outside Quebec or incomplete).",
+    },
+    search_failed: {
+      title: fr ? "Recherche TAL échouée" : "TAL search failed",
+      detail: fr
+        ? "Au moins une recherche d'adresse a échoué. Ouvrez le détail, puis relancez si besoin."
+        : "At least one address search failed. Open the job for details, then Re-run if needed.",
+    },
+    portal_error: {
+      title: fr ? "Erreur portail TAL" : "TAL portal error",
+      detail: fr
+        ? "Le site TAL n'a pas terminé de charger. Relancez quand le site est accessible."
+        : "The TAL site did not finish loading. Re-run when the site is reachable.",
+    },
+    worker_timeout: {
+      title: fr ? "Délai dépassé" : "Timed out",
+      detail: fr
+        ? "Le worker TAL a atteint sa limite de temps. Relancez quand le worker navigateur est libre."
+        : "The TAL search worker hit its time limit. Re-run when the browser worker is free.",
+    },
+    worker_stopped: {
+      title: fr ? "Worker interrompu" : "Worker stopped",
+      detail: fr
+        ? "Le worker TAL s'est arrêté avant d'écrire un résultat. Relancez quand il est en santé."
+        : "The TAL worker stopped before writing a result. Re-run when the browser worker is healthy.",
+    },
+    worker_crash: {
+      title: fr ? "Erreur technique" : "Technical error",
+      detail: fr
+        ? "Le worker TAL s'est arrêté de façon inattendue. Vérifiez les logs puis relancez."
+        : "The TAL worker stopped unexpectedly. Check logs, then Re-run.",
+    },
+  };
+  if (code && byCode[code]) return byCode[code];
+  const title = stripEmDashes(
+    payload.stage_label || (fr ? "Échec TAL" : "TAL failed")
+  );
+  const detail = stripEmDashes(payload.summary || payload.error || "");
+  if (!detail && !payload.stage_label) return null;
+  return { title, detail: detail || title };
+}
+
+/** Admin-facing SOQUIJ fail/skip title + body (FR/EN). Prefer error_code over raw stacks. */
+export function formatSoquijFailure(
+  payload: SoquijScreeningPayload | null,
+  locale: Locale = "fr"
+): { title: string; detail: string } | null {
+  if (!payload) return null;
+  const code = payload.error_code || "";
+  const fr = locale === "fr";
+  const byCode: Record<string, { title: string; detail: string }> = {
+    no_family_name: {
+      title: fr ? "Nom de famille manquant" : "No family name",
+      detail: fr
+        ? "Impossible de lancer SOQUIJ sans nom de famille."
+        : "Cannot run SOQUIJ without a family name.",
+    },
+    search_failed: {
+      title: fr ? "Recherche SOQUIJ échouée" : "SOQUIJ search failed",
+      detail: fr
+        ? "La recherche SOQUIJ s'est arrêtée. Vérifiez les logs du worker navigateur, puis relancez."
+        : "SOQUIJ search stopped. Check browser worker logs, then Re-run.",
+    },
+    portal_error: {
+      title: fr ? "Erreur portail SOQUIJ" : "SOQUIJ portal error",
+      detail: fr
+        ? "Le site SOQUIJ n'a pas terminé de charger. Relancez quand le site est accessible."
+        : "The SOQUIJ site did not finish loading. Re-run when the site is reachable.",
+    },
+    worker_timeout: {
+      title: fr ? "Délai dépassé" : "Timed out",
+      detail: fr
+        ? "Le worker SOQUIJ a atteint sa limite de temps. Relancez quand le worker navigateur est libre."
+        : "The SOQUIJ search worker hit its time limit. Re-run when the browser worker is free.",
+    },
+    worker_stopped: {
+      title: fr ? "Worker interrompu" : "Worker stopped",
+      detail: fr
+        ? "Le worker SOQUIJ s'est arrêté avant d'écrire un résultat. Relancez quand il est en santé."
+        : "The SOQUIJ worker stopped before writing a result. Re-run when the browser worker is healthy.",
+    },
+    worker_crash: {
+      title: fr ? "Erreur technique" : "Technical error",
+      detail: fr
+        ? "Le worker SOQUIJ s'est arrêté de façon inattendue. Vérifiez les logs puis relancez."
+        : "The SOQUIJ worker stopped unexpectedly. Check logs, then Re-run.",
+    },
+  };
+  if (code && byCode[code]) return byCode[code];
+  const title = stripEmDashes(
+    payload.stage_label || (fr ? "Échec SOQUIJ" : "SOQUIJ failed")
+  );
+  const detail = stripEmDashes(
+    payload.summary || payload.reason || payload.error || ""
+  );
+  if (!detail && !payload.stage_label) return null;
+  return { title, detail: detail || title };
+}
 
 const VALID_APPLICANT_ROLES = new Set(["respondent", "plaintiff"]);
 

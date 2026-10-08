@@ -4,6 +4,8 @@ import {
   corpiqSafeToRerunAfterPortalCheck,
   formatCorpiqFailure,
   formatJobMessagePreview,
+  formatSoquijFailure,
+  formatTalFailure,
   localizeCorpiqStageLabel,
   parseCorpiqJobMessage,
   formatSearchAddress,
@@ -28,6 +30,8 @@ import {
   idScreeningGlance,
   incomeScreeningGlance,
   householdAffordabilityGlance,
+  soquijScreeningGlance,
+  talScreeningGlance,
   type GlanceTone,
   type HouseholdAffordability,
   type ScreeningGlanceRow,
@@ -256,12 +260,16 @@ function memberFormName(member?: ApplicationMember): string {
 function DocumentsGlanceTable({
   idJob,
   incomeJob,
+  talJob,
+  soquijJob,
   locale,
   formName,
   onReviewDocuments,
 }: {
   idJob?: ApplicationJob;
   incomeJob?: ApplicationJob;
+  talJob?: ApplicationJob;
+  soquijJob?: ApplicationJob;
   locale: Locale;
   formName?: string | null;
   onReviewDocuments?: (kind: "id" | "income") => void;
@@ -286,6 +294,24 @@ function DocumentsGlanceTable({
         locale
       ),
       onReview: onReviewDocuments ? () => onReviewDocuments("income") : undefined,
+    });
+  }
+  if (talJob) {
+    rows.push({
+      ...talScreeningGlance(
+        parseTalScreeningMessage(talJob.message),
+        talJob.status,
+        locale
+      ),
+    });
+  }
+  if (soquijJob) {
+    rows.push({
+      ...soquijScreeningGlance(
+        parseSoquijScreeningMessage(soquijJob.message),
+        soquijJob.status,
+        locale
+      ),
     });
   }
   return <GlanceTable rows={rows} locale={locale} />;
@@ -604,6 +630,37 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
     );
   }
 
+  const isFailed =
+    job.status === "failed" || payload.status === "failed";
+  const isSkipped =
+    job.status === "skipped" || payload.status === "skipped";
+  if (isFailed || isSkipped) {
+    const failure = formatSoquijFailure(payload, locale);
+    const boxClass = isFailed
+      ? `${adminUi.alertWarn} space-y-1`
+      : "space-y-1 rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2";
+    return (
+      <div className={boxClass}>
+        <p className="font-medium text-[var(--ml-ink)]">
+          {failure?.title ||
+            (isSkipped
+              ? locale === "fr"
+                ? "Ignoré"
+                : "Skipped"
+              : c.soquijSearchFailed)}
+        </p>
+        {failure?.detail ? (
+          <p className="text-sm text-[var(--ml-steel)]">{failure.detail}</p>
+        ) : null}
+        {payload.query ? (
+          <p className="text-xs text-[var(--ml-steel)]">
+            {c.soquijQuery}: {payload.query}
+          </p>
+        ) : null}
+      </div>
+    );
+  }
+
   const scoredDecisions = payload.decisions ?? [];
   const hasMatchData =
     scoredDecisions.length > 0 &&
@@ -675,15 +732,11 @@ function SoquijJobCard({ job, locale }: { job: ApplicationJob; locale: Locale })
         </p>
       ) : null}
 
-      {payload.status === "failed" ? (
-        <p className={`${adminUi.alertWarn} !border-0 !bg-transparent !p-0`}>
-          {payload.reason || c.soquijSearchFailed}
-        </p>
-      ) : totalCount === 0 ? (
+      {totalCount === 0 ? (
         <p className="text-[var(--ml-steel)]">{c.soquijNoDecisions}</p>
       ) : (
         <>
-          {/* Direct name matches — shown prominently */}
+          {/* Direct name matches: shown prominently */}
           {hasMatchData ? (
             <>
               {talRespondents.length > 0 ? (
@@ -796,16 +849,42 @@ function TalJobCard({
       </p>
     );
   }
+  const isFailed = job.status === "failed";
+  const isSkipped = job.status === "skipped";
+  const failure =
+    isFailed || isSkipped ? formatTalFailure(tal, locale) : null;
+  const searches = tal.searches || [];
   return (
     <div className="space-y-3">
-      <p className="text-sm text-[var(--ml-steel)]">
-        {formatTalScreeningPreview(tal, locale)}
-      </p>
-      <div className="space-y-2">
-        {(tal.searches || []).map((search, idx) => (
-          <SearchBlock key={`${search.source}-${idx}`} search={search} locale={locale} />
-        ))}
-      </div>
+      {failure ? (
+        <div
+          className={
+            isFailed
+              ? `${adminUi.alertWarn} space-y-1`
+              : "space-y-1 rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2"
+          }
+        >
+          <p className="font-medium text-[var(--ml-ink)]">{failure.title}</p>
+          {failure.detail ? (
+            <p className="text-sm text-[var(--ml-steel)]">{failure.detail}</p>
+          ) : null}
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--ml-steel)]">
+          {formatTalScreeningPreview(tal, locale)}
+        </p>
+      )}
+      {searches.length > 0 ? (
+        <div className="space-y-2">
+          {searches.map((search, idx) => (
+            <SearchBlock
+              key={`${search.source}-${idx}`}
+              search={search}
+              locale={locale}
+            />
+          ))}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1188,6 +1267,8 @@ export default function ScreeningJobs({
               <DocumentsGlanceTable
                 idJob={memberJobs.find((job) => job.job_type === "id_document_extract")}
                 incomeJob={memberJobs.find((job) => job.job_type === "income_document_extract")}
+                talJob={memberJobs.find((job) => job.job_type === "tal_screening")}
+                soquijJob={memberJobs.find((job) => job.job_type === "soquij_screening")}
                 locale={locale}
                 formName={memberFormName(memberById.get(memberId))}
                 onReviewDocuments={
