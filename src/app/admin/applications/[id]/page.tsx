@@ -34,6 +34,7 @@ import {
 } from "@/lib/adminDocuments";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import type { AdminMessageKey } from "@/lib/adminI18n";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { facebookLink } from "@/lib/facebookSearch";
 import RejectionEmailComposer, {
   type RejectionComposeValues,
@@ -379,7 +380,7 @@ export default function ApplicationDetailPage() {
           setChecklist(EMPTY_CHECKLIST);
         }
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Erreur"));
+      .catch((e) => setError(formatAdminFetchError(e, locale, t("teamError"))));
   };
 
   useEffect(() => {
@@ -502,7 +503,7 @@ export default function ApplicationDetailPage() {
         );
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Erreur");
+      setError(formatAdminFetchError(e, locale, t("teamError")));
     } finally {
       setBusy(false);
     }
@@ -533,7 +534,7 @@ export default function ApplicationDetailPage() {
       setApp(updated);
       setIdentityFlash(t("appDetailCreditRequested"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("teamError"));
+      setError(formatAdminFetchError(e, locale, t("teamError")));
     } finally {
       setBusy(false);
     }
@@ -547,7 +548,7 @@ export default function ApplicationDetailPage() {
       setApp(updated);
       setAcceptNote("");
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("teamError"));
+      setError(formatAdminFetchError(e, locale, t("teamError")));
     } finally {
       setBusy(false);
     }
@@ -571,7 +572,7 @@ export default function ApplicationDetailPage() {
       setShowRefuse(false);
       setReason(values.reason);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("teamError"));
+      setError(formatAdminFetchError(e, locale, t("teamError")));
     } finally {
       setBusy(false);
     }
@@ -593,7 +594,7 @@ export default function ApplicationDetailPage() {
       setApp(updated);
       setShowOffer(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("teamError"));
+      setError(formatAdminFetchError(e, locale, t("teamError")));
     } finally {
       setBusy(false);
     }

@@ -1,4 +1,5 @@
 import { clearAdminToken, getAdminToken } from "./adminAuth";
+import { AdminNetworkError, isAdminNetworkError } from "./adminFetchError";
 import type { MemberDocument } from "./adminDocuments";
 
 const API_URL =
@@ -246,10 +247,16 @@ function headers(init?: RequestInit): Record<string, string> {
 }
 
 async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: { ...headers(init), ...(init?.headers as Record<string, string>) },
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: { ...headers(init), ...(init?.headers as Record<string, string>) },
+    });
+  } catch (error) {
+    if (isAdminNetworkError(error)) throw new AdminNetworkError();
+    throw error;
+  }
 
   let body: ApiEnvelope<T> | null = null;
   try {
@@ -286,11 +293,17 @@ async function adminPublicPost(path: string, payload: object): Promise<string> {
   const h: Record<string, string> = { "Content-Type": "application/json" };
   if (API_URL.includes("ngrok")) h["ngrok-skip-browser-warning"] = "1";
 
-  const res = await fetch(`${API_URL}${path}`, {
-    method: "POST",
-    headers: h,
-    body: JSON.stringify(payload),
-  });
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers: h,
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    if (isAdminNetworkError(error)) throw new AdminNetworkError();
+    throw error;
+  }
 
   let body: ApiEnvelope<null> | null = null;
   try {

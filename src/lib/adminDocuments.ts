@@ -1,4 +1,5 @@
 import { clearAdminToken, getAdminToken } from "./adminAuth";
+import { AdminNetworkError, isAdminNetworkError } from "./adminFetchError";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -116,14 +117,20 @@ async function adminFileFetch(
   const url = new URL(`${API_URL}${path}`);
   url.searchParams.set("disposition", disposition);
 
-  const res = await fetch(url.toString(), { headers: adminFileHeaders() });
+  let res: Response;
+  try {
+    res = await fetch(url.toString(), { headers: adminFileHeaders() });
+  } catch (error) {
+    if (isAdminNetworkError(error)) throw new AdminNetworkError();
+    throw error;
+  }
 
   if (res.status === 401) {
     clearAdminToken();
     if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
       window.location.href = "/admin/login";
     }
-    throw new Error("Session expirée");
+    throw new Error("Session expired");
   }
 
   if (!res.ok) {

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ApplicationMember } from "@/lib/adminApi";
 import { regenerateApplicationSummary } from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 import {
   MemberDocument,
   documentTypeLabel,
@@ -15,6 +16,7 @@ import {
   isPdfDocument,
   triggerBlobDownload,
 } from "@/lib/adminDocuments";
+import { useAdminLocaleContext } from "../../AdminLocaleContext";
 
 export type DocumentReviewRequest = {
   memberId: number;
@@ -65,6 +67,7 @@ function DocumentPreviewModal({
   positionLabel?: string | null;
   onMemberDocumentPreviewed?: (document: MemberDocument) => void;
 }) {
+  const { locale } = useAdminLocaleContext();
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -114,7 +117,15 @@ function DocumentPreviewModal({
         }
       } catch (e) {
         if (!cancelled) {
-          setError(e instanceof Error ? e.message : "Impossible d'ouvrir le fichier");
+          setError(
+            formatAdminFetchError(
+              e,
+              locale,
+              locale === "fr"
+                ? "Impossible d'ouvrir le fichier"
+                : "Could not open the file"
+            )
+          );
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -127,7 +138,7 @@ function DocumentPreviewModal({
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [applicationId, fallbackContentType, memberDocumentId, target]);
+  }, [applicationId, fallbackContentType, locale, memberDocumentId, target]);
 
   const onDownload = useCallback(async () => {
     try {
@@ -142,9 +153,15 @@ function DocumentPreviewModal({
           : await fetchSummaryPdfBlob(applicationId, "attachment");
       triggerBlobDownload(blob, filename);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Échec du téléchargement");
+      setError(
+        formatAdminFetchError(
+          e,
+          locale,
+          locale === "fr" ? "Échec du téléchargement" : "Download failed"
+        )
+      );
     }
-  }, [applicationId, fallbackContentType, filename, target]);
+  }, [applicationId, fallbackContentType, filename, locale, target]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -257,6 +274,7 @@ export default function ApplicationDocuments({
   reviewRequest,
   onMemberDocumentPreviewed,
 }: ApplicationDocumentsProps) {
+  const { locale } = useAdminLocaleContext();
   const [previewQueue, setPreviewQueue] = useState<PreviewTarget[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const preview = previewQueue[previewIndex] ?? null;
@@ -306,7 +324,13 @@ export default function ApplicationDocuments({
       );
       triggerBlobDownload(blob, document.original_filename);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Échec du téléchargement");
+      setError(
+        formatAdminFetchError(
+          e,
+          locale,
+          locale === "fr" ? "Échec du téléchargement" : "Download failed"
+        )
+      );
     } finally {
       setBusyKey(null);
     }
@@ -319,7 +343,13 @@ export default function ApplicationDocuments({
       const blob = await fetchSummaryPdfBlob(applicationId, "attachment");
       triggerBlobDownload(blob, "application_summary.pdf");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Échec du téléchargement");
+      setError(
+        formatAdminFetchError(
+          e,
+          locale,
+          locale === "fr" ? "Échec du téléchargement" : "Download failed"
+        )
+      );
     } finally {
       setBusyKey(null);
     }
@@ -332,7 +362,15 @@ export default function ApplicationDocuments({
       await regenerateApplicationSummary(applicationId);
       onSummaryRegenerated?.();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Échec de la génération du résumé");
+      setError(
+        formatAdminFetchError(
+          e,
+          locale,
+          locale === "fr"
+            ? "Échec de la génération du résumé"
+            : "Could not regenerate the summary"
+        )
+      );
     } finally {
       setRegeneratingSummary(false);
     }

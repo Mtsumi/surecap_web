@@ -6,6 +6,7 @@ import { FormEvent, useState } from "react";
 import { adminLogin } from "@/lib/adminApi";
 import { setAdminToken } from "@/lib/adminAuth";
 import { adminUi } from "@/lib/adminUi";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { clearCachedAdminUser } from "../AdminShell";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import LocaleToggle from "@/components/LocaleToggle";
@@ -32,7 +33,7 @@ export default function AdminLoginPage() {
         router.replace("/admin/applications");
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t("loginError"));
+      setError(formatAdminFetchError(err, locale, t("loginError")));
     } finally {
       setLoading(false);
     }

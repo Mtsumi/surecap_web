@@ -3,6 +3,7 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { adminUi } from "@/lib/adminUi";
 import type { RejectionEmailDraft } from "@/lib/adminApi";
+import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { useAdminCopy } from "../AdminLocaleContext";
 
 export type RejectionComposeValues = {
@@ -40,9 +41,11 @@ export default function RejectionEmailComposer({
   showReason = true,
   hint,
 }: Props) {
-  const { t } = useAdminCopy();
+  const { t, locale: uiLocale } = useAdminCopy();
   const tRef = useRef(t);
   tRef.current = t;
+  const uiLocaleRef = useRef(uiLocale);
+  uiLocaleRef.current = uiLocale;
   const [reason, setReason] = useState(initialReason);
   const [locale, setLocale] = useState<"fr" | "en">("fr");
   const [subject, setSubject] = useState("");
@@ -78,7 +81,7 @@ export default function RejectionEmailComposer({
         applyDraft(draft);
       } catch (e) {
         setDraftError(
-          e instanceof Error ? e.message : tRef.current("composerDraftError")
+          formatAdminFetchError(e, uiLocaleRef.current, tRef.current("composerDraftError"))
         );
       } finally {
         setLoadingDraft(false);
@@ -98,7 +101,11 @@ export default function RejectionEmailComposer({
       } catch (e) {
         if (!cancelled) {
           setDraftError(
-            e instanceof Error ? e.message : tRef.current("composerDraftError")
+            formatAdminFetchError(
+              e,
+              uiLocaleRef.current,
+              tRef.current("composerDraftError")
+            )
           );
         }
       } finally {
