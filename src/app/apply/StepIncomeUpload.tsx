@@ -121,6 +121,9 @@ export default function StepIncomeUpload(props: Props) {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const cameraInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
+
   const uploadErrorMessage = (e: unknown) => {
     if (e instanceof Error && e.message.includes("Unknown document type: pay_slip_3")) {
       return formatUploadErrorMessage(e.message);
@@ -161,7 +164,9 @@ export default function StepIncomeUpload(props: Props) {
         : await listInviteDocuments(inviteToken);
       publishDocuments(list);
     } catch (e) {
-      setError(formatClientFetchError(e, locale, LIST_LOAD_FAILED));
+      setError(
+        formatClientFetchError(e, localeRef.current, LIST_LOAD_FAILED)
+      );
     } finally {
       setLoadingList(false);
     }
@@ -171,7 +176,6 @@ export default function StepIncomeUpload(props: Props) {
     memberId,
     uploadToken,
     inviteToken,
-    locale,
     publishDocuments,
   ]);
 

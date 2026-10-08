@@ -92,6 +92,8 @@ function CreditConsentPreview({
   const { locale, t } = useAdminCopy();
   const tRef = useRef(t);
   tRef.current = t;
+  const localeRef = useRef(locale);
+  localeRef.current = locale;
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,13 +108,19 @@ function CreditConsentPreview({
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setError(formatAdminFetchError(err, locale, tRef.current("reviewPdfOpenError")));
+        setError(
+          formatAdminFetchError(
+            err,
+            localeRef.current,
+            tRef.current("reviewPdfOpenError")
+          )
+        );
       });
     return () => {
       cancelled = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [documentId, token, locale]);
+  }, [documentId, token]);
 
   const download = async () => {
     try {

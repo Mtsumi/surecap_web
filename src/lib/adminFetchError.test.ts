@@ -26,6 +26,13 @@ describe("formatAdminFetchError", () => {
     );
   });
 
+  it("maps ClientNetworkError from public api.ts (janitor review)", () => {
+    const err = new Error("CLIENT_NETWORK");
+    err.name = "ClientNetworkError";
+    expect(isAdminNetworkError(err)).toBe(true);
+    expect(formatAdminFetchError(err, "en")).toMatch(/Could not reach the admin API/);
+  });
+
   it("maps session expired", () => {
     expect(formatAdminFetchError(new Error("Session expired"), "en")).toMatch(
       /Sign in again/

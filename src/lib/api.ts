@@ -2,6 +2,7 @@ import { ClientNetworkError, isClientNetworkError } from "./clientFetchError";
 import {
   isRetryableUploadError,
   sleep,
+  uploadNetworkErrorMessage,
   uploadTimeoutErrorMessage,
 } from "./uploadErrors";
 
@@ -236,9 +237,9 @@ function jsonNetworkError(): Error {
   return new ClientNetworkError();
 }
 
-function networkFetchError(_detail?: string): Error {
-  // Upload-specific wording is applied in the UI via formatClientFetchError + fallback.
-  return new ClientNetworkError();
+function networkFetchError(detail?: string): Error {
+  // Keep upload-specific copy so isRetryableUploadError still matches and UI shows guidance.
+  return new Error(uploadNetworkErrorMessage(detail));
 }
 
 /** Map stale-backend upload errors to a clearer message on mobile. */
