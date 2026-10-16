@@ -17,11 +17,11 @@ describe("canadianPostal", () => {
     ).toContain("H3T 1A8");
   });
 
-  it("treats a place id or postal as a structured pick", () => {
+  it("requires a place id (postal alone is not enough)", () => {
     expect(isPickedCanadianAddress("3400 avenue Linton", "")).toBe(false);
     expect(isPickedCanadianAddress("3400 avenue Linton", "ChIJ123")).toBe(true);
     expect(
       isPickedCanadianAddress("3400 Avenue Linton, Montréal, QC H3T 1A8", "")
-    ).toBe(true);
+    ).toBe(false);
   });
 });
