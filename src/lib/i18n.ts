@@ -250,7 +250,7 @@ export const messages = {
     validationAddressDatesChain:
       "Your previous address must end on or before you started living at your current address.",
     validationPickGoogleAddress:
-      "Pick an address from the suggestions so we can include the postal code.",
+      "Pick an address from the suggestions (do not type the full address by hand). Put the apartment in its own field.",
     validationDateOfBirthInvalid: "Please enter a valid date of birth.",
     validationDateOfBirthUnderage: "Applicants must be at least 18 years old.",
     dateOfBirthHint: "You must be at least 18 years old.",
@@ -603,7 +603,7 @@ export const messages = {
     validationAddressDatesChain:
       "Votre adresse précédente doit se terminer au plus tard à la date de début de votre adresse actuelle.",
     validationPickGoogleAddress:
-      "Choisissez une adresse dans les suggestions pour inclure le code postal.",
+      "Choisissez une adresse dans les suggestions (ne tapez pas l'adresse au complet à la main). Indiquez l'appartement dans son propre champ.",
     validationDateOfBirthInvalid: "Veuillez entrer une date de naissance valide.",
     validationDateOfBirthUnderage: "Les demandeurs doivent avoir au moins 18 ans.",
     dateOfBirthHint: "Vous devez avoir au moins 18 ans.",

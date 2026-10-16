@@ -316,7 +316,7 @@ describe("address date validation", () => {
     ).toEqual({});
   });
 
-  it("requires a Google pick or postal for Canadian current addresses", () => {
+  it("requires a Google place id for Canadian current addresses (postal alone is not enough)", () => {
     expect(
       addressFieldErrors(
         baseInput({ current_place_id: "", current_address: "3400 avenue Linton" })
@@ -329,7 +329,7 @@ describe("address date validation", () => {
           current_address: "3400 avenue Linton, Montréal, QC H3T 1A8",
         })
       ).current_address
-    ).toBeUndefined();
+    ).toBe("pick_google_address");
   });
 
   it("skips the Google pick when the address is not in Canada", () => {

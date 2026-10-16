@@ -18,9 +18,10 @@ export function formattedAddressWithPostal(
 }
 
 export function isPickedCanadianAddress(
-  address: string,
+  _address: string,
   placeId?: string | null
 ): boolean {
-  if ((placeId || "").trim()) return true;
-  return hasCanadianPostal(address);
+  // Require a Places pick. Postal-only free text used to pass and then broke
+  // CORPIQ civic parse (app 132: "200.6e avenue… H4G 2Z9").
+  return Boolean((placeId || "").trim());
 }
