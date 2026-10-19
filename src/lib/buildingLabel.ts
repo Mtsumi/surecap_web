@@ -1,4 +1,4 @@
-/** Display helpers so applicants see street number with building nicknames. */
+/** Display helpers for building pickers and listings. */
 
 /** First comma segment of a full address, e.g. "3400 Av. Linton". */
 export function shortCivicAddress(address: string | null | undefined): string {
@@ -8,19 +8,13 @@ export function shortCivicAddress(address: string | null | undefined): string {
 }
 
 /**
- * Primary label for building pickers / review.
- * e.g. "Linton — 3400 Av. Linton"
+ * Primary title for building pickers / listing cards.
+ * Steve: name only (e.g. "Linton", "10e avenue"); full address is the subtitle.
+ * `address` is accepted for call-site compatibility but not shown in the title.
  */
 export function buildingLabel(
   name: string,
-  address?: string | null
+  _address?: string | null
 ): string {
-  const trimmedName = (name || "").trim() || name;
-  const civic = shortCivicAddress(address);
-  if (!civic) return trimmedName;
-  if (civic.toLowerCase() === trimmedName.toLowerCase()) return trimmedName;
-  if (trimmedName.toLowerCase().includes(civic.toLowerCase())) {
-    return trimmedName;
-  }
-  return `${trimmedName} - ${civic}`;
+  return (name || "").trim() || name;
 }
