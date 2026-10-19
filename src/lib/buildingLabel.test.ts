@@ -13,20 +13,19 @@ describe("buildingLabel", () => {
     expect(shortCivicAddress(null)).toBe("");
   });
 
-  it("joins nickname and short civic", () => {
+  it("returns building name only (address is subtitle elsewhere)", () => {
     expect(
       buildingLabel("Linton", "3400 Av. Linton, Montréal, QC H3S 1T2")
-    ).toBe("Linton - 3400 Av. Linton");
+    ).toBe("Linton");
     expect(buildingLabel("Goyer", "3270 Rue Goyer, Montréal, QC")).toBe(
-      "Goyer - 3270 Rue Goyer"
+      "Goyer"
     );
-  });
-
-  it("avoids duplicating when name already contains the civic", () => {
-    expect(buildingLabel("3400 Av. Linton", "3400 Av. Linton, Montréal")).toBe(
-      "3400 Av. Linton"
-    );
-    expect(buildingLabel("Linton", "Linton")).toBe("Linton");
+    expect(
+      buildingLabel(
+        "10e avenue",
+        "151-153-155 10e avenue, Lachine, QC, H8S 3E2"
+      )
+    ).toBe("10e avenue");
   });
 
   it("falls back to name when address is missing", () => {
