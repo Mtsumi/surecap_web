@@ -220,6 +220,8 @@ export const messages = {
     uploadQualityNotImage: "ID uploads must be a photo (JPEG, PNG, WebP, or HEIC).",
     uploadQualityNotPayslip:
       "This file does not look like a payslip yet. You can continue, but check the file.",
+    uploadQualityIncomeSelfie:
+      "This looks like a selfie, not a payslip or proof of income. Please upload a pay stub or income document.",
     uploadQualityNoTextLayer:
       "This PDF has little readable text. Export or photograph the payslip instead.",
     uploadQualityNoaLowText:
@@ -567,6 +569,8 @@ export const messages = {
       "Les pièces d'identité doivent être une photo (JPEG, PNG, WebP ou HEIC).",
     uploadQualityNotPayslip:
       "Ce fichier ne ressemble pas encore à une fiche de paie. Vérifiez le fichier avant de continuer.",
+    uploadQualityIncomeSelfie:
+      "Ceci ressemble à un selfie, pas à une fiche de paie ou une preuve de revenu. Téléversez un talon de paie ou un document de revenu.",
     uploadQualityNoTextLayer:
       "Ce PDF contient peu de texte lisible. Exportez ou photographiez la fiche de paie.",
     uploadQualityNoaLowText:

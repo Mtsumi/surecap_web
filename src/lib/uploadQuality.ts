@@ -16,6 +16,7 @@ const FLAG_MESSAGE: Record<string, MessageKey> = {
   payslip_not_recognized: "uploadQualityNotPayslip",
   payslip_no_text_layer: "uploadQualityNoTextLayer",
   payslip_blurry: "uploadQualityBlurry",
+  income_looks_like_selfie: "uploadQualityIncomeSelfie",
   noa_low_text: "uploadQualityNoaLowText",
   noa_blurry: "uploadQualityBlurry",
   quality_warn_after_retry: "uploadQualityRetryFlagged",
