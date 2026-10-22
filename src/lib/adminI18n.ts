@@ -402,6 +402,7 @@ export const adminMessages = {
     reviewIdentityOpenThenYesNo:
       "Ouvrez la pièce d'identité, puis indiquez Oui ou Non ci-dessous.",
     reviewCheckEmployer: "J'ai appelé l'employeur / les RH",
+    reviewCheckLandlord: "J'ai appelé le propriétaire",
     reviewCheckSocial: "J'ai vérifié Facebook",
     reviewTenantsIdentity: "Identité",
     reviewReadyForCredit: "Prêt pour la vérification de crédit",
@@ -808,6 +809,7 @@ export const adminMessages = {
     reviewIdentityOpenThenYesNo:
       "Open the ID document, then select Yes or No below.",
     reviewCheckEmployer: "I called the employer / HR",
+    reviewCheckLandlord: "I called the landlord",
     reviewCheckSocial: "I checked Facebook",
     reviewTenantsIdentity: "Identity",
     reviewReadyForCredit: "Ready for credit check",

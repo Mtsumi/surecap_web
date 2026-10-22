@@ -32,6 +32,7 @@ import type { AdminMessageKey } from "@/lib/adminI18n";
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   called_employer: false,
+  called_landlord: false,
   checked_social: false,
 };
 
@@ -363,10 +364,20 @@ export default function ReviewForm({ token }: { token: string }) {
     };
   }, [token]);
 
+  const showLandlordCheck = useMemo(
+    () =>
+      Boolean(
+        review?.members?.some((member) => member.role !== "guarantor")
+      ),
+    [review?.members]
+  );
+
   const allChecked = useMemo(
     () =>
-      checklist.called_employer && checklist.checked_social,
-    [checklist]
+      checklist.called_employer &&
+      checklist.checked_social &&
+      (!showLandlordCheck || checklist.called_landlord),
+    [checklist, showLandlordCheck]
   );
 
   async function openStripDoc(
@@ -680,6 +691,9 @@ export default function ReviewForm({ token }: { token: string }) {
               {(
                 [
                   ["called_employer", "reviewCheckEmployer"],
+                  ...(showLandlordCheck
+                    ? ([["called_landlord", "reviewCheckLandlord"]] as const)
+                    : []),
                   ["checked_social", "reviewCheckSocial"],
                 ] as const
               ).map(([key, labelKey]) => (
