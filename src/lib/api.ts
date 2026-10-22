@@ -771,6 +771,7 @@ export type JanitorReviewMember = {
 
 export type JanitorReviewChecklist = {
   called_employer: boolean;
+  called_landlord: boolean;
   checked_social: boolean;
 };
 

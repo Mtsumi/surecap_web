@@ -48,14 +48,21 @@ import MemberIdentityPanel, {
 
 const EMPTY_CHECKLIST: JanitorReviewChecklist = {
   called_employer: false,
+  called_landlord: false,
   checked_social: false,
 };
 
 const CHECKLIST_KEYS: Array<{
   key: keyof JanitorReviewChecklist;
   labelKey: AdminMessageKey;
+  hideForGuarantorOnly?: boolean;
 }> = [
   { key: "called_employer", labelKey: "reviewCheckEmployer" },
+  {
+    key: "called_landlord",
+    labelKey: "reviewCheckLandlord",
+    hideForGuarantorOnly: true,
+  },
   { key: "checked_social", labelKey: "reviewCheckSocial" },
 ];
 
@@ -374,6 +381,7 @@ export default function ApplicationDetailPage() {
         if (a.janitor_review_checklist) {
           setChecklist({
             called_employer: Boolean(a.janitor_review_checklist.called_employer),
+            called_landlord: Boolean(a.janitor_review_checklist.called_landlord),
             checked_social: Boolean(a.janitor_review_checklist.checked_social),
           });
         } else if (a.status === "submitted") {
@@ -523,8 +531,23 @@ export default function ApplicationDetailPage() {
     return `${memberRoleLabel(member.role, t)} - ${memberDisplayName(member)}`;
   };
 
+  const showLandlordCheck = useMemo(
+    () => members.some((member) => member.role !== "guarantor"),
+    [members]
+  );
+
   const checklistComplete =
-    checklist.called_employer && checklist.checked_social;
+    checklist.called_employer &&
+    checklist.checked_social &&
+    (!showLandlordCheck || checklist.called_landlord);
+
+  const visibleChecklistKeys = useMemo(
+    () =>
+      CHECKLIST_KEYS.filter(
+        (item) => !(item.hideForGuarantorOnly && !showLandlordCheck)
+      ),
+    [showLandlordCheck]
+  );
 
   const onRequestCreditCheck = async () => {
     setBusy(true);
@@ -745,7 +768,7 @@ export default function ApplicationDetailPage() {
                   </p>
                 </div>
                 <div className={`${adminUi.cardPad} space-y-2`}>
-                  {CHECKLIST_KEYS.map(({ key, labelKey }) => (
+                  {visibleChecklistKeys.map(({ key, labelKey }) => (
                     <label
                       key={key}
                       className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
@@ -848,7 +871,7 @@ export default function ApplicationDetailPage() {
                         ) : null}
                       </span>
                     </label>
-                    {CHECKLIST_KEYS.map(({ key, labelKey }) => (
+                    {visibleChecklistKeys.map(({ key, labelKey }) => (
                       <label
                         key={key}
                         className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
