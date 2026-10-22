@@ -13,6 +13,8 @@ export type CorpiqJobPayload = {
   score?: number | null;
   risk_band?: string | null;
   risk_label?: string | null;
+  points_before?: number | null;
+  points_required?: number | null;
 };
 
 export function parseCorpiqJobMessage(message: string | null): CorpiqJobPayload | null {
@@ -64,7 +66,8 @@ export function corpiqSafeToRerunAfterPortalCheck(
     code === "worker_timeout" ||
     code === "confirm_hung" ||
     code === "portal_navigation" ||
-    code === "stopped_before_pay"
+    code === "stopped_before_pay" ||
+    code === "insufficient_proprio_points"
   );
 }
 
@@ -125,6 +128,22 @@ export function formatCorpiqFailure(
       detail: fr
         ? "Impossible de lire le solde de points PROPRIO avant paiement. Paiement live refusé."
         : "Could not read the PROPRIO points balance before pay. Live submit refused.",
+    },
+    insufficient_proprio_points: {
+      title: fr ? "Points PROPRIO insuffisants" : "Insufficient PROPRIO points",
+      detail: (() => {
+        const bal =
+          payload.points_before === null || payload.points_before === undefined
+            ? "?"
+            : String(payload.points_before);
+        const need =
+          payload.points_required === null || payload.points_required === undefined
+            ? "~1550"
+            : `~${payload.points_required}`;
+        return fr
+          ? `Solde PROPRIO ${bal} - il faut ${need} pour le forfait Basic. Rechargez les points dans CORPIQ, puis Relancer.`
+          : `PROPRIO balance ${bal} - need ${need} for Basic. Top up points in CORPIQ, then Re-run.`;
+      })(),
     },
     stopped_before_pay: {
       title: fr ? "Arrêté avant paiement" : "Stopped before payment",

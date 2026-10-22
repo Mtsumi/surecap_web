@@ -72,5 +72,22 @@ describe("formatCorpiqFailure", () => {
   it("flags safe re-run failures", () => {
     expect(corpiqSafeToRerunAfterPortalCheck({ error_code: "stale_running" })).toBe(true);
     expect(corpiqSafeToRerunAfterPortalCheck({ error_code: "paid_no_report" })).toBe(false);
+    expect(
+      corpiqSafeToRerunAfterPortalCheck({ error_code: "insufficient_proprio_points" })
+    ).toBe(true);
+  });
+
+  it("maps insufficient_proprio_points with balance", () => {
+    const copy = formatCorpiqFailure(
+      {
+        error_code: "insufficient_proprio_points",
+        points_before: 39,
+        points_required: 1550,
+      },
+      "en"
+    );
+    expect(copy?.title).toMatch(/Insufficient PROPRIO/);
+    expect(copy?.detail).toMatch(/39/);
+    expect(copy?.detail).toMatch(/1550/);
   });
 });
