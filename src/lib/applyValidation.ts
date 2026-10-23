@@ -722,10 +722,29 @@ export function personalFieldErrors(
   const emailCode = validatePersonalStep(email);
   if (emailCode) errors.email = emailCode;
   if (phone !== undefined) {
-    const phoneCode = validatePhoneFormat(phone);
-    if (phoneCode) errors.phone = phoneCode;
+    // Empty must be required — validatePhoneFormat treats blank as OK (optional elsewhere).
+    if (!phone.trim()) {
+      errors.phone = "required";
+    } else {
+      const phoneCode = validatePhoneFormat(phone);
+      if (phoneCode) errors.phone = phoneCode;
+    }
   }
   return errors;
+}
+
+/** Banner text listing each field error so Continué isn't a blank "Validation failed". */
+export function describeApplyFieldErrors(
+  errors: ApplyFieldErrors,
+  labelFor: (field: string) => string,
+  messageFor: (code: ApplyValidationCode) => string
+): string {
+  const parts: string[] = [];
+  for (const [field, code] of Object.entries(errors)) {
+    if (!code) continue;
+    parts.push(`${labelFor(field)} — ${messageFor(code)}`);
+  }
+  return parts.join("\n");
 }
 
 export function firstFieldErrorKey(errors: ApplyFieldErrors): string | null {

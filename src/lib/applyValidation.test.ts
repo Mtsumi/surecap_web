@@ -470,6 +470,9 @@ describe("field error maps", () => {
       email: "invalid_email",
       phone: "invalid_phone",
     });
+    expect(personalFieldErrors("ok@example.com", "", "1990-01-01")).toEqual({
+      phone: "required",
+    });
     expect(personalFieldErrors("ok@example.com", "5145550100", "2099-01-01")).toEqual({
       date_of_birth: "date_of_birth_invalid",
     });
