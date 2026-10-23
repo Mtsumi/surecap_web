@@ -34,6 +34,7 @@ import {
   ApplyValidationCode,
   addressFieldErrors,
   adultMaxDateOfBirthString,
+  describeApplyFieldErrors,
   needsPreviousLandlordContactConfirm,
   validateDateOfBirth,
   validatePhoneFormat,
@@ -430,6 +431,37 @@ export default function InviteForm({ token }: Props) {
     }
     if (Object.keys(errors).length) {
       setFieldErrors(errors);
+      setError(
+        describeApplyFieldErrors(
+          errors,
+          (field) => {
+            const key =
+              field === "given_name"
+                ? "givenName"
+                : field === "family_name"
+                  ? "familyName"
+                  : field === "date_of_birth"
+                    ? "dateOfBirth"
+                    : field === "email"
+                      ? "email"
+                      : field === "phone"
+                        ? "phone"
+                        : field === "hr_phone"
+                          ? "hrPhone"
+                          : field === "hr_name"
+                            ? "hrName"
+                            : field === "employer_name"
+                              ? "employerName"
+                              : field === "monthly_net_income"
+                                ? "monthlyNetIncome"
+                                : field === "landlord_phone"
+                                  ? "landlordPhone"
+                                  : null;
+            return key ? t(locale, key) : field.replace(/_/g, " ");
+          },
+          (code) => t(locale, VALIDATION_MESSAGE[code] ?? "fieldRequired")
+        )
+      );
       return false;
     }
     if (
@@ -604,7 +636,15 @@ export default function InviteForm({ token }: Props) {
       const mapped = mapInviteServerSubmitError(e, role, form);
       if (mapped) {
         setFieldErrors(mapped.fieldErrors);
-        setError(t(locale, mapped.messageKey));
+        setError(
+          Object.keys(mapped.fieldErrors).length > 0
+            ? describeApplyFieldErrors(
+                mapped.fieldErrors,
+                (field) => field.replace(/_/g, " "),
+                (code) => t(locale, VALIDATION_MESSAGE[code] ?? "fieldRequired")
+              )
+            : t(locale, mapped.messageKey)
+        );
         setStep(mapped.step);
       } else {
         setError(formatClientFetchError(e, locale, t(locale, "error")));
@@ -766,7 +806,7 @@ export default function InviteForm({ token }: Props) {
       </nav>
 
       {error && (
-        <p className="mb-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
+        <p className="mb-4 whitespace-pre-line rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]">
           {error}
         </p>
       )}
@@ -1572,7 +1612,7 @@ export default function InviteForm({ token }: Props) {
           />
           {error && (
             <p
-              className="mb-4 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]"
+              className="mb-4 whitespace-pre-line rounded border border-[#e7c4c4] bg-[#fdf5f5] px-3 py-2 text-sm text-[#7f1d1d]"
               role="alert"
             >
               {error}

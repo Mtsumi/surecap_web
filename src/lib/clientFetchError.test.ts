@@ -34,4 +34,13 @@ describe("formatClientFetchError", () => {
       formatClientFetchError(new Error("Please provide a valid email"), "en")
     ).toBe("Please provide a valid email");
   });
+
+  it("replaces bare Validation failed envelope", () => {
+    expect(formatClientFetchError(new Error("Validation failed"), "en")).toMatch(
+      /missing or invalid/i
+    );
+    expect(formatClientFetchError(new Error("Validation failed"), "fr")).toMatch(
+      /manquantes ou invalides/i
+    );
+  });
 });

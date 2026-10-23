@@ -406,6 +406,9 @@ describe("step validators", () => {
     const phoneIssue = findFirstValidationIssue(baseInput({ phone: "12345" }));
     expect(phoneIssue).toEqual({ code: "invalid_phone", step: "personal" });
 
+    const emptyPhoneIssue = findFirstValidationIssue(baseInput({ phone: "" }));
+    expect(emptyPhoneIssue).toEqual({ code: "required", step: "personal" });
+
     const housingIssue = findFirstValidationIssue(
       baseInput({ move_in_date: "2026-06-03", landlord_phone: "5145550100", hr_phone: "5145550100" })
     );
@@ -469,6 +472,9 @@ describe("field error maps", () => {
     expect(personalFieldErrors("bad", "123")).toEqual({
       email: "invalid_email",
       phone: "invalid_phone",
+    });
+    expect(personalFieldErrors("ok@example.com", "", "1990-01-01")).toEqual({
+      phone: "required",
     });
     expect(personalFieldErrors("ok@example.com", "5145550100", "2099-01-01")).toEqual({
       date_of_birth: "date_of_birth_invalid",

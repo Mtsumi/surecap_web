@@ -70,6 +70,7 @@ import {
   personalFieldErrors,
   incomeFieldErrors,
   addressFieldErrors,
+  describeApplyFieldErrors,
   needsPreviousLandlordContactConfirm,
   validateEmailUniqueness,
   validatePhones,
@@ -97,6 +98,28 @@ const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   guarantor_required_abroad: "validationGuarantorRequiredAbroad",
   guarantor_address_not_quebec: "validationGuarantorAddressQuebec",
   guarantor_required_pays: "guarantorRequiredPaysHint",
+};
+
+const FIELD_LABEL_KEY: Record<string, MessageKey> = {
+  given_name: "givenName",
+  family_name: "familyName",
+  date_of_birth: "dateOfBirth",
+  email: "email",
+  phone: "phone",
+  current_address: "currentAddress",
+  previous_address: "previousAddress",
+  move_in_date: "moveInDate",
+  landlord_name: "landlordName",
+  landlord_phone: "landlordPhone",
+  previous_landlord_name: "previousLandlordName",
+  previous_landlord_phone: "previousLandlordPhone",
+  employer_name: "employerName",
+  hr_name: "hrName",
+  hr_phone: "hrPhone",
+  monthly_net_income: "monthlyNetIncome",
+  guarantor_name: "guarantorName",
+  guarantor_email: "email",
+  guarantor_phone: "guarantorPhone",
 };
 
 type Step =
@@ -442,13 +465,38 @@ export default function ApplyForm() {
     setFieldErrors(errors);
   };
 
+  const fieldErrorBanner = (errors: ApplyFieldErrors) =>
+    describeApplyFieldErrors(
+      errors,
+      (field) => {
+        const key = FIELD_LABEL_KEY[field];
+        return key ? t(locale, key) : field.replace(/_/g, " ");
+      },
+      (code) => t(locale, VALIDATION_MESSAGE[code])
+    );
+
   const blockWithFieldErrors = (errors: ApplyFieldErrors) => {
     if (Object.keys(errors).length === 0) return false;
     applyFieldErrors(errors);
-    setError(null);
+    setError(fieldErrorBanner(errors));
     const key = firstFieldErrorKey(errors);
     if (key) scrollToField(key);
     return true;
+  };
+
+  const applyMappedSubmitError = (err: unknown, input = validationInput()) => {
+    const mapped = mapSubmitError(err, input);
+    if (!mapped) return null;
+    applyFieldErrors(mapped.fieldErrors);
+    setError(
+      Object.keys(mapped.fieldErrors).length > 0
+        ? fieldErrorBanner(mapped.fieldErrors)
+        : t(locale, mapped.messageKey)
+    );
+    setErrorStep(mapped.step);
+    const key = firstFieldErrorKey(mapped.fieldErrors);
+    if (key) scrollToField(key);
+    return mapped;
   };
 
   const syncPhoneValidation = (landlordPhone: string, hrPhone: string) => {
@@ -460,7 +508,7 @@ export default function ApplyForm() {
   const StepAlert = () =>
     error ? (
       <div
-        className="rounded border border-[#e7c4c4] bg-[#fdf5f5] px-4 py-3 text-sm text-[#7f1d1d]"
+        className="whitespace-pre-line rounded border border-[#e7c4c4] bg-[#fdf5f5] px-4 py-3 text-sm text-[#7f1d1d]"
         role="alert"
       >
         {error}
@@ -1185,15 +1233,10 @@ export default function ApplyForm() {
         setConsentError(t(locale, "consentRequiredToSubmit"));
         return;
       }
-      const mapped = mapSubmitError(err, input);
+      const mapped = applyMappedSubmitError(err, input);
       if (mapped) {
-        applyFieldErrors(mapped.fieldErrors);
-        setError(t(locale, mapped.messageKey));
-        setErrorStep(mapped.step);
         persistProgress(mapped.step);
         setStep(mapped.step);
-        const key = firstFieldErrorKey(mapped.fieldErrors);
-        if (key) scrollToField(key);
       } else {
         setError(formatClientFetchError(err, locale, t(locale, "error")));
       }
@@ -1529,7 +1572,9 @@ export default function ApplyForm() {
                   );
                   continueToStep("addresses");
                 } catch (err) {
-                  setError(formatClientFetchError(err, locale, t(locale, "error")));
+                  if (!applyMappedSubmitError(err)) {
+                    setError(formatClientFetchError(err, locale, t(locale, "error")));
+                  }
                 } finally {
                   setSubmitting(false);
                 }
@@ -2010,6 +2055,7 @@ export default function ApplyForm() {
                 </div>
               </>
             ) : null}
+            <StepAlert />
             <button
               type="submit"
               disabled={submitting}
@@ -2611,6 +2657,7 @@ export default function ApplyForm() {
                 className={inputClass}
               />
             </label>
+            <StepAlert />
             <button
               type="submit"
               disabled={submitting}

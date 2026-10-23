@@ -49,5 +49,12 @@ export function formatClientFetchError(
     );
   }
 
+  // FastAPI envelope default when field details weren't mapped upstream.
+  if (/^validation failed$/i.test(raw)) {
+    return fr
+      ? "Certaines informations sont manquantes ou invalides. Vérifiez les champs en rouge."
+      : "Some information is missing or invalid. Check the highlighted fields.";
+  }
+
   return raw.replace(/\u2014/g, "-").replace(/—/g, "-");
 }
