@@ -133,6 +133,7 @@ export default function RejectionEmailComposer({
       setDraftError(t("offerComposerPreviewLinkError"));
       return;
     }
+    setDraftError(null);
     void onConfirm({
       reason: reason.trim(),
       locale,
@@ -223,7 +224,10 @@ export default function RejectionEmailComposer({
         {t("composerBody")}
         <textarea
           value={body}
-          onChange={(e) => setBody(e.target.value)}
+          onChange={(e) => {
+            setBody(e.target.value);
+            if (draftError) setDraftError(null);
+          }}
           rows={12}
           className={`${adminUi.textarea} mt-1 font-mono text-sm`}
           disabled={loadingDraft || submitting}
