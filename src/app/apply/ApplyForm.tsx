@@ -1410,11 +1410,15 @@ export default function ApplyForm() {
         )}
       </header>
 
-      {error && (
-        <div className="mb-5 rounded border border-[#e7c4c4] bg-[#fdf5f5] px-4 py-3 text-sm text-[#7f1d1d]">
+      {/* Form steps use StepAlert near Continue — avoid duplicating the same banner here. */}
+      {error &&
+      !["personal", "addresses", "housing", "references", "other", "review"].includes(
+        step
+      ) ? (
+        <div className="mb-5 whitespace-pre-line rounded border border-[#e7c4c4] bg-[#fdf5f5] px-4 py-3 text-sm text-[#7f1d1d]">
           {error}
         </div>
-      )}
+      ) : null}
 
       {showDraftBanner && (
         <div className="mb-5 flex items-start justify-between gap-3 rounded border border-[#c9dcc9] bg-[#f6faf6] px-4 py-3 text-sm text-[#1a3d22]">

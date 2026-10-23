@@ -298,6 +298,9 @@ export function validateHousingStep(
     | "guarantor"
   >
 ): ApplyValidationCode | null {
+  if (!input.move_in_date.trim()) {
+    return "required";
+  }
   const moveInError = moveInValidationCode(input.move_in_date, {
     earliest_move_in_date: input.unit_earliest_move_in,
     available_date: input.unit_available_date,
