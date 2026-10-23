@@ -245,8 +245,10 @@ export const adminMessages = {
     offerComposerTitle: "Courriel pour proposer un garant",
     offerComposerSubmit: "Envoyer le courriel au demandeur",
     offerComposerHint:
-      "Modifiez le courriel avant l'envoi. Le lien d'ajout du garant est mis à jour à l'envoi, même si vous le retirez du texte.",
+      "Modifiez le courriel avant l'envoi. Le marqueur {{ADD_GUARANTOR_LINK}} n'est pas un vrai lien — un lien personnel est généré à l'envoi. N'envoyez jamais un lien …/apercu.",
     offerComposerHintJanitor: " Un avis distinct est envoyé au concierge ({email}).",
+    offerComposerPreviewLinkError:
+      "Retirez le lien …/apercu du message. Un vrai lien d'ajout de garant est généré à l'envoi.",
     composerReasonLabel: "Motif (dossier + ligne Motif/Reason)",
     composerReasonPlaceholder: "Ex. crédit insuffisant",
     composerReinjectReason: "Réinjecter le motif dans le brouillon",
@@ -654,8 +656,10 @@ export const adminMessages = {
     offerComposerTitle: "Email to offer a guarantor",
     offerComposerSubmit: "Send email to the applicant",
     offerComposerHint:
-      "Edit the email before sending. The add-guarantor link is refreshed on send even if you remove it from the text.",
+      "Edit the email before sending. The {{ADD_GUARANTOR_LINK}} marker is not a real link — a personal link is generated on send. Never send a …/apercu link.",
     offerComposerHintJanitor: " A separate notice is sent to the janitor ({email}).",
+    offerComposerPreviewLinkError:
+      "Remove the …/apercu link from the message. A real add-guarantor link is generated on send.",
     composerReasonLabel: "Reason (file + Reason line)",
     composerReasonPlaceholder: "e.g. insufficient credit",
     composerReinjectReason: "Re-inject reason into the draft",

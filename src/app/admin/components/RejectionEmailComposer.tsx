@@ -125,6 +125,14 @@ export default function RejectionEmailComposer({
   const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
     if (!body.trim() || !subject.trim()) return;
+    // Guarantor offer: refuse draft preview leftovers (…/apercu) before the API does.
+    if (
+      !showReason &&
+      /\/apercu(?![A-Za-z0-9_-])/i.test(body)
+    ) {
+      setDraftError(t("offerComposerPreviewLinkError"));
+      return;
+    }
     void onConfirm({
       reason: reason.trim(),
       locale,
