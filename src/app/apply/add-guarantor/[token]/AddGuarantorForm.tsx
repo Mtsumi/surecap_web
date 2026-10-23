@@ -58,15 +58,19 @@ export default function AddGuarantorForm({ token }: { token: string }) {
     if (!context || context.has_guarantor || context.status !== "awaiting_credit_check") return;
     const trimmedName = name.trim();
     if (!trimmedName) {
-      setError(t(locale, "fieldRequired"));
+      setError(`${t(locale, "guarantorName")} — ${t(locale, "fieldRequired")}`);
       return;
     }
     if (validateEmailFormat(email)) {
-      setError(t(locale, "validationInvalidEmail"));
+      setError(`${t(locale, "email")} — ${t(locale, "validationInvalidEmail")}`);
       return;
     }
-    if (!phone.trim() || validatePhoneFormat(phone)) {
-      setError(t(locale, "validationInvalidPhone"));
+    if (!phone.trim()) {
+      setError(`${t(locale, "guarantorPhone")} — ${t(locale, "fieldRequired")}`);
+      return;
+    }
+    if (validatePhoneFormat(phone)) {
+      setError(`${t(locale, "guarantorPhone")} — ${t(locale, "validationInvalidPhone")}`);
       return;
     }
     setSubmitting(true);

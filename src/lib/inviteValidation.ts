@@ -134,9 +134,11 @@ export function inviteeFieldErrors(
   const dobError = validateDateOfBirth(fields.date_of_birth);
   if (dobError) errors.date_of_birth = dobError;
 
+  // Format-check only when a value is present; empties already marked required above.
   const phoneFields: (keyof InviteeFormFields)[] =
     role === "guarantor" ? ["phone", "hr_phone"] : ["phone", "hr_phone"];
   for (const key of phoneFields) {
+    if (errors[key] === "required") continue;
     const formatError = validatePhoneFormat(String(fields[key]));
     if (formatError) errors[key] = formatError;
   }

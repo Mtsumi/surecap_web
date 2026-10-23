@@ -2055,6 +2055,7 @@ export default function ApplyForm() {
                 </div>
               </>
             ) : null}
+            <StepAlert />
             <button
               type="submit"
               disabled={submitting}
@@ -2656,6 +2657,7 @@ export default function ApplyForm() {
                 className={inputClass}
               />
             </label>
+            <StepAlert />
             <button
               type="submit"
               disabled={submitting}

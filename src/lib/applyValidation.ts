@@ -511,6 +511,10 @@ export function findFirstValidationIssue(
   const personal = validatePersonalStep(input.email);
   if (personal) return { code: personal, step: "personal" };
 
+  // Phone is required on the primary personal step (blank is not OK here).
+  if (!input.phone.trim()) {
+    return { code: "required", step: "personal" };
+  }
   const applicantPhone = validatePhoneFormat(input.phone);
   if (applicantPhone) return { code: applicantPhone, step: "personal" };
 
@@ -589,7 +593,9 @@ export function housingFieldErrors(
     }
   }
 
-  if (input.move_in_date) {
+  if (!input.move_in_date.trim()) {
+    errors.move_in_date = "required";
+  } else {
     const moveInError = moveInValidationCode(input.move_in_date, {
       earliest_move_in_date: input.unit_earliest_move_in,
       available_date: input.unit_available_date,
