@@ -219,7 +219,7 @@ export const messages = {
       "This photo may not show a full ID card. Try fitting the whole card in frame.",
     uploadQualityNotImage: "ID uploads must be a photo (JPEG, PNG, WebP, or HEIC).",
     uploadQualityNotPayslip:
-      "This file does not look like a payslip yet. You can continue, but check the file.",
+      "This doesn't look like a payslip or proof of income. Please upload a pay stub or other income document.",
     uploadQualityIncomeSelfie:
       "This looks like a selfie, not a payslip or proof of income. Please upload a pay stub or income document.",
     uploadQualityNoTextLayer:
@@ -568,7 +568,7 @@ export const messages = {
     uploadQualityNotImage:
       "Les pièces d'identité doivent être une photo (JPEG, PNG, WebP ou HEIC).",
     uploadQualityNotPayslip:
-      "Ce fichier ne ressemble pas encore à une fiche de paie. Vérifiez le fichier avant de continuer.",
+      "Ceci ne ressemble pas à une fiche de paie ou une preuve de revenu. Téléversez un talon de paie ou un autre document de revenu.",
     uploadQualityIncomeSelfie:
       "Ceci ressemble à un selfie, pas à une fiche de paie ou une preuve de revenu. Téléversez un talon de paie ou un document de revenu.",
     uploadQualityNoTextLayer:
