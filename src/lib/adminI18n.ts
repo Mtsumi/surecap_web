@@ -245,10 +245,10 @@ export const adminMessages = {
     offerComposerTitle: "Courriel pour proposer un garant",
     offerComposerSubmit: "Envoyer le courriel au demandeur",
     offerComposerHint:
-      "Modifiez le courriel avant l'envoi. Le marqueur {{ADD_GUARANTOR_LINK}} n'est pas un vrai lien — un lien personnel est généré à l'envoi. N'envoyez jamais un lien …/apercu.",
-    offerComposerHintJanitor: " Un avis distinct est envoyé au concierge ({email}).",
+      "Le [ADD_GUARANTOR_LINK] est remplacé par un lien personnel à l'envoi (ajout de garant uniquement).",
+    offerComposerHintJanitor: " Avis court aussi au concierge ({email}).",
     offerComposerPreviewLinkError:
-      "Retirez le lien …/apercu du message. Un vrai lien d'ajout de garant est généré à l'envoi.",
+      "Retirez le …/apercu du message — ce n'est pas un vrai lien.",
     composerReasonLabel: "Motif (dossier + ligne Motif/Reason)",
     composerReasonPlaceholder: "Ex. crédit insuffisant",
     composerReinjectReason: "Réinjecter le motif dans le brouillon",
@@ -656,10 +656,10 @@ export const adminMessages = {
     offerComposerTitle: "Email to offer a guarantor",
     offerComposerSubmit: "Send email to the applicant",
     offerComposerHint:
-      "Edit the email before sending. The {{ADD_GUARANTOR_LINK}} marker is not a real link — a personal link is generated on send. Never send a …/apercu link.",
-    offerComposerHintJanitor: " A separate notice is sent to the janitor ({email}).",
+      "[ADD_GUARANTOR_LINK] is replaced with a personal link on send (add-guarantor only).",
+    offerComposerHintJanitor: " Short notice also goes to the janitor ({email}).",
     offerComposerPreviewLinkError:
-      "Remove the …/apercu link from the message. A real add-guarantor link is generated on send.",
+      "Remove …/apercu from the message — that is not a real link.",
     composerReasonLabel: "Reason (file + Reason line)",
     composerReasonPlaceholder: "e.g. insufficient credit",
     composerReinjectReason: "Re-inject reason into the draft",

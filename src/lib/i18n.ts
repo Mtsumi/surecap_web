@@ -294,14 +294,14 @@ export const messages = {
       "Thank you. A confirmation email has been sent to you.",
     addGuarantorTitle: "Add a guarantor",
     addGuarantorSubtitle:
-      "This is still application #{id} for {building}, unit {unit}.",
+      "Application #{id} · {building}, unit {unit} — only this step is open.",
     addGuarantorIntro:
-      "Credit could not be approved as-is. If you have a guarantor, add them below. They will receive an email to complete their section.",
+      "Credit could not be approved as-is. Add a guarantor below. You cannot change the rest of this application here — only the guarantor contact. They will get an email to complete their section.",
     addGuarantorSubmit: "Send the guarantor invite",
     addGuarantorSubmitting: "Sending…",
     addGuarantorSuccessTitle: "Guarantor invite sent",
     addGuarantorSuccessBody:
-      "We emailed your guarantor a link to complete their section on this same application.",
+      "Done. Your guarantor was invited on this same application. Nothing else on the file was changed.",
     addGuarantorAlready: "A guarantor is already on this application.",
     addGuarantorExpired: "This link is invalid or has expired.",
     addGuarantorNoGuarantor:
@@ -651,14 +651,14 @@ export const messages = {
       "Merci. Un courriel de confirmation vous a été envoyé.",
     addGuarantorTitle: "Ajouter un garant",
     addGuarantorSubtitle:
-      "Il s'agit toujours de la demande #{id} pour {building}, logement {unit}.",
+      "Demande #{id} · {building}, logement {unit} — seule cette étape est ouverte.",
     addGuarantorIntro:
-      "Le crédit n'a pas pu être approuvé en l'état. Si vous avez un garant, ajoutez-le ci-dessous. Il recevra un courriel pour compléter sa section.",
+      "Le crédit n'a pas pu être approuvé en l'état. Ajoutez un garant ci-dessous. Vous ne pouvez pas modifier le reste de la demande ici — seulement le contact du garant. Il recevra un courriel pour compléter sa section.",
     addGuarantorSubmit: "Envoyer l'invitation au garant",
     addGuarantorSubmitting: "Envoi…",
     addGuarantorSuccessTitle: "Invitation envoyée au garant",
     addGuarantorSuccessBody:
-      "Nous avons envoyé à votre garant un lien pour compléter sa section sur cette même demande.",
+      "C'est fait. Votre garant a été invité sur cette même demande. Rien d'autre n'a été modifié au dossier.",
     addGuarantorAlready: "Un garant est déjà sur cette demande.",
     addGuarantorExpired: "Ce lien est invalide ou expiré.",
     addGuarantorNoGuarantor:
