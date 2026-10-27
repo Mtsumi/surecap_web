@@ -98,6 +98,7 @@ const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   guarantor_required_abroad: "validationGuarantorRequiredAbroad",
   guarantor_address_not_quebec: "validationGuarantorAddressQuebec",
   guarantor_required_pays: "guarantorRequiredPaysHint",
+  invite_email_mismatch: "validationInviteEmailMismatch",
 };
 
 const FIELD_LABEL_KEY: Record<string, MessageKey> = {

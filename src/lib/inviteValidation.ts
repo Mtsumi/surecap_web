@@ -52,9 +52,7 @@ export type InviteeFormFields = {
   linkedin_url: string;
 };
 
-export type InviteeFieldErrors = Partial<
-  Record<string, ApplyValidationCode | "required" | "invite_email_mismatch">
->;
+export type InviteeFieldErrors = Partial<Record<string, ApplyValidationCode>>;
 
 const ROOMMATE_REQUIRED: (keyof InviteeFormFields)[] = [
   "given_name",
@@ -92,7 +90,7 @@ const INCOME_REFERENCE_FIELDS = new Set<keyof InviteeFormFields>([
 export function validateInviteeEmailMatch(
   invitedEmail: string,
   email: string
-): ApplyValidationCode | "invite_email_mismatch" | null {
+): ApplyValidationCode | null {
   const formatError = validateEmailFormat(email);
   if (formatError) return formatError;
   if (invitedEmail.trim().toLowerCase() !== email.trim().toLowerCase()) {

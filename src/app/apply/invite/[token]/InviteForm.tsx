@@ -55,10 +55,7 @@ type Step = "personal" | "addresses" | "references" | "review" | "done";
 const ROOMMATE_STEPS: Step[] = ["personal", "addresses", "references", "review"];
 const GUARANTOR_STEPS: Step[] = ["personal", "addresses", "references", "review"];
 
-const VALIDATION_MESSAGE: Record<
-  ApplyValidationCode | "invite_email_mismatch",
-  MessageKey
-> = {
+const VALIDATION_MESSAGE: Record<ApplyValidationCode, MessageKey> = {
   move_in_too_soon: "validationMoveInTooSoon",
   move_in_before_available: "validationMoveInBeforeAvailable",
   invalid_email: "validationInvalidEmail",
