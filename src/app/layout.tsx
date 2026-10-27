@@ -1,17 +1,25 @@
 import type { Metadata } from "next";
-import { Archivo, Source_Sans_3 } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const adminDisplay = Archivo({
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
+// Self-hosted: next/font/google flakes on Vercel when Google returns extensionless
+// /l/font?kit=… URLs (null ext parse → TypeError). See vercel/next.js#99114.
+const adminDisplay = localFont({
+  src: [
+    { path: "./fonts/archivo-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/archivo-latin-700-normal.woff2", weight: "700", style: "normal" },
+    { path: "./fonts/archivo-latin-800-normal.woff2", weight: "800", style: "normal" },
+  ],
   variable: "--font-admin-display",
   display: "swap",
 });
 
-const adminBody = Source_Sans_3({
-  subsets: ["latin"],
-  weight: ["400", "600", "700"],
+const adminBody = localFont({
+  src: [
+    { path: "./fonts/source-sans-3-latin-400-normal.woff2", weight: "400", style: "normal" },
+    { path: "./fonts/source-sans-3-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/source-sans-3-latin-700-normal.woff2", weight: "700", style: "normal" },
+  ],
   variable: "--font-admin-body",
   display: "swap",
 });
