@@ -32,7 +32,8 @@ export type ApplyValidationCode =
   | "guarantor_required_abroad"
   | "guarantor_address_not_quebec"
   | "guarantor_required_pays"
-  | "pick_google_address";
+  | "pick_google_address"
+  | "invite_email_mismatch";
 
 export type ApplyFormStep = "personal" | "addresses" | "housing" | "references" | "other";
 
