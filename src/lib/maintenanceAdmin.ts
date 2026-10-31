@@ -35,6 +35,20 @@ export type MaintenanceCategory = (typeof MAINTENANCE_CATEGORIES)[number];
 export type MaintenanceStatus = (typeof MAINTENANCE_STATUSES)[number];
 export type MaintenanceRole = (typeof MAINTENANCE_ROLES)[number];
 
+/** Select UI: plumbing-related codes share one optgroup; other categories stand alone. */
+export const MAINTENANCE_CATEGORY_GROUPS: {
+  groupKey: "maintenanceCategoryPlumbingGroup" | "maintenanceCategoryOtherGroup";
+  categories: MaintenanceCategory[];
+}[] = [
+  { groupKey: "maintenanceCategoryPlumbingGroup", categories: ["water_leak", "plumbing"] },
+  {
+    groupKey: "maintenanceCategoryOtherGroup",
+    categories: ["heating", "electrical", "carpentry", "mold_humidity", "other"],
+  },
+];
+
+export const DEFAULT_MAINTENANCE_CATEGORY: MaintenanceCategory = "plumbing";
+
 export function canAccessMaintenance(user: AdminUser | null | undefined): boolean {
   if (!user?.active) return false;
   if (user.is_super_admin) return true;
