@@ -74,6 +74,7 @@ export function buildingsForMaintenanceUser<T extends { id: number }>(
 }
 
 const STATUS_LABEL_FR: Record<string, string> = {
+  draft: "Brouillon",
   pending_owner: "Approbation requise",
   declined: "Refusé",
   open: "Ouvert",
@@ -87,6 +88,7 @@ const STATUS_LABEL_FR: Record<string, string> = {
 };
 
 const STATUS_LABEL_EN: Record<string, string> = {
+  draft: "Draft",
   pending_owner: "Awaiting approval",
   declined: "Declined",
   open: "Open",
