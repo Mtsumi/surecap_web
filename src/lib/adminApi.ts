@@ -285,7 +285,8 @@ async function adminFetch<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(body?.message || res.statusText);
   }
 
-  if (!body || body.data === null || body.data === undefined) {
+  if (body?.data === null || body?.data === undefined) {
+    if (body?.status === "success") return null as T;
     throw new Error(body?.message || "Empty response");
   }
 
@@ -659,6 +660,40 @@ export function listMaintenanceTickets(params?: {
 
 export function getMaintenanceTicket(ticketId: number) {
   return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}`);
+}
+
+export type MaintenanceTicketDraftInput = {
+  building_id: number;
+  unit_id?: number | null;
+  location_kind: "unit" | "common_area";
+  location_label?: string | null;
+};
+
+export type MaintenanceTicketSubmitInput = {
+  category: string;
+  urgent?: boolean;
+  title: string;
+  description: string;
+};
+
+export function createMaintenanceDraft(body: MaintenanceTicketDraftInput) {
+  return adminFetch<MaintenanceTicket>("/maintenance/tickets/draft", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function submitMaintenanceTicket(ticketId: number, body: MaintenanceTicketSubmitInput) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/submit`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function deleteMaintenanceDraft(ticketId: number) {
+  return adminFetch<null>(`/maintenance/tickets/${ticketId}`, {
+    method: "DELETE",
+  });
 }
 
 export function createMaintenanceTicket(body: MaintenanceTicketCreateInput) {
