@@ -21,6 +21,7 @@ import {
   buildingsForMaintenanceUser,
   maintenanceCategoryLabel,
 } from "@/lib/maintenanceAdmin";
+import MaintenancePhotoInputs from "../MaintenancePhotoInputs";
 
 export default function MaintenanceNewPage() {
   const router = useRouter();
@@ -67,9 +68,9 @@ export default function MaintenanceNewPage() {
     };
   }, [buildingId]);
 
-  const onPhotosSelected = (files: FileList | null) => {
-    if (!files?.length) return;
-    setPhotos((prev) => [...prev, ...Array.from(files)]);
+  const onPhotosSelected = (files: File[]) => {
+    if (!files.length) return;
+    setPhotos((prev) => [...prev, ...files]);
   };
 
   const onSubmit = async (e: FormEvent) => {
@@ -276,22 +277,7 @@ export default function MaintenanceNewPage() {
 
         <div>
           <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceFieldPhotos")}</p>
-          <label className="mt-2 inline-block">
-            <span className={adminUi.btnSecondary + " cursor-pointer"}>
-              {t("maintenanceUploadPhoto")}
-            </span>
-            <input
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              disabled={busy}
-              onChange={(e) => {
-                onPhotosSelected(e.target.files);
-                e.target.value = "";
-              }}
-            />
-          </label>
+          <MaintenancePhotoInputs disabled={busy} onFiles={onPhotosSelected} t={t} />
           {photos.length > 0 ? (
             <ul className="mt-2 space-y-1 text-xs text-[var(--ml-ink)]">
               {photos.map((f, idx) => (

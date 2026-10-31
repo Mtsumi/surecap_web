@@ -22,6 +22,7 @@ import {
   downloadMaintenanceAttachment,
   openMaintenanceAttachmentInline,
 } from "@/lib/maintenanceFiles";
+import MaintenancePhotoInputs from "../MaintenancePhotoInputs";
 
 function ticketLocation(ticket: MaintenanceTicket): string {
   if (ticket.location_kind === "unit") {
@@ -94,12 +95,12 @@ export default function MaintenanceDetailPage() {
     }
   };
 
-  const onPhoto = async (files: FileList | null) => {
-    if (!files?.length || uploadBusy) return;
+  const onPhoto = async (files: File[]) => {
+    if (!files.length || uploadBusy) return;
     setUploadBusy(true);
     setError(null);
     try {
-      for (const file of Array.from(files)) {
+      for (const file of files) {
         const updated = await uploadMaintenanceTicketAttachment(ticketId, file);
         setTicket(updated);
       }
@@ -211,22 +212,15 @@ export default function MaintenanceDetailPage() {
         ) : (
           <p className="mt-2 text-sm text-[var(--ml-steel)]">—</p>
         )}
-        <label className="mt-4 inline-block">
-          <span className={adminUi.btnSecondary + " cursor-pointer"}>
-            {uploadBusy ? t("maintenanceUploading") : t("maintenanceUploadPhoto")}
-          </span>
-          <input
-            type="file"
-            accept="image/*"
-            multiple
-            className="hidden"
-            disabled={uploadBusy}
-            onChange={(e) => {
-              void onPhoto(e.target.files);
-              e.target.value = "";
-            }}
-          />
-        </label>
+        <MaintenancePhotoInputs
+          disabled={uploadBusy}
+          multipleBrowse
+          onFiles={(files) => void onPhoto(files)}
+          t={t}
+        />
+        {uploadBusy ? (
+          <p className="mt-2 text-xs text-[var(--ml-steel)]">{t("maintenanceUploading")}</p>
+        ) : null}
       </div>
 
       {showOwnerPanel ? (
