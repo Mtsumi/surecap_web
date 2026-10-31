@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AdminUser, adminMe } from "@/lib/adminApi";
 import { clearAdminToken, isAdminLoggedIn } from "@/lib/adminAuth";
+import { canAccessMaintenance, isMaintenanceOnlyUser, maintenanceRoleLabel } from "@/lib/maintenanceAdmin";
 import { useAdminLocaleContext } from "./AdminLocaleContext";
 import LocaleToggle from "@/components/LocaleToggle";
 
@@ -13,6 +14,9 @@ const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed";
 function roleLabel(user: AdminUser, locale: "fr" | "en"): string {
   if (user.is_super_admin) {
     return locale === "fr" ? "Superadministrateur" : "Super admin";
+  }
+  if (user.maintenance_role) {
+    return maintenanceRoleLabel(user.maintenance_role, locale);
   }
   return locale === "fr" ? "Administrateur" : "Administrator";
 }
@@ -99,6 +103,17 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }, [user, pathname, router]);
 
   useEffect(() => {
+    if (!user || !isMaintenanceOnlyUser(user)) return;
+    const allowed =
+      pathname.startsWith("/admin/maintenance") ||
+      pathname.startsWith("/admin/account") ||
+      pathname.startsWith("/admin/login");
+    if (!allowed) {
+      router.replace("/admin/maintenance");
+    }
+  }, [user, pathname, router]);
+
+  useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
@@ -126,14 +141,24 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   const passwordChangeRequired = user?.must_change_password ?? false;
 
+  const maintenanceOnly = isMaintenanceOnlyUser(user);
+
   const fullNav: {
     href: string;
     label: string;
     external?: boolean;
-  }[] = [
+  }[] = maintenanceOnly
+    ? [
+        { href: "/admin/maintenance", label: t("navMaintenance") },
+        { href: "/admin/account", label: t("navAccount") },
+      ]
+    : [
     { href: "/admin/applications", label: t("navApplications") },
     { href: "/admin/buildings", label: t("navBuildings") },
     { href: "/admin/listings", label: t("navListingQr") },
+    ...(canAccessMaintenance(user)
+      ? [{ href: "/admin/maintenance", label: t("navMaintenance") }]
+      : []),
     ...(user?.is_super_admin
       ? [
           { href: "/admin/team", label: t("navTeam") },

@@ -17,6 +17,8 @@ export type AdminUser = {
   is_super_admin: boolean;
   active: boolean;
   must_change_password: boolean;
+  maintenance_role: string | null;
+  janitor_building_ids: number[] | null;
   created_at: string;
   updated_at: string;
 };
@@ -561,6 +563,8 @@ export function createAdminUser(data: {
   email: string;
   password: string;
   is_super_admin?: boolean;
+  maintenance_role?: string | null;
+  janitor_building_ids?: number[] | null;
 }) {
   return adminFetch<AdminUser>("/admin/users", {
     method: "POST",
@@ -570,10 +574,156 @@ export function createAdminUser(data: {
 
 export function updateAdminUser(
   id: number,
-  data: Partial<{ active: boolean; password: string; is_super_admin: boolean }>
+  data: Partial<{
+    active: boolean;
+    password: string;
+    is_super_admin: boolean;
+    maintenance_role: string | null;
+    janitor_building_ids: number[] | null;
+  }>
 ) {
   return adminFetch<AdminUser>(`/admin/users/${id}`, {
     method: "PATCH",
     body: JSON.stringify(data),
   });
+}
+
+export type MaintenanceAttachment = {
+  id: number;
+  kind: string;
+  original_filename: string;
+  content_type: string;
+  byte_size: number;
+  uploaded_at: string;
+};
+
+export type MaintenanceTicket = {
+  id: number;
+  building_id: number;
+  building_name: string | null;
+  unit_id: number | null;
+  unit_number: string | null;
+  location_kind: string;
+  location_label: string | null;
+  category: string;
+  urgent: boolean;
+  title: string;
+  description: string;
+  status: string;
+  owner_decision: string | null;
+  status_reason: string | null;
+  opened_by_id: number;
+  opened_by_email: string | null;
+  estimated_completion_at: string | null;
+  assigned_worker_id: number | null;
+  created_at: string;
+  updated_at: string;
+  attachments: MaintenanceAttachment[];
+};
+
+export type MaintenanceTicketCreateInput = {
+  building_id: number;
+  unit_id?: number | null;
+  location_kind: "unit" | "common_area";
+  location_label?: string | null;
+  category: string;
+  urgent?: boolean;
+  title: string;
+  description: string;
+};
+
+function maintenanceUploadHeaders(): Record<string, string> {
+  const headers: Record<string, string> = {};
+  const token = getAdminToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (API_URL.includes("ngrok")) headers["ngrok-skip-browser-warning"] = "1";
+  return headers;
+}
+
+export function listMaintenanceTickets(params?: {
+  building_id?: number;
+  status?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  const q = new URLSearchParams();
+  if (params?.building_id != null) q.set("building_id", String(params.building_id));
+  if (params?.status) q.set("status", params.status);
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  if (params?.offset != null) q.set("offset", String(params.offset));
+  const qs = q.toString();
+  return adminFetch<MaintenanceTicket[]>(
+    `/maintenance/tickets${qs ? `?${qs}` : ""}`
+  );
+}
+
+export function getMaintenanceTicket(ticketId: number) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}`);
+}
+
+export function createMaintenanceTicket(body: MaintenanceTicketCreateInput) {
+  return adminFetch<MaintenanceTicket>("/maintenance/tickets", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function uploadMaintenanceTicketAttachment(
+  ticketId: number,
+  file: File
+): Promise<MaintenanceTicket> {
+  const form = new FormData();
+  form.append("file", file);
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}/maintenance/tickets/${ticketId}/attachments`, {
+      method: "POST",
+      headers: maintenanceUploadHeaders(),
+      body: form,
+    });
+  } catch (error) {
+    if (isAdminNetworkError(error)) throw new AdminNetworkError();
+    throw error;
+  }
+
+  let body: ApiEnvelope<MaintenanceTicket> | null = null;
+  try {
+    body = (await res.json()) as ApiEnvelope<MaintenanceTicket>;
+  } catch {
+    body = null;
+  }
+
+  if (res.status === 401) {
+    clearAdminToken();
+    if (typeof window !== "undefined" && !window.location.pathname.includes("/login")) {
+      window.location.href = "/admin/login";
+    }
+    throw new Error("Session expired");
+  }
+
+  if (!res.ok) {
+    const detail =
+      body && typeof body === "object" && "detail" in body
+        ? (body as { detail?: string | { msg?: string }[] }).detail
+        : undefined;
+    let message = body?.message || res.statusText;
+    if (typeof detail === "string") message = detail;
+    else if (Array.isArray(detail) && detail[0]?.msg) message = detail[0].msg;
+    throw new Error(message);
+  }
+  if (!body?.data) throw new Error(body?.message || "Upload failed");
+  return body.data;
+}
+
+export function postMaintenanceOwnerDecision(
+  ticketId: number,
+  data: { decision: "approve" | "decline" | "hold"; reason?: string | null }
+) {
+  return adminFetch<MaintenanceTicket>(
+    `/admin/maintenance/tickets/${ticketId}/owner-decision`,
+    {
+      method: "POST",
+      body: JSON.stringify(data),
+    }
+  );
 }
