@@ -10,12 +10,14 @@ import {
   createMaintenanceTicket,
   listBuildingsAdmin,
   listUnitsAdmin,
+  uploadMaintenanceTicketAttachment,
 } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
 import { formatAdminFetchError } from "@/lib/adminFetchError";
 import {
-  MAINTENANCE_CATEGORIES,
+  DEFAULT_MAINTENANCE_CATEGORY,
+  MAINTENANCE_CATEGORY_GROUPS,
   buildingsForMaintenanceUser,
   maintenanceCategoryLabel,
 } from "@/lib/maintenanceAdmin";
@@ -29,11 +31,13 @@ export default function MaintenanceNewPage() {
   const [locationKind, setLocationKind] = useState<"unit" | "common_area">("unit");
   const [unitId, setUnitId] = useState<number | "">("");
   const [locationLabel, setLocationLabel] = useState("");
-  const [category, setCategory] = useState<string>(MAINTENANCE_CATEGORIES[0]);
+  const [category, setCategory] = useState<string>(DEFAULT_MAINTENANCE_CATEGORY);
   const [urgent, setUrgent] = useState(false);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [photos, setPhotos] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -63,11 +67,17 @@ export default function MaintenanceNewPage() {
     };
   }, [buildingId]);
 
+  const onPhotosSelected = (files: FileList | null) => {
+    if (!files?.length) return;
+    setPhotos((prev) => [...prev, ...Array.from(files)]);
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (busy || buildingId === "") return;
     setBusy(true);
     setError(null);
+    setProgress(t("maintenanceCreateSaving"));
     try {
       const ticket = await createMaintenanceTicket({
         building_id: buildingId,
@@ -80,11 +90,35 @@ export default function MaintenanceNewPage() {
           ? { unit_id: unitId === "" ? null : unitId }
           : { unit_id: null, location_label: locationLabel.trim() }),
       });
+
+      for (let i = 0; i < photos.length; i++) {
+        setProgress(
+          t("maintenanceCreateUploadingPhoto")
+            .replace("{current}", String(i + 1))
+            .replace("{total}", String(photos.length))
+        );
+        try {
+          await uploadMaintenanceTicketAttachment(ticket.id, photos[i]);
+        } catch (uploadErr) {
+          setError(
+            `${t("maintenanceCreatePhotoPartial")} ${formatAdminFetchError(
+              uploadErr,
+              locale,
+              t("maintenanceError")
+            )}`
+          );
+          router.push(`/admin/maintenance/${ticket.id}`);
+          return;
+        }
+      }
+
       router.push(`/admin/maintenance/${ticket.id}`);
     } catch (err) {
+      setProgress(null);
       setError(formatAdminFetchError(err, locale, t("maintenanceCreateError")));
     } finally {
       setBusy(false);
+      setProgress(null);
     }
   };
 
@@ -98,6 +132,9 @@ export default function MaintenanceNewPage() {
       <h1 className={adminUi.pageTitle}>{t("maintenanceCreateTitle")}</h1>
 
       {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
+      {progress ? (
+        <p className="mt-4 text-sm text-[var(--ml-steel)]">{progress}</p>
+      ) : null}
 
       <form
         onSubmit={onSubmit}
@@ -191,10 +228,14 @@ export default function MaintenanceNewPage() {
             onChange={(e) => setCategory(e.target.value)}
             disabled={busy}
           >
-            {MAINTENANCE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {maintenanceCategoryLabel(c, locale)}
-              </option>
+            {MAINTENANCE_CATEGORY_GROUPS.map((group) => (
+              <optgroup key={group.groupKey} label={t(group.groupKey)}>
+                {group.categories.map((c) => (
+                  <option key={c} value={c}>
+                    {maintenanceCategoryLabel(c, locale)}
+                  </option>
+                ))}
+              </optgroup>
             ))}
           </select>
         </label>
@@ -233,8 +274,37 @@ export default function MaintenanceNewPage() {
           />
         </label>
 
+        <div>
+          <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceFieldPhotos")}</p>
+          <label className="mt-2 inline-block">
+            <span className={adminUi.btnSecondary + " cursor-pointer"}>
+              {t("maintenanceUploadPhoto")}
+            </span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              disabled={busy}
+              onChange={(e) => {
+                onPhotosSelected(e.target.files);
+                e.target.value = "";
+              }}
+            />
+          </label>
+          {photos.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-xs text-[var(--ml-ink)]">
+              {photos.map((f, idx) => (
+                <li key={`${f.name}-${idx}`}>
+                  {f.name} ({Math.round(f.size / 1024)} KB)
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+
         <button type="submit" className={adminUi.btnPrimary} disabled={busy}>
-          {t("maintenanceCreateSubmit")}
+          {busy ? progress || t("maintenanceCreateSaving") : t("maintenanceCreateSubmit")}
         </button>
       </form>
     </>

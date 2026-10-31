@@ -18,6 +18,10 @@ import {
   maintenanceStatusClass,
   maintenanceStatusLabel,
 } from "@/lib/maintenanceAdmin";
+import {
+  downloadMaintenanceAttachment,
+  openMaintenanceAttachmentInline,
+} from "@/lib/maintenanceFiles";
 
 function ticketLocation(ticket: MaintenanceTicket): string {
   if (ticket.location_kind === "unit") {
@@ -171,10 +175,36 @@ export default function MaintenanceDetailPage() {
       <div className={`${adminUi.card} ${adminUi.cardPad} mt-6`}>
         <h2 className={adminUi.sectionTitle}>{t("maintenancePhotos")}</h2>
         {ticket.attachments.length > 0 ? (
-          <ul className="mt-3 space-y-1 text-sm text-[var(--ml-ink)]">
+          <ul className="mt-3 space-y-2 text-sm text-[var(--ml-ink)]">
             {ticket.attachments.map((a) => (
-              <li key={a.id}>
-                {a.original_filename} ({Math.round(a.byte_size / 1024)} KB)
+              <li key={a.id} className="flex flex-wrap items-center gap-2">
+                <span>
+                  {a.original_filename} ({Math.round(a.byte_size / 1024)} KB)
+                </span>
+                <button
+                  type="button"
+                  className={adminUi.link}
+                  disabled={uploadBusy}
+                  onClick={() => {
+                    openMaintenanceAttachmentInline(ticket.id, a.id).catch((e) =>
+                      setError(formatAdminFetchError(e, locale, t("maintenanceError")))
+                    );
+                  }}
+                >
+                  {t("maintenancePhotoView")}
+                </button>
+                <button
+                  type="button"
+                  className={adminUi.link}
+                  disabled={uploadBusy}
+                  onClick={() => {
+                    downloadMaintenanceAttachment(ticket.id, a.id, a.original_filename).catch(
+                      (e) => setError(formatAdminFetchError(e, locale, t("maintenanceError")))
+                    );
+                  }}
+                >
+                  {t("maintenancePhotoDownload")}
+                </button>
               </li>
             ))}
           </ul>
