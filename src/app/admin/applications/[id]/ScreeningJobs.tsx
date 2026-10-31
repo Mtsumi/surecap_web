@@ -42,10 +42,7 @@ import {
   fetchMemberDocumentBlob,
   triggerBlobDownload,
 } from "@/lib/adminDocuments";
-import {
-  corpiqReportDownloadContentType,
-  parseCorpiqReportDocumentId,
-} from "@/lib/corpiqAdmin";
+import { resolveCorpiqReportDocument } from "@/lib/corpiqAdmin";
 import {
   corpiqPortalPreflightIssues,
   corpiqPreflightLabel,
@@ -956,7 +953,11 @@ function CorpiqMemberControls({
   );
   const preflightIssues = corpiqPortalPreflightIssues(member);
   const portalReady = preflightIssues.length === 0;
-  const reportDocumentId = parseCorpiqReportDocumentId(job?.message ?? null);
+  const reportRef = resolveCorpiqReportDocument(
+    job?.message ?? null,
+    member?.documents
+  );
+  const reportDocumentId = reportRef?.id ?? null;
 
   const run = async (force: boolean) => {
     if (force && !window.confirm(
@@ -979,16 +980,16 @@ function CorpiqMemberControls({
   };
 
   const openReport = async () => {
-    if (reportDocumentId == null) return;
+    if (reportRef == null) return;
     const tab = window.open("about:blank", "_blank");
     if (tab) tab.opener = null;
     setReportBusy(true);
     setError(null);
-    const contentType = corpiqReportDownloadContentType(job?.message ?? null);
+    const contentType = reportRef.contentType;
     try {
       const blob = await fetchMemberDocumentBlob(
         applicationId,
-        reportDocumentId,
+        reportRef.id,
         "inline",
         contentType
       );
@@ -1080,7 +1081,7 @@ function CorpiqMemberControls({
             <button
               type="button"
               disabled={reportBusy}
-              className={`${adminUi.btnSecondary} disabled:opacity-50`}
+              className={`${adminUi.btnPrimary} disabled:opacity-50`}
               onClick={() => void openReport()}
             >
               {reportBusy

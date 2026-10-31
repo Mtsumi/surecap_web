@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   corpiqReportDownloadContentType,
   parseCorpiqReportDocumentId,
+  resolveCorpiqReportDocument,
 } from "./corpiqAdmin";
 
 describe("corpiqAdmin", () => {
@@ -34,5 +35,22 @@ describe("corpiqAdmin", () => {
         })
       )
     ).toBe("application/pdf");
+  });
+
+  it("falls back to member corpiq_report_pdf when job lacks ids", () => {
+    expect(
+      resolveCorpiqReportDocument(JSON.stringify({ score: 463 }), [
+        { id: 10, document_type: "corpiq_report" },
+        { id: 11, document_type: "corpiq_report_pdf" },
+      ])
+    ).toEqual({ id: 11, contentType: "application/pdf" });
+  });
+
+  it("falls back to HTML member doc when PDF missing", () => {
+    expect(
+      resolveCorpiqReportDocument(null, [
+        { id: 10, document_type: "corpiq_report" },
+      ])
+    ).toEqual({ id: 10, contentType: "text/html" });
   });
 });
