@@ -205,6 +205,7 @@ export default function MaintenanceNewPage() {
       ) : null}
 
       <form
+        id="maintenance-new-ticket"
         onSubmit={onSubmit}
         className={`${adminUi.card} ${adminUi.cardPad} mt-6 max-w-xl space-y-4`}
       >
@@ -341,46 +342,47 @@ export default function MaintenanceNewPage() {
             disabled={formDisabled}
           />
         </label>
-
-        <div>
-          <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceFieldPhotos")}</p>
-          <p className="mt-1 text-xs text-[var(--ml-steel)]">
-            {t("maintenancePhotosUploadHint")}
-          </p>
-          <MaintenancePhotoInputs
-            disabled={formDisabled || !locationReady}
-            onFiles={(files) => {
-              void onPhotosSelected(files);
-            }}
-            t={t}
-          />
-          {!locationReady ? (
-            <p className="mt-2 text-xs text-[var(--ml-steel)]">
-              {t("maintenancePhotosNeedLocation")}
-            </p>
-          ) : null}
-          {photoRows.length > 0 ? (
-            <ul className="mt-2 space-y-1 text-xs text-[var(--ml-ink)]">
-              {photoRows.map((row) => (
-                <li key={row.key}>
-                  {row.name} ({Math.round(row.size / 1024)} KB)
-                  {row.status === "uploading" ? ` — ${t("maintenancePhotoUploadingShort")}` : null}
-                  {row.status === "done" ? ` — ${t("maintenancePhotoUploaded")}` : null}
-                  {row.status === "error" ? ` — ${row.error ?? t("maintenanceError")}` : null}
-                </li>
-              ))}
-            </ul>
-          ) : null}
-        </div>
-
-        <button
-          type="submit"
-          className={adminUi.btnPrimary}
-          disabled={formDisabled || hasUploadErrors}
-        >
-          {busy ? progress || t("maintenanceCreateSaving") : t("maintenanceCreateSubmit")}
-        </button>
       </form>
+
+      <div className={`${adminUi.card} ${adminUi.cardPad} mt-4 max-w-xl`}>
+        <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceFieldPhotos")}</p>
+        <p className="mt-1 text-xs text-[var(--ml-steel)]">
+          {t("maintenancePhotosUploadHint")}
+        </p>
+        <MaintenancePhotoInputs
+          disabled={formDisabled || !locationReady}
+          onFiles={(files) => {
+            void onPhotosSelected(files);
+          }}
+          t={t}
+        />
+        {!locationReady ? (
+          <p className="mt-2 text-xs text-[var(--ml-steel)]">
+            {t("maintenancePhotosNeedLocation")}
+          </p>
+        ) : null}
+        {photoRows.length > 0 ? (
+          <ul className="mt-2 space-y-1 text-xs text-[var(--ml-ink)]">
+            {photoRows.map((row) => (
+              <li key={row.key}>
+                {row.name} ({Math.round(row.size / 1024)} KB)
+                {row.status === "uploading" ? ` — ${t("maintenancePhotoUploadingShort")}` : null}
+                {row.status === "done" ? ` — ${t("maintenancePhotoUploaded")}` : null}
+                {row.status === "error" ? ` — ${row.error ?? t("maintenanceError")}` : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+
+      <button
+        type="submit"
+        form="maintenance-new-ticket"
+        className={`${adminUi.btnPrimary} mt-4 max-w-xl`}
+        disabled={formDisabled || hasUploadErrors}
+      >
+        {busy ? progress || t("maintenanceCreateSaving") : t("maintenanceCreateSubmit")}
+      </button>
     </>
   );
 }
