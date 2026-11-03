@@ -151,6 +151,24 @@ export function maintenanceRoleLabel(role: string | null | undefined, locale: Lo
   return map[role] ?? role;
 }
 
+/** Worker assign dropdown: prefer display name, show email for disambiguation. */
+export function maintenanceWorkerPickerLabel(worker: {
+  email: string;
+  display_name?: string | null;
+}): string {
+  const name = worker.display_name?.trim();
+  if (name) return `${name} (${worker.email})`;
+  return worker.email;
+}
+
+export function maintenanceWorkerDisplayName(worker: {
+  email: string;
+  display_name?: string | null;
+}): string {
+  const name = worker.display_name?.trim();
+  return name || worker.email;
+}
+
 export function maintenanceStatusClass(status: string): string {
   const map: Record<string, string> = {
     pending_owner: "admin-status admin-status-collecting",

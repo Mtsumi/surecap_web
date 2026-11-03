@@ -42,6 +42,7 @@ export default function MaintenanceStaffPage() {
 
   const saveUser = async (
     user: AdminUser,
+    display_name: string | null,
     maintenance_role: string | null,
     janitor_building_ids: number[] | null
   ) => {
@@ -50,6 +51,7 @@ export default function MaintenanceStaffPage() {
     setMessage(null);
     try {
       await updateAdminUser(user.id, {
+        display_name,
         maintenance_role,
         janitor_building_ids,
       });
@@ -107,16 +109,19 @@ function StaffRow({
   busy: boolean;
   onSave: (
     user: AdminUser,
+    displayName: string | null,
     role: string | null,
     buildingIds: number[] | null
   ) => Promise<void>;
 }) {
+  const [displayName, setDisplayName] = useState(user.display_name ?? "");
   const [role, setRole] = useState<string>(user.maintenance_role ?? "");
   const [buildingIds, setBuildingIds] = useState<number[]>(
     user.janitor_building_ids ?? []
   );
 
   useEffect(() => {
+    setDisplayName(user.display_name ?? "");
     setRole(user.maintenance_role ?? "");
     setBuildingIds(user.janitor_building_ids ?? []);
   }, [user]);
@@ -133,6 +138,18 @@ function StaffRow({
       {user.is_super_admin ? (
         <p className="text-xs text-[var(--ml-steel)]">{t("teamSuperAdmin")}</p>
       ) : null}
+
+      <label className="mt-4 block text-sm text-[var(--ml-steel)]">
+        {t("maintenanceStaffDisplayName")}
+        <input
+          type="text"
+          className={adminUi.input}
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          disabled={busy}
+          placeholder={t("teamDisplayName")}
+        />
+      </label>
 
       <label className="mt-4 block text-sm text-[var(--ml-steel)]">
         {t("maintenanceStaffRole")}
@@ -179,6 +196,7 @@ function StaffRow({
         onClick={() =>
           void onSave(
             user,
+            displayName.trim() || null,
             role || null,
             role === "janitor" ? buildingIds : null
           )
