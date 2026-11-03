@@ -91,6 +91,7 @@ export default function MaintenanceNewPage() {
 
   useEffect(() => {
     const oldId = draftTicketIdRef.current;
+    draftTicketIdRef.current = null;
     setDraftTicketId(null);
     setPhotoRows([]);
     if (oldId != null) {
@@ -115,6 +116,7 @@ export default function MaintenanceNewPage() {
       throw new Error(t("maintenancePhotosNeedLocation"));
     }
     const ticket = await createMaintenanceDraft(draftPayload());
+    draftTicketIdRef.current = ticket.id;
     setDraftTicketId(ticket.id);
     return ticket.id;
   }, [draftPayload, locationReady, t]);
