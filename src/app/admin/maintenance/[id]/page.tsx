@@ -5,8 +5,12 @@ import { useParams } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import {
   MaintenanceTicket,
+  MaintenanceWorker,
+  acknowledgeMaintenanceTicket,
   adminMe,
+  assignMaintenanceWorker,
   getMaintenanceTicket,
+  listMaintenanceWorkers,
   postMaintenanceOwnerDecision,
   uploadMaintenanceTicketAttachment,
 } from "@/lib/adminApi";
@@ -34,12 +38,17 @@ export default function MaintenanceDetailPage() {
   const { t, locale } = useAdminLocaleContext();
   const [ticket, setTicket] = useState<MaintenanceTicket | null>(null);
   const [isSuper, setIsSuper] = useState(false);
+  const [isMm, setIsMm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [decisionBusy, setDecisionBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
+  const [etaLocal, setEtaLocal] = useState("");
+  const [workers, setWorkers] = useState<MaintenanceWorker[]>([]);
+  const [workerId, setWorkerId] = useState<number | "">("");
+  const [mmBusy, setMmBusy] = useState(false);
 
   const reportError = useCallback((msg: string) => setError(msg), []);
 
@@ -57,6 +66,13 @@ export default function MaintenanceDetailPage() {
         if (cancelled) return;
         setTicket(data);
         setIsSuper(user.is_super_admin);
+        const mm = user.is_super_admin || user.maintenance_role === "maintenance_manager";
+        setIsMm(mm);
+        if (mm) {
+          listMaintenanceWorkers()
+            .then(setWorkers)
+            .catch(() => setWorkers([]));
+        }
       })
       .catch((e) => {
         if (cancelled) return;
@@ -91,6 +107,39 @@ export default function MaintenanceDetailPage() {
       setError(formatAdminFetchError(e, locale, t("maintenanceError")));
     } finally {
       setDecisionBusy(false);
+    }
+  };
+
+  const onAck = async () => {
+    if (mmBusy || !etaLocal) return;
+    setMmBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const iso = new Date(etaLocal).toISOString();
+      const updated = await acknowledgeMaintenanceTicket(ticketId, iso);
+      setTicket(updated);
+      setMessage(t("maintenanceDecisionSaved"));
+    } catch (e) {
+      setError(formatAdminFetchError(e, locale, t("maintenanceError")));
+    } finally {
+      setMmBusy(false);
+    }
+  };
+
+  const onAssign = async () => {
+    if (mmBusy || workerId === "") return;
+    setMmBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const updated = await assignMaintenanceWorker(ticketId, Number(workerId));
+      setTicket(updated);
+      setMessage(t("maintenanceDecisionSaved"));
+    } catch (e) {
+      setError(formatAdminFetchError(e, locale, t("maintenanceError")));
+    } finally {
+      setMmBusy(false);
     }
   };
 
@@ -158,6 +207,19 @@ export default function MaintenanceDetailPage() {
             {t("maintenanceOpenedBy").replace("{email}", ticket.opened_by_email)}
           </p>
         ) : null}
+        {ticket.estimated_completion_at ? (
+          <p className="text-sm text-[var(--ml-steel)]">
+            {t("maintenanceEtaLabel").replace(
+              "{date}",
+              new Date(ticket.estimated_completion_at).toLocaleString(locale === "fr" ? "fr-CA" : "en-CA")
+            )}
+          </p>
+        ) : null}
+        {ticket.assigned_worker_email ? (
+          <p className="text-sm text-[var(--ml-steel)]">
+            {t("maintenanceAssignedTo").replace("{email}", ticket.assigned_worker_email)}
+          </p>
+        ) : null}
         {ticket.status_reason ? (
           <p className="text-sm text-[var(--ml-ink)]">
             <span className="text-[var(--ml-steel)]">{t("maintenanceReason")}: </span>
@@ -203,6 +265,60 @@ export default function MaintenanceDetailPage() {
           <p className="mt-2 text-xs text-[var(--ml-steel)]">{t("maintenanceUploading")}</p>
         ) : null}
       </div>
+
+      {isMm && ticket.status === "open" ? (
+        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
+          <h2 className={adminUi.sectionTitle}>{t("maintenanceAckTitle")}</h2>
+          <label className="block text-sm text-[var(--ml-steel)]">
+            {t("maintenanceAckEta")}
+            <input
+              type="datetime-local"
+              className={adminUi.input}
+              value={etaLocal}
+              onChange={(e) => setEtaLocal(e.target.value)}
+              disabled={mmBusy}
+            />
+          </label>
+          <button
+            type="button"
+            className={adminUi.btnPrimary}
+            disabled={mmBusy || !etaLocal}
+            onClick={() => void onAck()}
+          >
+            {t("maintenanceAckSubmit")}
+          </button>
+        </div>
+      ) : null}
+
+      {isMm && ticket.status === "acknowledged" ? (
+        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
+          <h2 className={adminUi.sectionTitle}>{t("maintenanceAssignTitle")}</h2>
+          <label className="block text-sm text-[var(--ml-steel)]">
+            {t("maintenanceSelectWorker")}
+            <select
+              className={adminUi.input}
+              value={workerId}
+              onChange={(e) => setWorkerId(e.target.value ? Number(e.target.value) : "")}
+              disabled={mmBusy}
+            >
+              <option value="">{t("maintenanceSelectWorker")}</option>
+              {workers.map((w) => (
+                <option key={w.id} value={w.id}>
+                  {w.email}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className={adminUi.btnPrimary}
+            disabled={mmBusy || workerId === ""}
+            onClick={() => void onAssign()}
+          >
+            {t("maintenanceAssignSubmit")}
+          </button>
+        </div>
+      ) : null}
 
       {showOwnerPanel ? (
         <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>

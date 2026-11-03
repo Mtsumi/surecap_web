@@ -617,6 +617,7 @@ export type MaintenanceTicket = {
   opened_by_email: string | null;
   estimated_completion_at: string | null;
   assigned_worker_id: number | null;
+  assigned_worker_email?: string | null;
   created_at: string;
   updated_at: string;
   attachments: MaintenanceAttachment[];
@@ -761,4 +762,74 @@ export function postMaintenanceOwnerDecision(
       body: JSON.stringify(data),
     }
   );
+}
+
+export type MaintenanceWorker = { id: number; email: string };
+
+export function listMaintenanceWorkers() {
+  return adminFetch<MaintenanceWorker[]>("/maintenance/workers");
+}
+
+export function acknowledgeMaintenanceTicket(
+  ticketId: number,
+  estimatedCompletionAt: string
+) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/acknowledge`, {
+    method: "POST",
+    body: JSON.stringify({ estimated_completion_at: estimatedCompletionAt }),
+  });
+}
+
+export function assignMaintenanceWorker(ticketId: number, workerId: number) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/assign`, {
+    method: "POST",
+    body: JSON.stringify({ worker_id: workerId }),
+  });
+}
+
+export type AdminNotification = {
+  id: number;
+  kind: string;
+  entity_type: string;
+  entity_id: number;
+  title: string;
+  body: string;
+  read_at: string | null;
+  created_at: string;
+};
+
+export type AdminNotificationList = {
+  items: AdminNotification[];
+  unread_count: number;
+};
+
+export function listAdminNotifications(params?: { unread_only?: boolean; limit?: number }) {
+  const q = new URLSearchParams();
+  if (params?.unread_only) q.set("unread_only", "true");
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  const qs = q.toString();
+  return adminFetch<AdminNotificationList>(`/admin/notifications${qs ? `?${qs}` : ""}`);
+}
+
+export function markAdminNotificationRead(id: number) {
+  return adminFetch<AdminNotification>(`/admin/notifications/${id}/read`, {
+    method: "PATCH",
+  });
+}
+
+export function markAllAdminNotificationsRead() {
+  return adminFetch<number>("/admin/notifications/read-all", { method: "POST" });
+}
+
+export type MaintenanceNotifySettings = { emails: string[]; source: string };
+
+export function getMaintenanceNotifySettings() {
+  return adminFetch<MaintenanceNotifySettings>("/admin/maintenance/notify-settings");
+}
+
+export function putMaintenanceNotifySettings(emails: string[]) {
+  return adminFetch<MaintenanceNotifySettings>("/admin/maintenance/notify-settings", {
+    method: "PUT",
+    body: JSON.stringify({ emails }),
+  });
 }

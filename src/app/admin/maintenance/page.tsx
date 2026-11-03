@@ -104,9 +104,14 @@ export default function MaintenanceListPage() {
             {t("maintenanceNewTicket")}
           </Link>
           {isSuper ? (
-            <Link href="/admin/maintenance/staff" className={adminUi.btnSecondary}>
-              {t("maintenanceStaff")}
-            </Link>
+            <>
+              <Link href="/admin/maintenance/staff" className={adminUi.btnSecondary}>
+                {t("maintenanceStaff")}
+              </Link>
+              <Link href="/admin/maintenance/settings" className={adminUi.btnSecondary}>
+                {t("maintenanceNotifySettings")}
+              </Link>
+            </>
           ) : null}
         </div>
       </div>
