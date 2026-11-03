@@ -14,6 +14,7 @@ type ApiEnvelope<T> = {
 export type AdminUser = {
   id: number;
   email: string;
+  display_name: string | null;
   is_super_admin: boolean;
   active: boolean;
   must_change_password: boolean;
@@ -563,6 +564,7 @@ export function listAdminUsers() {
 export function createAdminUser(data: {
   email: string;
   password: string;
+  display_name?: string | null;
   is_super_admin?: boolean;
   maintenance_role?: string | null;
   janitor_building_ids?: number[] | null;
@@ -578,6 +580,7 @@ export function updateAdminUser(
   data: Partial<{
     active: boolean;
     password: string;
+    display_name: string | null;
     is_super_admin: boolean;
     maintenance_role: string | null;
     janitor_building_ids: number[] | null;
@@ -618,6 +621,7 @@ export type MaintenanceTicket = {
   estimated_completion_at: string | null;
   assigned_worker_id: number | null;
   assigned_worker_email?: string | null;
+  assigned_worker_display_name?: string | null;
   created_at: string;
   updated_at: string;
   attachments: MaintenanceAttachment[];
@@ -764,7 +768,7 @@ export function postMaintenanceOwnerDecision(
   );
 }
 
-export type MaintenanceWorker = { id: number; email: string };
+export type MaintenanceWorker = { id: number; email: string; display_name: string | null };
 
 export function listMaintenanceWorkers() {
   return adminFetch<MaintenanceWorker[]>("/maintenance/workers");

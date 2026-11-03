@@ -15,6 +15,7 @@ export default function TeamPage() {
   const { t, locale } = useAdminLocaleContext();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [email, setEmail] = useState("");
+  const [displayName, setDisplayName] = useState("");
   const [password, setPassword] = useState("");
   const [isSuper, setIsSuper] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,9 +41,11 @@ export default function TeamPage() {
       await createAdminUser({
         email: email.trim(),
         password,
+        display_name: displayName.trim() || null,
         is_super_admin: isSuper,
       });
       setEmail("");
+      setDisplayName("");
       setPassword("");
       setIsSuper(false);
       setMessage(t("teamCreated"));
@@ -56,17 +59,6 @@ export default function TeamPage() {
       setError(formatAdminFetchError(err, locale, t("teamError")));
     } finally {
       setBusy(false);
-    }
-  };
-
-  const deactivate = async (user: AdminUser) => {
-    if (!confirm(t("teamDeactivateConfirm").replace("{email}", user.email))) return;
-    try {
-      setError(null);
-      await updateAdminUser(user.id, { active: false });
-      await load();
-    } catch (err) {
-      setError(formatAdminFetchError(err, locale, t("teamError")));
     }
   };
 
@@ -88,6 +80,17 @@ export default function TeamPage() {
             placeholder={t("teamEmail")}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            className={adminUi.input}
+            disabled={busy}
+          />
+        </label>
+        <label className="block text-sm text-[var(--ml-steel)]">
+          {t("teamDisplayName")}
+          <input
+            type="text"
+            placeholder={t("teamDisplayName")}
+            value={displayName}
+            onChange={(e) => setDisplayName(e.target.value)}
             className={adminUi.input}
             disabled={busy}
           />
@@ -120,28 +123,104 @@ export default function TeamPage() {
         </button>
       </form>
 
-      <ul className={`${adminUi.list} mt-8`}>
+      <ul className={`${adminUi.list} mt-8 space-y-4`}>
         {users.map((u) => (
-          <li key={u.id} className="flex flex-wrap items-center justify-between gap-3 !py-4">
-            <div>
-              <p className="font-semibold text-[var(--ml-ink)]">{u.email}</p>
-              <p className="text-xs text-[var(--ml-steel)]">
-                {u.is_super_admin ? t("teamSuperAdmin") : t("teamAdmin")}
-                {!u.active && ` · ${t("teamInactive")}`}
-              </p>
-            </div>
-            {u.active && (
-              <button
-                type="button"
-                onClick={() => deactivate(u)}
-                className={adminUi.btnDanger + " !px-3 !py-1.5 !text-xs"}
-              >
-                {t("teamDeactivate")}
-              </button>
-            )}
-          </li>
+          <TeamMemberRow
+            key={u.id}
+            user={u}
+            t={t}
+            locale={locale}
+            onChanged={load}
+            onError={(msg) => setError(msg)}
+          />
         ))}
       </ul>
     </>
+  );
+}
+
+function TeamMemberRow({
+  user,
+  t,
+  locale,
+  onChanged,
+  onError,
+}: {
+  user: AdminUser;
+  t: (key: import("@/lib/adminI18n").AdminMessageKey) => string;
+  locale: import("@/lib/i18n").Locale;
+  onChanged: () => Promise<void>;
+  onError: (msg: string) => void;
+}) {
+  const [displayName, setDisplayName] = useState(user.display_name ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDisplayName(user.display_name ?? "");
+  }, [user]);
+
+  const saveName = async () => {
+    setSaving(true);
+    try {
+      await updateAdminUser(user.id, { display_name: displayName.trim() || null });
+      await onChanged();
+    } catch (e) {
+      onError(formatAdminFetchError(e, locale, t("teamError")));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const deactivate = async () => {
+    if (!confirm(t("teamDeactivateConfirm").replace("{email}", user.email))) return;
+    try {
+      await updateAdminUser(user.id, { active: false });
+      await onChanged();
+    } catch (e) {
+      onError(formatAdminFetchError(e, locale, t("teamError")));
+    }
+  };
+
+  return (
+    <li className={`${adminUi.card} ${adminUi.cardPad} flex flex-col gap-3`}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="font-semibold text-[var(--ml-ink)]">{user.email}</p>
+          <p className="text-xs text-[var(--ml-steel)]">
+            {user.is_super_admin ? t("teamSuperAdmin") : t("teamAdmin")}
+            {!user.active && ` · ${t("teamInactive")}`}
+          </p>
+        </div>
+        {user.active && (
+          <button
+            type="button"
+            onClick={() => void deactivate()}
+            className={adminUi.btnDanger + " !px-3 !py-1.5 !text-xs"}
+          >
+            {t("teamDeactivate")}
+          </button>
+        )}
+      </div>
+      <label className="block text-sm text-[var(--ml-steel)]">
+        {t("teamDisplayName")}
+        <input
+          type="text"
+          className={adminUi.input}
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          disabled={!user.active || saving}
+        />
+      </label>
+      {user.active ? (
+        <button
+          type="button"
+          className={adminUi.btnPrimary + " self-start"}
+          disabled={saving}
+          onClick={() => void saveName()}
+        >
+          {saving ? t("loading") : t("buildingsSave")}
+        </button>
+      ) : null}
+    </li>
   );
 }

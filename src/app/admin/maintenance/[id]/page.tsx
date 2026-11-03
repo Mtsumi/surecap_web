@@ -21,6 +21,8 @@ import {
   maintenanceCategoryLabel,
   maintenanceStatusClass,
   maintenanceStatusLabel,
+  maintenanceWorkerPickerLabel,
+  maintenanceWorkerDisplayName,
 } from "@/lib/maintenanceAdmin";
 import MaintenanceAttachmentThumb from "../MaintenanceAttachmentThumb";
 import MaintenancePhotoInputs from "../MaintenancePhotoInputs";
@@ -37,6 +39,7 @@ export default function MaintenanceDetailPage() {
   const ticketId = Number(params.id);
   const { t, locale } = useAdminLocaleContext();
   const [ticket, setTicket] = useState<MaintenanceTicket | null>(null);
+  const [viewerId, setViewerId] = useState<number | null>(null);
   const [isSuper, setIsSuper] = useState(false);
   const [isMm, setIsMm] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -65,6 +68,7 @@ export default function MaintenanceDetailPage() {
       .then(([data, user]) => {
         if (cancelled) return;
         setTicket(data);
+        setViewerId(user.id);
         setIsSuper(user.is_super_admin);
         const mm = user.is_super_admin || user.maintenance_role === "maintenance_manager";
         setIsMm(mm);
@@ -215,9 +219,17 @@ export default function MaintenanceDetailPage() {
             )}
           </p>
         ) : null}
-        {ticket.assigned_worker_email ? (
+        {ticket.assigned_worker_id ? (
           <p className="text-sm text-[var(--ml-steel)]">
-            {t("maintenanceAssignedTo").replace("{email}", ticket.assigned_worker_email)}
+            {viewerId === ticket.assigned_worker_id
+              ? t("maintenanceAssignedToYou")
+              : t("maintenanceAssignedToName").replace(
+                  "{name}",
+                  maintenanceWorkerDisplayName({
+                    email: ticket.assigned_worker_email ?? "—",
+                    display_name: ticket.assigned_worker_display_name,
+                  })
+                )}
           </p>
         ) : null}
         {ticket.status_reason ? (
@@ -304,7 +316,7 @@ export default function MaintenanceDetailPage() {
               <option value="">{t("maintenanceSelectWorker")}</option>
               {workers.map((w) => (
                 <option key={w.id} value={w.id}>
-                  {w.email}
+                  {maintenanceWorkerPickerLabel(w)}
                 </option>
               ))}
             </select>
