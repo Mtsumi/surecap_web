@@ -14,6 +14,20 @@ type Props = {
   t: (key: AdminMessageKey) => string;
 };
 
+/** Copy files then reset input on next task — avoids React 19 removeChild during onChange. */
+function handleFileInputChange(
+  input: HTMLInputElement,
+  onFiles: (files: File[]) => void
+) {
+  const list = input.files;
+  if (!list?.length) return;
+  const files = Array.from(list);
+  window.setTimeout(() => {
+    onFiles(files);
+    input.value = "";
+  }, 0);
+}
+
 export default function MaintenancePhotoInputs({
   disabled,
   multipleBrowse = true,
@@ -24,15 +38,6 @@ export default function MaintenancePhotoInputs({
   const cameraRef = useRef<HTMLInputElement>(null);
   const browseRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  /** Remount inputs after pick — avoids React removeChild errors from clearing input.value. */
-  const [inputKey, setInputKey] = useState(0);
-
-  const absorb = (list: FileList | null) => {
-    if (!list?.length) return;
-    const files = Array.from(list);
-    queueMicrotask(() => onFiles(files));
-    setInputKey((k) => k + 1);
-  };
 
   const openCamera = () => {
     setMenuOpen(false);
@@ -47,24 +52,26 @@ export default function MaintenancePhotoInputs({
   return (
     <div className="relative mt-2">
       <input
-        key={`camera-${inputKey}`}
         ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
         disabled={disabled}
-        className="sr-only"
-        onChange={(e) => absorb(e.target.files)}
+        tabIndex={-1}
+        aria-hidden
+        className="pointer-events-none fixed left-[-9999px] h-px w-px opacity-0"
+        onChange={(e) => handleFileInputChange(e.currentTarget, onFiles)}
       />
       <input
-        key={`browse-${inputKey}`}
         ref={browseRef}
         type="file"
         accept="image/*"
         multiple={multipleBrowse}
         disabled={disabled}
-        className="sr-only"
-        onChange={(e) => absorb(e.target.files)}
+        tabIndex={-1}
+        aria-hidden
+        className="pointer-events-none fixed left-[-9999px] h-px w-px opacity-0"
+        onChange={(e) => handleFileInputChange(e.currentTarget, onFiles)}
       />
 
       {variant === "detail" ? (
