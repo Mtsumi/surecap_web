@@ -24,10 +24,14 @@ export default function MaintenancePhotoInputs({
   const cameraRef = useRef<HTMLInputElement>(null);
   const browseRef = useRef<HTMLInputElement>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  /** Remount inputs after pick — avoids React removeChild errors from clearing input.value. */
+  const [inputKey, setInputKey] = useState(0);
 
   const absorb = (list: FileList | null) => {
     if (!list?.length) return;
-    onFiles(Array.from(list));
+    const files = Array.from(list);
+    queueMicrotask(() => onFiles(files));
+    setInputKey((k) => k + 1);
   };
 
   const openCamera = () => {
@@ -43,28 +47,24 @@ export default function MaintenancePhotoInputs({
   return (
     <div className="relative mt-2">
       <input
+        key={`camera-${inputKey}`}
         ref={cameraRef}
         type="file"
         accept="image/*"
         capture="environment"
         disabled={disabled}
         className="sr-only"
-        onChange={(e) => {
-          absorb(e.target.files);
-          e.target.value = "";
-        }}
+        onChange={(e) => absorb(e.target.files)}
       />
       <input
+        key={`browse-${inputKey}`}
         ref={browseRef}
         type="file"
         accept="image/*"
         multiple={multipleBrowse}
         disabled={disabled}
         className="sr-only"
-        onChange={(e) => {
-          absorb(e.target.files);
-          e.target.value = "";
-        }}
+        onChange={(e) => absorb(e.target.files)}
       />
 
       {variant === "detail" ? (
