@@ -8,6 +8,7 @@ import { clearAdminToken, isAdminLoggedIn } from "@/lib/adminAuth";
 import { canAccessMaintenance, isMaintenanceOnlyUser, maintenanceRoleLabel } from "@/lib/maintenanceAdmin";
 import { useAdminLocaleContext } from "./AdminLocaleContext";
 import LocaleToggle from "@/components/LocaleToggle";
+import NotificationBell from "./NotificationBell";
 
 const SIDEBAR_COLLAPSED_KEY = "admin-sidebar-collapsed";
 
@@ -106,6 +107,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     if (!user || !isMaintenanceOnlyUser(user)) return;
     const allowed =
       pathname.startsWith("/admin/maintenance") ||
+      pathname.startsWith("/admin/notifications") ||
       pathname.startsWith("/admin/account") ||
       pathname.startsWith("/admin/login");
     if (!allowed) {
@@ -297,6 +299,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </p>
           </div>
           <div className="hidden min-w-0 flex-1 md:block" />
+          <NotificationBell />
           <LocaleToggle locale={locale} onChange={setLocale} />
           <button
             type="button"
