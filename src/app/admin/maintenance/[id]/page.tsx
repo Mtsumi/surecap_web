@@ -8,10 +8,13 @@ import {
   MaintenanceWorker,
   acknowledgeMaintenanceTicket,
   adminMe,
+  approveMaintenanceClose,
   assignMaintenanceWorker,
+  completeMaintenanceJob,
   getMaintenanceTicket,
   listMaintenanceWorkers,
   postMaintenanceOwnerDecision,
+  startMaintenanceJob,
   uploadMaintenanceTicketAttachment,
 } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
@@ -52,6 +55,7 @@ export default function MaintenanceDetailPage() {
   const [workers, setWorkers] = useState<MaintenanceWorker[]>([]);
   const [workerId, setWorkerId] = useState<number | "">("");
   const [mmBusy, setMmBusy] = useState(false);
+  const [workerBusy, setWorkerBusy] = useState(false);
 
   const reportError = useCallback((msg: string) => setError(msg), []);
 
@@ -147,13 +151,13 @@ export default function MaintenanceDetailPage() {
     }
   };
 
-  const onPhoto = async (files: File[]) => {
+  const onPhoto = async (files: File[], kind: "issue" | "completion" = "issue") => {
     if (!files.length || uploadBusy) return;
     setUploadBusy(true);
     setError(null);
     try {
       for (const file of files) {
-        const updated = await uploadMaintenanceTicketAttachment(ticketId, file);
+        const updated = await uploadMaintenanceTicketAttachment(ticketId, file, kind);
         setTicket(updated);
       }
     } catch (e) {
@@ -179,6 +183,29 @@ export default function MaintenanceDetailPage() {
   }
 
   const showOwnerPanel = isSuper && ticket.status === "pending_owner";
+  const isAssignee = viewerId != null && ticket.assigned_worker_id === viewerId;
+  const issuePhotos = ticket.attachments.filter((a) => a.kind === "issue");
+  const completionPhotos = ticket.attachments.filter((a) => a.kind === "completion");
+
+  const renderPhotoGrid = (items: typeof issuePhotos) =>
+    items.length > 0 ? (
+      <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        {items.map((a) => (
+          <li key={a.id}>
+            <MaintenanceAttachmentThumb
+              ticketId={ticket.id}
+              attachment={a}
+              disabled={uploadBusy}
+              locale={locale}
+              t={t}
+              onError={reportError}
+            />
+          </li>
+        ))}
+      </ul>
+    ) : (
+      <p className="mt-2 text-sm text-[var(--ml-steel)]">—</p>
+    );
 
   return (
     <>
@@ -247,32 +274,31 @@ export default function MaintenanceDetailPage() {
       </div>
 
       <div className={`${adminUi.card} ${adminUi.cardPad} mt-6`}>
-        <h2 className={adminUi.sectionTitle}>{t("maintenancePhotos")}</h2>
-        {ticket.attachments.length > 0 ? (
-          <ul className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-            {ticket.attachments.map((a) => (
-              <li key={a.id}>
-                <MaintenanceAttachmentThumb
-                  ticketId={ticket.id}
-                  attachment={a}
-                  disabled={uploadBusy}
-                  locale={locale}
-                  t={t}
-                  onError={reportError}
-                />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="mt-2 text-sm text-[var(--ml-steel)]">—</p>
-        )}
-        <MaintenancePhotoInputs
-          variant="detail"
-          disabled={uploadBusy}
-          multipleBrowse
-          onFiles={(files) => void onPhoto(files)}
-          t={t}
-        />
+        <h2 className={adminUi.sectionTitle}>{t("maintenanceIssuePhotos")}</h2>
+        {renderPhotoGrid(issuePhotos)}
+        {!["closed", "declined"].includes(ticket.status) ? (
+          <MaintenancePhotoInputs
+            variant="detail"
+            disabled={uploadBusy}
+            multipleBrowse
+            onFiles={(files) => void onPhoto(files, "issue")}
+            t={t}
+          />
+        ) : null}
+      </div>
+
+      <div className={`${adminUi.card} ${adminUi.cardPad} mt-6`}>
+        <h2 className={adminUi.sectionTitle}>{t("maintenanceCompletionPhotos")}</h2>
+        {renderPhotoGrid(completionPhotos)}
+        {isAssignee && ticket.status === "in_progress" ? (
+          <MaintenancePhotoInputs
+            variant="detail"
+            disabled={uploadBusy}
+            multipleBrowse
+            onFiles={(files) => void onPhoto(files, "completion")}
+            t={t}
+          />
+        ) : null}
         {uploadBusy ? (
           <p className="mt-2 text-xs text-[var(--ml-steel)]">{t("maintenanceUploading")}</p>
         ) : null}
@@ -328,6 +354,85 @@ export default function MaintenanceDetailPage() {
             onClick={() => void onAssign()}
           >
             {t("maintenanceAssignSubmit")}
+          </button>
+        </div>
+      ) : null}
+
+      {isAssignee && ticket.status === "assigned" ? (
+        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
+          <h2 className={adminUi.sectionTitle}>{t("maintenanceWorkerStartTitle")}</h2>
+          <button
+            type="button"
+            className={adminUi.btnPrimary}
+            disabled={workerBusy}
+            onClick={() => {
+              setWorkerBusy(true);
+              setError(null);
+              startMaintenanceJob(ticketId)
+                .then((updated) => {
+                  setTicket(updated);
+                  setMessage(t("maintenanceDecisionSaved"));
+                })
+                .catch((e) =>
+                  setError(formatAdminFetchError(e, locale, t("maintenanceError")))
+                )
+                .finally(() => setWorkerBusy(false));
+            }}
+          >
+            {t("maintenanceWorkerStartSubmit")}
+          </button>
+        </div>
+      ) : null}
+
+      {isAssignee && ticket.status === "in_progress" ? (
+        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
+          <h2 className={adminUi.sectionTitle}>{t("maintenanceWorkerCompleteTitle")}</h2>
+          <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceWorkerCompleteHint")}</p>
+          <button
+            type="button"
+            className={adminUi.btnPrimary}
+            disabled={workerBusy || completionPhotos.length < 1}
+            onClick={() => {
+              setWorkerBusy(true);
+              setError(null);
+              completeMaintenanceJob(ticketId)
+                .then((updated) => {
+                  setTicket(updated);
+                  setMessage(t("maintenanceDecisionSaved"));
+                })
+                .catch((e) =>
+                  setError(formatAdminFetchError(e, locale, t("maintenanceError")))
+                )
+                .finally(() => setWorkerBusy(false));
+            }}
+          >
+            {t("maintenanceWorkerCompleteSubmit")}
+          </button>
+        </div>
+      ) : null}
+
+      {isMm && ticket.status === "pending_manager_close" ? (
+        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
+          <h2 className={adminUi.sectionTitle}>{t("maintenanceApproveCloseTitle")}</h2>
+          <button
+            type="button"
+            className={adminUi.btnPrimary}
+            disabled={mmBusy}
+            onClick={() => {
+              setMmBusy(true);
+              setError(null);
+              approveMaintenanceClose(ticketId)
+                .then((updated) => {
+                  setTicket(updated);
+                  setMessage(t("maintenanceDecisionSaved"));
+                })
+                .catch((e) =>
+                  setError(formatAdminFetchError(e, locale, t("maintenanceError")))
+                )
+                .finally(() => setMmBusy(false));
+            }}
+          >
+            {t("maintenanceApproveCloseSubmit")}
           </button>
         </div>
       ) : null}
