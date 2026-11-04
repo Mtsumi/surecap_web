@@ -16,6 +16,7 @@ export default function AdminLoginPage() {
   const { t, locale, setLocale } = useAdminLocaleContext();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -24,9 +25,9 @@ export default function AdminLoginPage() {
     setLoading(true);
     setError(null);
     try {
-      const res = await adminLogin(email.trim(), password);
+      const res = await adminLogin(email.trim(), password, rememberMe);
       clearCachedAdminUser();
-      setAdminToken(res.access_token);
+      setAdminToken(res.access_token, rememberMe);
       if (res.must_change_password) {
         router.replace("/admin/account?required=1");
       } else {
@@ -75,6 +76,15 @@ export default function AdminLoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               className={adminUi.input}
             />
+          </label>
+          <label className="flex items-center gap-2 text-sm text-[var(--ml-steel)]">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(e) => setRememberMe(e.target.checked)}
+              className="h-4 w-4"
+            />
+            <span>{t("loginRememberMe")}</span>
           </label>
           <button
             type="submit"
