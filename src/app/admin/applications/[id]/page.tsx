@@ -35,6 +35,13 @@ import {
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import type { AdminMessageKey } from "@/lib/adminI18n";
 import { formatAdminFetchError } from "@/lib/adminFetchError";
+import { formatAdminDateTime } from "@/lib/adminDateTime";
+import {
+  applicationStatusTimestamp,
+  applicationTimelineEvents,
+  applicationTimestampStrip,
+  preferApplicationTimeline,
+} from "@/lib/applicationTimestamps";
 import { facebookLink } from "@/lib/facebookSearch";
 import RejectionEmailComposer, {
   type RejectionComposeValues,
@@ -641,6 +648,11 @@ export default function ApplicationDetailPage() {
       ? t("appDetailRoommates").replace("{count}", String(app.roommate_count))
       : null,
   ].filter(Boolean);
+  const timestampStrip = applicationTimestampStrip(app, locale);
+  const statusTimestamp = applicationStatusTimestamp(app, locale);
+  const timelineEvents = applicationTimelineEvents(app, locale);
+  const showTimeline = preferApplicationTimeline(timestampStrip, timelineEvents);
+  const showStrip = !showTimeline && timestampStrip.length > 1;
 
   const documentCount =
     sortedMembers.reduce((count, member) => count + (member.documents?.length ?? 0), 0) +
@@ -706,6 +718,40 @@ export default function ApplicationDetailPage() {
             </span>
           </div>
 
+          {!showTimeline && !showStrip && statusTimestamp ? (
+            <p className="mt-3 text-sm font-medium text-[var(--ml-ink)]">
+              {t(statusTimestamp.labelKey).replace(
+                "{when}",
+                statusTimestamp.when
+              )}
+            </p>
+          ) : null}
+          {showTimeline ? (
+            <div className="mt-3">
+              <p className={adminUi.fieldLabel}>{t("appTsTimelineTitle")}</p>
+              <ol className="mt-2 space-y-1.5 border-l border-[var(--ml-line)] pl-3">
+                {timelineEvents.map((event) => (
+                  <li
+                    key={`${event.labelKey}-${event.atMs}`}
+                    className="text-sm text-[var(--ml-steel)]"
+                  >
+                    <span className="text-[var(--ml-ink)]">
+                      {t(event.labelKey)}
+                    </span>
+                    {" · "}
+                    {event.when}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          ) : showStrip ? (
+            <p className={`${adminUi.pageSubtitle} mt-3 text-sm`}>
+              {timestampStrip
+                .map((part) => `${t(part.labelKey)} · ${part.when}`)
+                .join(" · ")}
+            </p>
+          ) : null}
+
           {error ? <p className={`${adminUi.alertError} mt-4`}>{error}</p> : null}
           {identityFlash ? (
             <p className={`${adminUi.alertSuccess} mt-4`}>{identityFlash}</p>
@@ -733,9 +779,7 @@ export default function ApplicationDetailPage() {
             <p className={`${adminUi.pageSubtitle} mt-4`}>
               {t("draftNudgeSent").replace(
                 "{when}",
-                new Date(app.draft_nudge_sent_at).toLocaleString(
-                  locale === "en" ? "en-CA" : "fr-CA"
-                )
+                formatAdminDateTime(app.draft_nudge_sent_at, locale) ?? ""
               )}
             </p>
           ) : null}
@@ -743,9 +787,8 @@ export default function ApplicationDetailPage() {
             <p className={`${adminUi.pageSubtitle} mt-2`}>
               {t("applicantNudgeSent").replace(
                 "{when}",
-                new Date(app.applicant_draft_nudge_sent_at).toLocaleString(
-                  locale === "en" ? "en-CA" : "fr-CA"
-                )
+                formatAdminDateTime(app.applicant_draft_nudge_sent_at, locale) ??
+                  ""
               )}
             </p>
           ) : null}

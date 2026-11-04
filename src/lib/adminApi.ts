@@ -43,6 +43,10 @@ export type ApplicationListItem = {
   building_id: number;
   building_name: string;
   created_at: string;
+  credit_check_requested_at?: string | null;
+  accepted_at?: string | null;
+  rejection_email_sent_at?: string | null;
+  updated_at?: string | null;
 };
 
 export type ApplicationMember = {
@@ -191,6 +195,8 @@ export type ApplicationDetail = {
   screening_reviews?: string[];
   janitor_review_checklist?: JanitorReviewChecklist | null;
   credit_check_requested_at?: string | null;
+  accepted_at?: string | null;
+  janitor_reviewed_at?: string | null;
 };
 
 export type ApplicationList = {
