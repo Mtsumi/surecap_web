@@ -4,6 +4,7 @@ import RejectionEmailComposer, {
   type RejectionComposeValues,
 } from "./RejectionEmailComposer";
 import type { RejectionEmailDraft } from "@/lib/adminApi";
+import { formatAdminDateTime } from "@/lib/adminDateTime";
 import { adminUi } from "@/lib/adminUi";
 import { useAdminCopy } from "../AdminLocaleContext";
 
@@ -50,9 +51,7 @@ export default function SteveCreditDecision({
   onConfirmRefuse: (values: RejectionComposeValues) => void | Promise<void>;
 }) {
   const { locale, t } = useAdminCopy();
-  const offerSentLabel = offerSentAt
-    ? new Date(offerSentAt).toLocaleString(locale === "en" ? "en-CA" : "fr-CA")
-    : null;
+  const offerSentLabel = formatAdminDateTime(offerSentAt, locale);
 
   const body = (
     <div className="space-y-4">

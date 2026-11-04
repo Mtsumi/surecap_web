@@ -16,6 +16,8 @@ import {
   type ApplicationStatus,
 } from "@/lib/adminStatus";
 import { formatAdminFetchError } from "@/lib/adminFetchError";
+import { formatAdminDateTime } from "@/lib/adminDateTime";
+import { applicationStatusTimestamp } from "@/lib/applicationTimestamps";
 
 /** Empty string = omit status (API hides drafts). */
 type StatusFilter = "" | ApplicationStatus;
@@ -148,25 +150,39 @@ export default function ApplicationsPage() {
 
       {!loading && !error && items.length > 0 && (
         <ul className={`${adminUi.list} mt-6`}>
-          {items.map((app) => (
-            <li key={app.id} className="!p-0">
-              <Link
-                href={`/admin/applications/${app.id}`}
-                className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 transition-colors hover:bg-[var(--ml-paper)] sm:px-5"
-              >
-                <div>
-                  <p className="font-semibold text-[var(--ml-ink)]">
-                    #{app.id}{" "}
-                    {[app.given_name, app.family_name].filter(Boolean).join(" ") || "—"}
-                  </p>
-                  <p className="text-sm text-[var(--ml-steel)]">
-                    {app.building_name} · {app.unit_number}
-                  </p>
-                </div>
-                {statusBadge(app.status, locale)}
-              </Link>
-            </li>
-          ))}
+          {items.map((app) => {
+            const created = formatAdminDateTime(app.created_at, locale);
+            const statusLine = applicationStatusTimestamp(app, locale);
+            const statusText =
+              statusLine && statusLine.labelKey !== "appTsStatusCreated"
+                ? t(statusLine.labelKey).replace("{when}", statusLine.when)
+                : null;
+            return (
+              <li key={app.id} className="!p-0">
+                <Link
+                  href={`/admin/applications/${app.id}`}
+                  className="flex flex-wrap items-center justify-between gap-3 px-4 py-4 transition-colors hover:bg-[var(--ml-paper)] sm:px-5"
+                >
+                  <div>
+                    <p className="font-semibold text-[var(--ml-ink)]">
+                      #{app.id}{" "}
+                      {[app.given_name, app.family_name].filter(Boolean).join(" ") || "—"}
+                    </p>
+                    <p className="text-sm text-[var(--ml-steel)]">
+                      {app.building_name} · {app.unit_number}
+                    </p>
+                    {created ? (
+                      <p className="mt-1 text-xs text-[var(--ml-steel)]">
+                        {t("applicationsCreated").replace("{when}", created)}
+                        {statusText ? ` · ${statusText}` : null}
+                      </p>
+                    ) : null}
+                  </div>
+                  {statusBadge(app.status, locale)}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </>
