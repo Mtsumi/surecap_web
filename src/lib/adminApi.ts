@@ -710,13 +710,15 @@ export function createMaintenanceTicket(body: MaintenanceTicketCreateInput) {
 
 export async function uploadMaintenanceTicketAttachment(
   ticketId: number,
-  file: File
+  file: File,
+  kind: "issue" | "completion" = "issue"
 ): Promise<MaintenanceTicket> {
   const form = new FormData();
   form.append("file", file);
+  const q = kind === "issue" ? "" : `?kind=${encodeURIComponent(kind)}`;
   let res: Response;
   try {
-    res = await fetch(`${API_URL}/maintenance/tickets/${ticketId}/attachments`, {
+    res = await fetch(`${API_URL}/maintenance/tickets/${ticketId}/attachments${q}`, {
       method: "POST",
       headers: maintenanceUploadHeaders(),
       body: form,
@@ -788,6 +790,27 @@ export function assignMaintenanceWorker(ticketId: number, workerId: number) {
   return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/assign`, {
     method: "POST",
     body: JSON.stringify({ worker_id: workerId }),
+  });
+}
+
+export function startMaintenanceJob(ticketId: number) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/start`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function completeMaintenanceJob(ticketId: number) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/complete`, {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+}
+
+export function approveMaintenanceClose(ticketId: number) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/approve-close`, {
+    method: "POST",
+    body: JSON.stringify({}),
   });
 }
 
