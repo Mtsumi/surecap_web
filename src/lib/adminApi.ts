@@ -330,10 +330,14 @@ async function adminPublicPost(path: string, payload: object): Promise<string> {
   return body?.message || "Success";
 }
 
-export function adminLogin(email: string, password: string) {
+export function adminLogin(
+  email: string,
+  password: string,
+  remember_me = false
+) {
   return adminFetch<AdminLoginResponse>("/admin/auth/login", {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email, password, remember_me }),
   });
 }
 
