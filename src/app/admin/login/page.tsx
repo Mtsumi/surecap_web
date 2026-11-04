@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { adminLogin } from "@/lib/adminApi";
 import { setAdminToken } from "@/lib/adminAuth";
+import { safeAdminLoginNext } from "@/lib/adminLoginRedirect";
 import { adminUi } from "@/lib/adminUi";
 import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { clearCachedAdminUser } from "../AdminShell";
@@ -30,7 +31,11 @@ export default function AdminLoginPage() {
       if (res.must_change_password) {
         router.replace("/admin/account?required=1");
       } else {
-        router.replace("/admin/applications");
+        const next =
+          typeof window !== "undefined"
+            ? safeAdminLoginNext(new URLSearchParams(window.location.search).get("next"))
+            : null;
+        router.replace(next ?? "/admin/applications");
       }
     } catch (err) {
       setError(formatAdminFetchError(err, locale, t("loginError")));
