@@ -1026,6 +1026,18 @@ export function formatSoquijFailure(
         ? "Le site SOQUIJ n'a pas terminé de charger. Relancez quand le site est accessible."
         : "The SOQUIJ site did not finish loading. Re-run when the site is reachable.",
     },
+    usage_policy_block: {
+      title: fr ? "SOQUIJ: politique d'utilisation" : "SOQUIJ usage policy block",
+      detail: fr
+        ? "SOQUIJ a refusé la recherche automatisée. N'enfilez pas tout de suite. Attendez quelques heures, ou cherchez le nom manuellement sur citoyens.soquij.qc.ca."
+        : "SOQUIJ blocked this automated search. Do not re-run right away. Wait a few hours, or search the name manually on citoyens.soquij.qc.ca.",
+    },
+    captcha_error: {
+      title: fr ? "Erreur captcha SOQUIJ" : "SOQUIJ captcha error",
+      detail: fr
+        ? "Le reCAPTCHA SOQUIJ n'a pas pu être résolu. Vérifiez CAPTCHA_API_KEY et les logs du worker, puis relancez une fois."
+        : "SOQUIJ reCAPTCHA could not be solved. Check CAPTCHA_API_KEY and browser worker logs, then re-run once.",
+    },
     worker_timeout: {
       title: fr ? "Délai dépassé" : "Timed out",
       detail: fr
