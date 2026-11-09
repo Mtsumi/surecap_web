@@ -41,6 +41,19 @@ describe("formatSoquijFailure", () => {
     const copy = formatSoquijFailure({ error_code: "no_family_name" }, "fr");
     expect(copy?.title).toMatch(/famille/i);
   });
+
+  it("maps usage_policy_block without urging immediate re-run", () => {
+    const copy = formatSoquijFailure({ error_code: "usage_policy_block" }, "en");
+    expect(copy?.title).toMatch(/usage policy/i);
+    expect(copy?.detail.toLowerCase()).toMatch(/do not re-run right away/);
+    expect(copy?.detail).not.toMatch(/—/);
+  });
+
+  it("maps captcha_error", () => {
+    const copy = formatSoquijFailure({ error_code: "captcha_error" }, "en");
+    expect(copy?.title).toMatch(/captcha/i);
+    expect(copy?.detail).toMatch(/CAPTCHA_API_KEY/);
+  });
 });
 
 describe("formatTalScreeningPreview", () => {
