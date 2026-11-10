@@ -24,9 +24,11 @@ export const MAINTENANCE_STATUSES = [
   "closed",
 ] as const;
 
+/** Roles shown in Team UI (legacy janitor is migrated server-side to PA). */
 export const MAINTENANCE_ROLES = [
   "staff",
-  "janitor",
+  "property_administrator",
+  "assistant_property_manager",
   "maintenance_manager",
   "worker",
 ] as const;
@@ -66,7 +68,10 @@ export function buildingsForMaintenanceUser<T extends { id: number }>(
   user: AdminUser | null | undefined,
   buildings: T[]
 ): T[] {
-  if (!user || user.is_super_admin || user.maintenance_role !== "janitor") {
+  const scoped =
+    user?.maintenance_role === "property_administrator" ||
+    user?.maintenance_role === "janitor";
+  if (!user || user.is_super_admin || !scoped) {
     return buildings;
   }
   const allowed = new Set(user.janitor_building_ids ?? []);
@@ -122,18 +127,26 @@ const CATEGORY_LABEL_EN: Record<string, string> = {
 };
 
 const ROLE_LABEL_FR: Record<string, string> = {
-  staff: "Personnel",
-  janitor: "Concierge",
+  staff: "Personnel (sans billets)",
+  property_administrator: "Administrateur de propriété",
+  assistant_property_manager: "Adjoint à la gestion",
+  janitor: "Administrateur de propriété",
   maintenance_manager: "Gestionnaire entretien",
   worker: "Technicien",
 };
 
 const ROLE_LABEL_EN: Record<string, string> = {
-  staff: "Staff",
-  janitor: "Janitor",
+  staff: "Staff (no tickets)",
+  property_administrator: "Property administrator",
+  assistant_property_manager: "Assistant property manager",
+  janitor: "Property administrator",
   maintenance_manager: "Maintenance manager",
   worker: "Worker",
 };
+
+export function roleNeedsBuildings(role: string | null | undefined): boolean {
+  return role === "property_administrator" || role === "janitor";
+}
 
 export function maintenanceStatusLabel(status: string, locale: Locale): string {
   const map = locale === "fr" ? STATUS_LABEL_FR : STATUS_LABEL_EN;
