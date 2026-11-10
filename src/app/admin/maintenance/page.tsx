@@ -105,8 +105,8 @@ export default function MaintenanceListPage() {
           </Link>
           {isSuper ? (
             <>
-              <Link href="/admin/maintenance/staff" className={adminUi.btnSecondary}>
-                {t("maintenanceStaff")}
+              <Link href="/admin/team" className={adminUi.btnSecondary}>
+                {t("navTeam")}
               </Link>
               <Link href="/admin/maintenance/settings" className={adminUi.btnSecondary}>
                 {t("maintenanceNotifySettings")}
