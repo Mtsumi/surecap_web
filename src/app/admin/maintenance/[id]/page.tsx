@@ -13,6 +13,7 @@ import {
   getMaintenanceTicket,
   listMaintenanceWorkers,
   postMaintenanceOwnerDecision,
+  proposeMaintenanceVisit,
   startMaintenanceJob,
   uploadMaintenanceTicketAttachment,
 } from "@/lib/adminApi";
@@ -55,6 +56,22 @@ export default function MaintenanceDetailPage() {
   const [workerBusy, setWorkerBusy] = useState(false);
   const [canAssign, setCanAssign] = useState(false);
   const [canClose, setCanClose] = useState(false);
+  const [visitVacant, setVisitVacant] = useState(false);
+  const [visitEmail, setVisitEmail] = useState("");
+  const [visitStart, setVisitStart] = useState(() => {
+    const d = new Date();
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 2);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
+  const [visitEnd, setVisitEnd] = useState(() => {
+    const d = new Date();
+    d.setMinutes(0, 0, 0);
+    d.setHours(d.getHours() + 4);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  });
 
   const reportError = useCallback((msg: string) => setError(msg), []);
 
@@ -313,7 +330,102 @@ export default function MaintenanceDetailPage() {
         </div>
       ) : null}
 
-      {isAssignee && ticket.status === "assigned" ? (
+      {isAssignee &&
+      (ticket.status === "assigned" ||
+        ticket.status === "awaiting_tenant" ||
+        ticket.status === "scheduled") ? (
+        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
+          <h2 className={adminUi.sectionTitle}>{t("maintenanceProposeVisitTitle")}</h2>
+          <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceProposeVisitHint")}</p>
+          {ticket.status === "awaiting_tenant" ? (
+            <p className="text-sm text-[var(--ml-steel)]">
+              {ticket.tenant_reply === "no"
+                ? t("maintenanceProposeVisitDeclined")
+                : t("maintenanceProposeVisitWaiting")}
+            </p>
+          ) : null}
+          {ticket.status === "scheduled" ? (
+            <p className="text-sm text-[var(--ml-steel)]">
+              {t("maintenanceProposeVisitScheduled")}
+              {ticket.visit_window_start && ticket.visit_window_end
+                ? ` · ${new Date(ticket.visit_window_start).toLocaleString()} – ${new Date(ticket.visit_window_end).toLocaleString()}`
+                : ""}
+            </p>
+          ) : null}
+          <label className="flex items-center gap-2 text-sm text-[var(--ml-ink)]">
+            <input
+              type="checkbox"
+              checked={visitVacant}
+              onChange={(e) => setVisitVacant(e.target.checked)}
+            />
+            {t("maintenanceProposeVisitVacant")}
+          </label>
+          {!visitVacant ? (
+            <label className="block text-sm text-[var(--ml-steel)]">
+              {t("maintenanceProposeVisitEmail")}
+              <input
+                className={adminUi.input}
+                type="email"
+                value={visitEmail}
+                onChange={(e) => setVisitEmail(e.target.value)}
+              />
+            </label>
+          ) : null}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <label className="block text-sm text-[var(--ml-steel)]">
+              {t("maintenanceProposeVisitStart")}
+              <input
+                className={adminUi.input}
+                type="datetime-local"
+                value={visitStart}
+                onChange={(e) => setVisitStart(e.target.value)}
+              />
+            </label>
+            <label className="block text-sm text-[var(--ml-steel)]">
+              {t("maintenanceProposeVisitEnd")}
+              <input
+                className={adminUi.input}
+                type="datetime-local"
+                value={visitEnd}
+                onChange={(e) => setVisitEnd(e.target.value)}
+              />
+            </label>
+          </div>
+          <button
+            type="button"
+            className={adminUi.btnPrimary}
+            disabled={workerBusy || (!visitVacant && !visitEmail.trim())}
+            onClick={() => {
+              setWorkerBusy(true);
+              setError(null);
+              proposeMaintenanceVisit(ticketId, {
+                window_start: new Date(visitStart).toISOString(),
+                window_end: new Date(visitEnd).toISOString(),
+                vacant: visitVacant,
+                notify_email: visitVacant ? null : visitEmail.trim(),
+                locale,
+              })
+                .then((updated) => {
+                  setTicket(updated);
+                  setMessage(t("maintenanceDecisionSaved"));
+                })
+                .catch((e) =>
+                  setError(formatAdminFetchError(e, locale, t("maintenanceError")))
+                )
+                .finally(() => setWorkerBusy(false));
+            }}
+          >
+            {t("maintenanceProposeVisitSubmit")}
+          </button>
+          {ticket.status === "assigned" ? (
+            <p className="text-xs text-[var(--ml-steel)]">
+              {t("maintenanceWorkerStartNeedSchedule")}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {isAssignee && ticket.status === "scheduled" ? (
         <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
           <h2 className={adminUi.sectionTitle}>{t("maintenanceWorkerStartTitle")}</h2>
           <button
