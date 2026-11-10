@@ -632,9 +632,27 @@ export type MaintenanceTicket = {
   assigned_worker_id: number | null;
   assigned_worker_email?: string | null;
   assigned_worker_display_name?: string | null;
+  visit_window_start?: string | null;
+  visit_window_end?: string | null;
+  visit_vacant?: boolean;
+  visit_notify_email?: string | null;
+  visit_notify_phone?: string | null;
+  visit_proposed_at?: string | null;
+  tenant_notice_sent_at?: string | null;
+  tenant_reply?: string | null;
+  tenant_replied_at?: string | null;
   created_at: string;
   updated_at: string;
   attachments: MaintenanceAttachment[];
+};
+
+export type ProposeVisitInput = {
+  window_start: string;
+  window_end: string;
+  vacant: boolean;
+  notify_email?: string | null;
+  notify_phone?: string | null;
+  locale?: "fr" | "en";
 };
 
 export type MaintenanceTicketCreateInput = {
@@ -800,6 +818,13 @@ export function assignMaintenanceWorker(ticketId: number, workerId: number) {
   return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/assign`, {
     method: "POST",
     body: JSON.stringify({ worker_id: workerId }),
+  });
+}
+
+export function proposeMaintenanceVisit(ticketId: number, body: ProposeVisitInput) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/propose-visit`, {
+    method: "POST",
+    body: JSON.stringify(body),
   });
 }
 
