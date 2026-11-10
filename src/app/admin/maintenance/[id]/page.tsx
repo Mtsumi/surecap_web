@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState } from "react";
 import {
   MaintenanceTicket,
   MaintenanceWorker,
-  acknowledgeMaintenanceTicket,
   adminMe,
   approveMaintenanceClose,
   assignMaintenanceWorker,
@@ -44,18 +43,18 @@ export default function MaintenanceDetailPage() {
   const [ticket, setTicket] = useState<MaintenanceTicket | null>(null);
   const [viewerId, setViewerId] = useState<number | null>(null);
   const [isSuper, setIsSuper] = useState(false);
-  const [isMm, setIsMm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [decisionBusy, setDecisionBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
-  const [etaLocal, setEtaLocal] = useState("");
   const [workers, setWorkers] = useState<MaintenanceWorker[]>([]);
   const [workerId, setWorkerId] = useState<number | "">("");
   const [mmBusy, setMmBusy] = useState(false);
   const [workerBusy, setWorkerBusy] = useState(false);
+  const [canAssign, setCanAssign] = useState(false);
+  const [canClose, setCanClose] = useState(false);
 
   const reportError = useCallback((msg: string) => setError(msg), []);
 
@@ -74,9 +73,12 @@ export default function MaintenanceDetailPage() {
         setTicket(data);
         setViewerId(user.id);
         setIsSuper(user.is_super_admin);
-        const mm = user.is_super_admin || user.maintenance_role === "maintenance_manager";
-        setIsMm(mm);
-        if (mm) {
+        const assign = user.maintenance_role === "maintenance_manager";
+        const close =
+          user.is_super_admin || user.maintenance_role === "maintenance_manager";
+        setCanAssign(assign);
+        setCanClose(close);
+        if (assign) {
           listMaintenanceWorkers()
             .then(setWorkers)
             .catch(() => setWorkers([]));
@@ -115,23 +117,6 @@ export default function MaintenanceDetailPage() {
       setError(formatAdminFetchError(e, locale, t("maintenanceError")));
     } finally {
       setDecisionBusy(false);
-    }
-  };
-
-  const onAck = async () => {
-    if (mmBusy || !etaLocal) return;
-    setMmBusy(true);
-    setError(null);
-    setMessage(null);
-    try {
-      const iso = new Date(etaLocal).toISOString();
-      const updated = await acknowledgeMaintenanceTicket(ticketId, iso);
-      setTicket(updated);
-      setMessage(t("maintenanceDecisionSaved"));
-    } catch (e) {
-      setError(formatAdminFetchError(e, locale, t("maintenanceError")));
-    } finally {
-      setMmBusy(false);
     }
   };
 
@@ -238,14 +223,6 @@ export default function MaintenanceDetailPage() {
             {t("maintenanceOpenedBy").replace("{email}", ticket.opened_by_email)}
           </p>
         ) : null}
-        {ticket.estimated_completion_at ? (
-          <p className="text-sm text-[var(--ml-steel)]">
-            {t("maintenanceEtaLabel").replace(
-              "{date}",
-              new Date(ticket.estimated_completion_at).toLocaleString(locale === "fr" ? "fr-CA" : "en-CA")
-            )}
-          </p>
-        ) : null}
         {ticket.assigned_worker_id ? (
           <p className="text-sm text-[var(--ml-steel)]">
             {viewerId === ticket.assigned_worker_id
@@ -304,33 +281,10 @@ export default function MaintenanceDetailPage() {
         ) : null}
       </div>
 
-      {isMm && ticket.status === "open" ? (
-        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
-          <h2 className={adminUi.sectionTitle}>{t("maintenanceAckTitle")}</h2>
-          <label className="block text-sm text-[var(--ml-steel)]">
-            {t("maintenanceAckEta")}
-            <input
-              type="datetime-local"
-              className={adminUi.input}
-              value={etaLocal}
-              onChange={(e) => setEtaLocal(e.target.value)}
-              disabled={mmBusy}
-            />
-          </label>
-          <button
-            type="button"
-            className={adminUi.btnPrimary}
-            disabled={mmBusy || !etaLocal}
-            onClick={() => void onAck()}
-          >
-            {t("maintenanceAckSubmit")}
-          </button>
-        </div>
-      ) : null}
-
-      {isMm && ticket.status === "acknowledged" ? (
+      {canAssign && (ticket.status === "open" || ticket.status === "acknowledged") ? (
         <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
           <h2 className={adminUi.sectionTitle}>{t("maintenanceAssignTitle")}</h2>
+          <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceAssignHint")}</p>
           <label className="block text-sm text-[var(--ml-steel)]">
             {t("maintenanceSelectWorker")}
             <select
@@ -411,7 +365,7 @@ export default function MaintenanceDetailPage() {
         </div>
       ) : null}
 
-      {isMm && ticket.status === "pending_manager_close" ? (
+      {canClose && ticket.status === "pending_manager_close" ? (
         <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
           <h2 className={adminUi.sectionTitle}>{t("maintenanceApproveCloseTitle")}</h2>
           <button

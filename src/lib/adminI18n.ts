@@ -424,6 +424,7 @@ export const adminMessages = {
     maintenanceAckEta: "Date estimée de fin",
     maintenanceAckSubmit: "Accuser réception",
     maintenanceAssignTitle: "Assigner un technicien",
+    maintenanceAssignHint: "Choisissez un travailleur pour ce billet. Pas de date estimée — le technicien planifiera la visite.",
     maintenanceAssignSubmit: "Assigner",
     maintenanceWorkerStartTitle: "Démarrer les travaux",
     maintenanceWorkerStartSubmit: "Démarrer",
@@ -956,6 +957,8 @@ export const adminMessages = {
     maintenanceAckEta: "Estimated completion",
     maintenanceAckSubmit: "Acknowledge",
     maintenanceAssignTitle: "Assign a worker",
+    maintenanceAssignHint:
+      "Pick a worker for this ticket. No estimated date — the worker will schedule the visit.",
     maintenanceAssignSubmit: "Assign",
     maintenanceWorkerStartTitle: "Start job",
     maintenanceWorkerStartSubmit: "Start job",
