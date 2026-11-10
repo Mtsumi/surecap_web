@@ -51,6 +51,7 @@ export default function MaintenanceNewClient() {
   const [busy, setBusy] = useState(false);
   const [uploadBusy, setUploadBusy] = useState(false);
   const [progress, setProgress] = useState<string | null>(null);
+  const [photoAckCount, setPhotoAckCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const draftTicketIdRef = useRef<number | null>(null);
   const photoRowSeq = useRef(0);
@@ -95,6 +96,7 @@ export default function MaintenanceNewClient() {
     draftTicketIdRef.current = null;
     setDraftTicketId(null);
     setPhotoRows([]);
+    setPhotoAckCount(null);
     if (oldId != null) {
       deleteMaintenanceDraft(oldId).catch(() => {});
     }
@@ -129,7 +131,9 @@ export default function MaintenanceNewClient() {
       return;
     }
     setError(null);
+    setPhotoAckCount(null);
     setUploadBusy(true);
+    let uploadedInBatch = 0;
     try {
       const ticketId = await ensureDraft();
       for (const file of files) {
@@ -144,6 +148,7 @@ export default function MaintenanceNewClient() {
           setPhotoRows((prev) =>
             prev.map((row) => (row.key === key ? { ...row, status: "done" } : row))
           );
+          uploadedInBatch += 1;
         } catch (uploadErr) {
           const msg = formatAdminFetchError(uploadErr, locale, t("maintenanceError"));
           setPhotoRows((prev) =>
@@ -154,6 +159,7 @@ export default function MaintenanceNewClient() {
           setError(msg);
         }
       }
+      if (uploadedInBatch > 0) setPhotoAckCount(uploadedInBatch);
     } catch (err) {
       setError(formatAdminFetchError(err, locale, t("maintenanceCreateError")));
     } finally {
@@ -363,6 +369,17 @@ export default function MaintenanceNewClient() {
           <p className="mt-2 text-xs text-[var(--ml-steel)]">
             {t("maintenancePhotosNeedLocation")}
           </p>
+        ) : null}
+        {photoAckCount != null && photoAckCount > 0 ? (
+          <div
+            className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900"
+            role="status"
+          >
+            <p className="font-semibold">{t("maintenancePhotosAckTitle")}</p>
+            <p className="mt-0.5 text-xs">
+              {t("maintenancePhotosAckBody").replace("{count}", String(photoAckCount))}
+            </p>
+          </div>
         ) : null}
         {photoRows.length > 0 ? (
           <ul className="mt-2 space-y-1 text-xs text-[var(--ml-ink)]">
