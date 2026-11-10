@@ -69,8 +69,8 @@ export function buildingsForMaintenanceUser<T extends { id: number }>(
   buildings: T[]
 ): T[] {
   const scoped =
-    user.maintenance_role === "property_administrator" ||
-    user.maintenance_role === "janitor";
+    user?.maintenance_role === "property_administrator" ||
+    user?.maintenance_role === "janitor";
   if (!user || user.is_super_admin || !scoped) {
     return buildings;
   }
