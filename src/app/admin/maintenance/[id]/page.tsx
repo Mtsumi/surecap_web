@@ -58,6 +58,7 @@ export default function MaintenanceDetailPage() {
   const [canClose, setCanClose] = useState(false);
   const [visitVacant, setVisitVacant] = useState(false);
   const [visitEmail, setVisitEmail] = useState("");
+  const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [visitStart, setVisitStart] = useState(() => {
     const d = new Date();
     d.setMinutes(0, 0, 0);
@@ -330,12 +331,67 @@ export default function MaintenanceDetailPage() {
         </div>
       ) : null}
 
+      {isAssignee && ticket.status === "scheduled" ? (
+        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
+          <h2 className={adminUi.sectionTitle}>{t("maintenanceWorkerStartTitle")}</h2>
+          <button
+            type="button"
+            className={adminUi.btnPrimary}
+            disabled={workerBusy || rescheduleOpen}
+            onClick={() => {
+              setWorkerBusy(true);
+              setError(null);
+              startMaintenanceJob(ticketId)
+                .then((updated) => {
+                  setTicket(updated);
+                  setRescheduleOpen(false);
+                  setMessage(t("maintenanceDecisionSaved"));
+                })
+                .catch((e) =>
+                  setError(formatAdminFetchError(e, locale, t("maintenanceError")))
+                )
+                .finally(() => setWorkerBusy(false));
+            }}
+          >
+            {t("maintenanceWorkerStartSubmit")}
+          </button>
+        </div>
+      ) : null}
+
+      {isAssignee && ticket.status === "scheduled" && !rescheduleOpen ? (
+        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-3`}>
+          <h2 className={adminUi.sectionTitle}>{t("maintenanceProposeVisitScheduled")}</h2>
+          {ticket.visit_window_start && ticket.visit_window_end ? (
+            <p className="text-sm text-[var(--ml-ink)]">
+              {new Date(ticket.visit_window_start).toLocaleString()} –{" "}
+              {new Date(ticket.visit_window_end).toLocaleString()}
+            </p>
+          ) : null}
+          {ticket.visit_vacant ? (
+            <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceProposeVisitVacant")}</p>
+          ) : ticket.visit_notify_email ? (
+            <p className="text-sm text-[var(--ml-steel)]">{ticket.visit_notify_email}</p>
+          ) : null}
+          <button
+            type="button"
+            className={adminUi.btnSecondary}
+            onClick={() => setRescheduleOpen(true)}
+          >
+            {t("maintenanceProposeVisitReschedule")}
+          </button>
+        </div>
+      ) : null}
+
       {isAssignee &&
       (ticket.status === "assigned" ||
         ticket.status === "awaiting_tenant" ||
-        ticket.status === "scheduled") ? (
+        (ticket.status === "scheduled" && rescheduleOpen)) ? (
         <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
-          <h2 className={adminUi.sectionTitle}>{t("maintenanceProposeVisitTitle")}</h2>
+          <h2 className={adminUi.sectionTitle}>
+            {ticket.status === "scheduled"
+              ? t("maintenanceProposeVisitReschedule")
+              : t("maintenanceProposeVisitTitle")}
+          </h2>
           <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceProposeVisitHint")}</p>
           {ticket.status === "awaiting_tenant" ? (
             <p className="text-sm text-[var(--ml-steel)]">
@@ -345,12 +401,14 @@ export default function MaintenanceDetailPage() {
             </p>
           ) : null}
           {ticket.status === "scheduled" ? (
-            <p className="text-sm text-[var(--ml-steel)]">
-              {t("maintenanceProposeVisitScheduled")}
-              {ticket.visit_window_start && ticket.visit_window_end
-                ? ` · ${new Date(ticket.visit_window_start).toLocaleString()} – ${new Date(ticket.visit_window_end).toLocaleString()}`
-                : ""}
-            </p>
+            <button
+              type="button"
+              className="text-sm underline text-[var(--ml-steel)]"
+              onClick={() => setRescheduleOpen(false)}
+              disabled={workerBusy}
+            >
+              {t("maintenanceProposeVisitCancelReschedule")}
+            </button>
           ) : null}
           <label className="flex items-center gap-2 text-sm text-[var(--ml-ink)]">
             <input
@@ -407,6 +465,7 @@ export default function MaintenanceDetailPage() {
               })
                 .then((updated) => {
                   setTicket(updated);
+                  setRescheduleOpen(false);
                   setMessage(t("maintenanceDecisionSaved"));
                 })
                 .catch((e) =>
@@ -422,32 +481,6 @@ export default function MaintenanceDetailPage() {
               {t("maintenanceWorkerStartNeedSchedule")}
             </p>
           ) : null}
-        </div>
-      ) : null}
-
-      {isAssignee && ticket.status === "scheduled" ? (
-        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-4`}>
-          <h2 className={adminUi.sectionTitle}>{t("maintenanceWorkerStartTitle")}</h2>
-          <button
-            type="button"
-            className={adminUi.btnPrimary}
-            disabled={workerBusy}
-            onClick={() => {
-              setWorkerBusy(true);
-              setError(null);
-              startMaintenanceJob(ticketId)
-                .then((updated) => {
-                  setTicket(updated);
-                  setMessage(t("maintenanceDecisionSaved"));
-                })
-                .catch((e) =>
-                  setError(formatAdminFetchError(e, locale, t("maintenanceError")))
-                )
-                .finally(() => setWorkerBusy(false));
-            }}
-          >
-            {t("maintenanceWorkerStartSubmit")}
-          </button>
         </div>
       ) : null}
 
