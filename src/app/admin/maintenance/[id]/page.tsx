@@ -10,6 +10,7 @@ import {
   approveMaintenanceClose,
   assignMaintenanceWorker,
   completeMaintenanceJob,
+  getBrowserPunchGps,
   getMaintenanceTicket,
   listMaintenanceWorkers,
   postMaintenanceOwnerDecision,
@@ -341,7 +342,8 @@ export default function MaintenanceDetailPage() {
             onClick={() => {
               setWorkerBusy(true);
               setError(null);
-              startMaintenanceJob(ticketId)
+              void getBrowserPunchGps()
+                .then((gps) => startMaintenanceJob(ticketId, gps))
                 .then((updated) => {
                   setTicket(updated);
                   setRescheduleOpen(false);
@@ -495,7 +497,8 @@ export default function MaintenanceDetailPage() {
             onClick={() => {
               setWorkerBusy(true);
               setError(null);
-              completeMaintenanceJob(ticketId)
+              void getBrowserPunchGps()
+                .then((gps) => completeMaintenanceJob(ticketId, gps))
                 .then((updated) => {
                   setTicket(updated);
                   setMessage(t("maintenanceDecisionSaved"));
