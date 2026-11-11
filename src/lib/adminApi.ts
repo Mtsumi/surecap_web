@@ -641,6 +641,8 @@ export type MaintenanceTicket = {
   tenant_notice_sent_at?: string | null;
   tenant_reply?: string | null;
   tenant_replied_at?: string | null;
+  clock_state?: "clocked_in" | "clocked_out";
+  clock_started_at?: string | null;
   created_at: string;
   updated_at: string;
   attachments: MaintenanceAttachment[];
@@ -828,17 +830,60 @@ export function proposeMaintenanceVisit(ticketId: number, body: ProposeVisitInpu
   });
 }
 
-export function startMaintenanceJob(ticketId: number) {
-  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/start`, {
-    method: "POST",
-    body: JSON.stringify({}),
+export type ClockPunchInput = {
+  latitude: number;
+  longitude: number;
+  accuracy_m?: number | null;
+  report?: string | null;
+  idempotency_key?: string | null;
+};
+
+/** Browser geolocation for Phase E punches (required by API). */
+export function getBrowserPunchGps(): Promise<ClockPunchInput> {
+  return new Promise((resolve, reject) => {
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      reject(new Error("Geolocation unavailable"));
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude,
+          accuracy_m: pos.coords.accuracy ?? null,
+        });
+      },
+      (err) => reject(new Error(err.message || "Location required")),
+      { enableHighAccuracy: true, timeout: 15_000 }
+    );
   });
 }
 
-export function completeMaintenanceJob(ticketId: number) {
+export function startMaintenanceJob(ticketId: number, body: ClockPunchInput) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/start`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function stopMaintenanceJob(ticketId: number, body: ClockPunchInput) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/stop`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function resumeMaintenanceJob(ticketId: number, body: ClockPunchInput) {
+  return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/resume`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function completeMaintenanceJob(ticketId: number, body: ClockPunchInput) {
   return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}/complete`, {
     method: "POST",
-    body: JSON.stringify({}),
+    body: JSON.stringify(body),
   });
 }
 
