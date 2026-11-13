@@ -281,7 +281,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
       )}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
-        <header className="flex shrink-0 items-center gap-1.5 border-b border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 print:hidden">
+        <header className="relative z-30 flex shrink-0 items-center gap-1.5 border-b border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 print:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
@@ -296,7 +296,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             </p>
           </div>
           <div className="hidden min-w-0 flex-1 md:block" />
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="flex min-w-0 shrink-0 items-center gap-1.5 sm:gap-2">
             <NotificationBell />
             <span className="md:hidden">
               <LocaleToggle locale={locale} onChange={setLocale} compact />
