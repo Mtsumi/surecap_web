@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   AdminNotification,
   listAdminNotifications,
@@ -17,6 +17,8 @@ export default function NotificationBell() {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
   const [items, setItems] = useState<AdminNotification[]>([]);
+  const [panelTop, setPanelTop] = useState<number | null>(null);
+  const [isNarrow, setIsNarrow] = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
 
   const refresh = useCallback(async () => {
@@ -35,6 +37,34 @@ export default function NotificationBell() {
     return () => window.clearInterval(id);
   }, [refresh]);
 
+  useLayoutEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const syncNarrow = () => setIsNarrow(mq.matches);
+    syncNarrow();
+    mq.addEventListener("change", syncNarrow);
+    return () => mq.removeEventListener("change", syncNarrow);
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open || !isNarrow) {
+      setPanelTop(null);
+      return;
+    }
+    const updateTop = () => {
+      const header = wrapRef.current?.closest("header");
+      if (header) {
+        setPanelTop(header.getBoundingClientRect().bottom + 8);
+      }
+    };
+    updateTop();
+    window.addEventListener("resize", updateTop);
+    window.addEventListener("scroll", updateTop, true);
+    return () => {
+      window.removeEventListener("resize", updateTop);
+      window.removeEventListener("scroll", updateTop, true);
+    };
+  }, [open, isNarrow]);
+
   useEffect(() => {
     if (!open) return;
     const onDoc = (e: MouseEvent) => {
@@ -42,9 +72,19 @@ export default function NotificationBell() {
         setOpen(false);
       }
     };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
-  }, [open]);
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    if (isNarrow) document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("keydown", onKey);
+      if (isNarrow) document.body.style.overflow = prevOverflow;
+    };
+  }, [open, isNarrow]);
 
   const onOpenItem = async (item: AdminNotification) => {
     setOpen(false);
@@ -60,10 +100,10 @@ export default function NotificationBell() {
   };
 
   return (
-    <div className="relative" ref={wrapRef}>
+    <div className="relative shrink-0" ref={wrapRef}>
       <button
         type="button"
-        className="relative shrink-0 rounded-md border border-[var(--ml-line)] px-2.5 py-1.5 text-xs text-[var(--ml-ink)]"
+        className="relative shrink-0 rounded-md border border-[var(--ml-line)] px-2 py-1.5 text-xs text-[var(--ml-ink)] sm:px-2.5"
         aria-label={t("notificationsTitle")}
         aria-expanded={open}
         onClick={() => {
@@ -73,51 +113,62 @@ export default function NotificationBell() {
       >
         {t("notificationsBell")}
         {unread > 0 ? (
-          <span className="absolute -right-1 -top-1 min-w-[1.1rem] rounded-full bg-[var(--ml-brick)] px-1 text-center text-[10px] font-bold leading-4 text-white">
+          <span className="absolute -right-1 -top-1 z-10 min-w-[1.1rem] rounded-full bg-[var(--ml-brick)] px-1 text-center text-[10px] font-bold leading-4 text-white">
             {unread > 9 ? "9+" : unread}
           </span>
         ) : null}
       </button>
       {open ? (
-        <div
-          role="menu"
-          className="absolute right-0 z-30 mt-1 w-80 overflow-hidden rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] shadow-lg"
-        >
-          <p className="border-b border-[var(--ml-line)] px-3 py-2 text-xs font-semibold text-[var(--ml-ink)]">
-            {t("notificationsTitle")}
-          </p>
-          {items.length === 0 ? (
-            <p className="px-3 py-4 text-sm text-[var(--ml-steel)]">{t("notificationsEmpty")}</p>
-          ) : (
-            <ul>
-              {items.map((item) => (
-                <li key={item.id}>
-                  <button
-                    type="button"
-                    className="block w-full px-3 py-2 text-left hover:bg-[var(--ml-paper)]"
-                    onClick={() => void onOpenItem(item)}
-                  >
-                    <span
-                      className={`block text-sm ${item.read_at ? "font-normal text-[var(--ml-steel)]" : "font-semibold text-[var(--ml-ink)]"}`}
-                    >
-                      {item.title}
-                    </span>
-                    <span className="mt-0.5 line-clamp-2 block text-xs text-[var(--ml-steel)]">
-                      {item.body}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-          <Link
-            href="/admin/notifications"
-            className="block border-t border-[var(--ml-line)] px-3 py-2 text-center text-xs font-semibold text-[var(--ml-brick)]"
+        <>
+          <button
+            type="button"
+            aria-label="Close"
+            className="fixed inset-0 z-40 bg-black/20 md:hidden"
             onClick={() => setOpen(false)}
+          />
+          <div
+            role="menu"
+            style={panelTop != null ? { top: panelTop } : undefined}
+            className="fixed left-3 right-3 z-50 max-h-[min(70vh,24rem)] overflow-y-auto rounded-lg border border-[var(--ml-line)] bg-[var(--ml-card)] shadow-lg md:absolute md:left-auto md:right-0 md:top-auto md:mt-1 md:w-80 md:max-h-[min(70vh,28rem)]"
           >
-            {t("notificationsSeeAll")}
-          </Link>
-        </div>
+            <p className="sticky top-0 border-b border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2 text-xs font-semibold text-[var(--ml-ink)]">
+              {t("notificationsTitle")}
+            </p>
+            {items.length === 0 ? (
+              <p className="px-3 py-4 text-sm text-[var(--ml-steel)]">
+                {t("notificationsEmpty")}
+              </p>
+            ) : (
+              <ul>
+                {items.map((item) => (
+                  <li key={item.id}>
+                    <button
+                      type="button"
+                      className="block w-full px-3 py-2.5 text-left hover:bg-[var(--ml-paper)]"
+                      onClick={() => void onOpenItem(item)}
+                    >
+                      <span
+                        className={`block break-words text-sm ${item.read_at ? "font-normal text-[var(--ml-steel)]" : "font-semibold text-[var(--ml-ink)]"}`}
+                      >
+                        {item.title}
+                      </span>
+                      <span className="mt-0.5 line-clamp-2 block break-words text-xs text-[var(--ml-steel)]">
+                        {item.body}
+                      </span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Link
+              href="/admin/notifications"
+              className="sticky bottom-0 block border-t border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2.5 text-center text-xs font-semibold text-[var(--ml-brick)]"
+              onClick={() => setOpen(false)}
+            >
+              {t("notificationsSeeAll")}
+            </Link>
+          </div>
+        </>
       ) : null}
     </div>
   );
