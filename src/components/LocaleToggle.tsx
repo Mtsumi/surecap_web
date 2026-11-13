@@ -32,10 +32,10 @@ export default function LocaleToggle({
         onClick={() => onChange(next)}
         title={next.toUpperCase()}
         aria-label={`Switch to ${next === "en" ? "English" : "French"}`}
-        className={`flex h-10 w-10 items-center justify-center rounded-lg text-xs font-semibold ${
+        className={`flex h-8 min-w-8 shrink-0 items-center justify-center rounded-md border px-2 text-xs font-semibold ${
           variant === "dark"
-            ? "text-[#9AA7B3] hover:bg-[#243444] hover:text-white"
-            : "text-[#57534e]"
+            ? "border-[#5A6C7E] text-[#9AA7B3] hover:bg-[#243444] hover:text-white"
+            : "border-[#d6d0c4] text-[#57534e]"
         }`}
       >
         {next.toUpperCase()}

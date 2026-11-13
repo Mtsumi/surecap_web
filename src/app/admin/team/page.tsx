@@ -254,10 +254,12 @@ function TeamMemberRow({
   };
 
   return (
-    <li className={`${adminUi.card} ${adminUi.cardPad} flex flex-col gap-3`}>
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-[var(--ml-ink)]">{user.email}</p>
+    <li className={`${adminUi.cardPad} flex min-w-0 flex-col gap-3`}>
+      <div className="flex min-w-0 flex-wrap items-start justify-between gap-2 sm:gap-3">
+        <div className="min-w-0 flex-1">
+          <p className="break-all font-semibold text-[var(--ml-ink)] sm:truncate sm:break-normal">
+            {user.email}
+          </p>
           <p className="text-xs text-[var(--ml-steel)]">
             {user.is_super_admin ? t("teamSuperAdmin") : t("teamAdmin")}
             {user.maintenance_role
@@ -270,7 +272,7 @@ function TeamMemberRow({
           <button
             type="button"
             onClick={() => void deactivate()}
-            className={adminUi.btnDanger + " !px-3 !py-1.5 !text-xs"}
+            className={adminUi.btnDanger + " !shrink-0 !px-3 !py-1.5 !text-xs"}
           >
             {t("teamDeactivate")}
           </button>

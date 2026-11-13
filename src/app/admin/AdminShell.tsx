@@ -280,12 +280,12 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         </div>
       )}
 
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="flex shrink-0 items-center gap-3 border-b border-[var(--ml-line)] bg-[var(--ml-card)] px-4 py-3 print:hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-x-hidden">
+        <header className="flex shrink-0 items-center gap-1.5 border-b border-[var(--ml-line)] bg-[var(--ml-card)] px-3 py-2.5 sm:gap-3 sm:px-4 sm:py-3 print:hidden">
           <button
             type="button"
             onClick={() => setMobileOpen(true)}
-            className="rounded-md border border-[var(--ml-line)] px-2.5 py-1.5 text-sm text-[var(--ml-ink)] md:hidden"
+            className="shrink-0 rounded-md border border-[var(--ml-line)] px-2.5 py-1.5 text-sm text-[var(--ml-ink)] md:hidden"
             aria-label="Open menu"
           >
             Menu
@@ -294,23 +294,27 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
             <p className="truncate font-[family-name:var(--font-admin-display)] text-sm font-extrabold tracking-wide">
               {t("brand")}
             </p>
-            <p className="truncate text-[10px] uppercase tracking-[0.12em] text-[var(--ml-steel)]">
-              {t("slogan")}
-            </p>
           </div>
           <div className="hidden min-w-0 flex-1 md:block" />
-          <NotificationBell />
-          <LocaleToggle locale={locale} onChange={setLocale} />
-          <button
-            type="button"
-            onClick={logout}
-            className="shrink-0 rounded-md border border-[var(--ml-line)] px-2.5 py-1.5 text-xs text-[var(--ml-ink)]"
-          >
-            {t("logout")}
-          </button>
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <NotificationBell />
+            <span className="md:hidden">
+              <LocaleToggle locale={locale} onChange={setLocale} compact />
+            </span>
+            <span className="hidden md:inline-flex">
+              <LocaleToggle locale={locale} onChange={setLocale} />
+            </span>
+            <button
+              type="button"
+              onClick={logout}
+              className="shrink-0 rounded-md border border-[var(--ml-line)] px-2 py-1.5 text-xs text-[var(--ml-ink)] sm:px-2.5"
+            >
+              {t("logout")}
+            </button>
+          </div>
         </header>
 
-        <main className="mx-auto w-full max-w-5xl min-h-0 flex-1 overflow-y-auto px-5 py-8 print:overflow-visible">
+        <main className="mx-auto w-full max-w-5xl min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-3 py-6 sm:px-5 sm:py-8 print:overflow-visible">
           {children}
         </main>
       </div>

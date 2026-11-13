@@ -37,7 +37,7 @@ body {
 
 @layer components {
   .admin-page-title {
-    @apply admin-display text-2xl font-extrabold tracking-tight;
+    @apply admin-display text-xl font-extrabold tracking-tight sm:text-2xl;
     color: var(--ml-ink);
   }
 
