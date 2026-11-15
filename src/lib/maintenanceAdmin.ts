@@ -88,7 +88,7 @@ const STATUS_LABEL_FR: Record<string, string> = {
   awaiting_tenant: "En attente locataire",
   scheduled: "Planifié",
   in_progress: "En cours",
-  pending_manager_close: "À fermer",
+  pending_manager_close: "En attente de revue",
   closed: "Terminé",
 };
 
@@ -102,7 +102,7 @@ const STATUS_LABEL_EN: Record<string, string> = {
   awaiting_tenant: "Awaiting tenant",
   scheduled: "Scheduled",
   in_progress: "In progress",
-  pending_manager_close: "Pending close",
+  pending_manager_close: "Awaiting review",
   closed: "Closed",
 };
 
