@@ -85,6 +85,38 @@ function pendingSummary(status: string, locale: Locale): string {
   return locale === "fr" ? "En cours" : "Running";
 }
 
+/** Elapsed since ISO timestamp; null if unusable. */
+function elapsedLabel(iso: string | null | undefined, locale: Locale): string | null {
+  if (!iso) return null;
+  const ms = Date.now() - Date.parse(iso);
+  if (!Number.isFinite(ms) || ms < 0) return null;
+  const sec = Math.floor(ms / 1000);
+  if (sec < 60) return `${sec}s`;
+  const min = Math.floor(sec / 60);
+  return locale === "fr" ? `${min} min` : `${min} min`;
+}
+
+/** Admin in-flight SOQUIJ copy: ETA band + optional elapsed (not failure coaching). */
+export function soquijInFlightSummary(
+  status: string,
+  locale: Locale,
+  sinceIso?: string | null
+): string {
+  const elapsed = elapsedLabel(sinceIso, locale);
+  if (status === "pending") {
+    const base =
+      locale === "fr"
+        ? "En file · démarre en général sous 1 min"
+        : "Queued · usually starts within ~1 min";
+    return elapsed ? `${base} · ${elapsed}` : base;
+  }
+  const base =
+    locale === "fr"
+      ? "Recherche · 1–3 min en général"
+      : "Searching · usually 1–3 min";
+  return elapsed ? `${base} · ${elapsed}` : base;
+}
+
 export function idScreeningGlance(
   payload: IdDocumentExtractPayload | null,
   status: string,
@@ -414,7 +446,9 @@ export function talScreeningGlance(
 export function soquijScreeningGlance(
   payload: SoquijScreeningPayload | null,
   status: string,
-  locale: Locale
+  locale: Locale,
+  /** Job created_at (queued) or updated_at when running — for elapsed only. */
+  sinceIso?: string | null
 ): ScreeningGlanceRow {
   const checkLabel = "SOQUIJ";
   const fromJob = jobTone(status);
@@ -423,7 +457,7 @@ export function soquijScreeningGlance(
       key: "soquij",
       tone: "pending",
       checkLabel,
-      summary: pendingSummary(status, locale),
+      summary: soquijInFlightSummary(status, locale, sinceIso),
       issues: [],
     };
   }
@@ -470,11 +504,13 @@ export function soquijScreeningGlance(
         : `${strong} strong match(es)`
     );
   }
+  const preview = formatSoquijScreeningPreview(payload, locale);
   return {
     key: "soquij",
     tone: respondents > 0 ? "bad" : strong > 0 ? "warn" : "ok",
     checkLabel,
-    summary: formatSoquijScreeningPreview(payload, locale),
+    summary:
+      locale === "fr" ? `Prêt · ${preview}` : `Ready · ${preview}`,
     issues,
   };
 }

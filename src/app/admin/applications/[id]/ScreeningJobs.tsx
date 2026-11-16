@@ -307,7 +307,10 @@ function DocumentsGlanceTable({
       ...soquijScreeningGlance(
         parseSoquijScreeningMessage(soquijJob.message),
         soquijJob.status,
-        locale
+        locale,
+        soquijJob.status === "running"
+          ? soquijJob.updated_at
+          : soquijJob.created_at
       ),
     });
   }
