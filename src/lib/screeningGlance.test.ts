@@ -190,7 +190,21 @@ describe("screeningGlance", () => {
       "en"
     );
     expect(row.tone).toBe("bad");
+    expect(row.summary).toMatch(/^Ready ·/);
     expect(row.issues.some((issue) => /respondent/i.test(issue))).toBe(true);
+  });
+
+  it("shows SOQUIJ searching ETA while running", () => {
+    const since = new Date(Date.now() - 45_000).toISOString();
+    const row = soquijScreeningGlance(null, "running", "en", since);
+    expect(row.tone).toBe("pending");
+    expect(row.summary).toMatch(/Searching · usually 1–3 min/);
+    expect(row.summary).toMatch(/45s|1 min/);
+  });
+
+  it("shows SOQUIJ queued ETA while pending", () => {
+    const row = soquijScreeningGlance(null, "pending", "fr");
+    expect(row.summary).toMatch(/En file · démarre en général sous 1 min/);
   });
 
   it("shows income vs rent from the shared API snapshot", () => {
