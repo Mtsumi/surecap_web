@@ -187,6 +187,11 @@ export const adminMessages = {
       "Les avis de candidature pour cet immeuble sont envoyés ici. Laissez vide pour utiliser ADMIN_EMAILS.",
     buildingsJanitorFallback: "Utilise ADMIN_EMAILS (non défini ici)",
     buildingsJanitorSection: "Concierge",
+    buildingsVericlockSection: "VeriClock",
+    buildingsVericlockJobGuid: "GUID du job VeriClock",
+    buildingsVericlockJobGuidHint:
+      "Job VeriClock pour les pointages d’entretien à cet immeuble. Laisser vide = job par défaut (env).",
+    buildingsVericlockJobGuidEmpty: "Non mappé (utilisera le job par défaut)",
     buildingsJanitorPhone: "Téléphone du concierge",
     buildingsJanitorPhoneHint:
       "Inclus dans le courriel au demandeur s'il faut ajouter un garant. Sans numéro, on envoie le courriel du concierge.",
@@ -749,6 +754,11 @@ export const adminMessages = {
       "Application notifications for this building go here. Leave blank to use ADMIN_EMAILS.",
     buildingsJanitorFallback: "Uses ADMIN_EMAILS (not set for this building)",
     buildingsJanitorSection: "Janitor",
+    buildingsVericlockSection: "VeriClock",
+    buildingsVericlockJobGuid: "VeriClock job GUID",
+    buildingsVericlockJobGuidHint:
+      "VeriClock job used for maintenance punches at this building. Leave empty to use the default env job.",
+    buildingsVericlockJobGuidEmpty: "Not mapped (uses default job)",
     buildingsJanitorPhone: "Janitor phone",
     buildingsJanitorPhoneHint:
       "Included in the applicant email when they can add a guarantor. If empty, the janitor email is used.",

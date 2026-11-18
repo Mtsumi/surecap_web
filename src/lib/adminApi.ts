@@ -226,6 +226,8 @@ export type BuildingAdmin = {
   active: boolean;
   janitor_email: string | null;
   janitor_phone: string | null;
+  dropbox_area?: string | null;
+  vericlock_job_guid?: string | null;
 };
 
 export type UnitPhotoAdmin = {
@@ -527,7 +529,9 @@ export function listUnitsAdmin(buildingId: number) {
 /** PATCH building settings; blank janitor_email/phone clears that field. */
 export function updateBuildingAdmin(
   buildingId: number,
-  data: Partial<Pick<BuildingAdmin, "janitor_email" | "janitor_phone">>
+  data: Partial<
+    Pick<BuildingAdmin, "janitor_email" | "janitor_phone" | "dropbox_area" | "vericlock_job_guid">
+  >
 ) {
   return adminFetch<BuildingAdmin>(`/admin/buildings/${buildingId}`, {
     method: "PATCH",
