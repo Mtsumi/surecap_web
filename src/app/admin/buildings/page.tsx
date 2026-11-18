@@ -236,6 +236,121 @@ function BuildingJanitorSection({
   );
 }
 
+type BuildingVericlockSectionProps = {
+  building: BuildingAdmin;
+  onUpdated: (building: BuildingAdmin) => void;
+  onError: (message: string) => void;
+  t: (key: AdminMessageKey) => string;
+  locale: Locale;
+};
+
+function BuildingVericlockSection({
+  building,
+  onUpdated,
+  onError,
+  t,
+  locale,
+}: BuildingVericlockSectionProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [guidDraft, setGuidDraft] = useState(building.vericlock_job_guid ?? "");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!isEditing) {
+      setGuidDraft(building.vericlock_job_guid ?? "");
+    }
+  }, [building.id, building.vericlock_job_guid, isEditing]);
+
+  const save = async () => {
+    const next = guidDraft.trim();
+    const current = (building.vericlock_job_guid ?? "").trim();
+    if (next === current) {
+      setIsEditing(false);
+      return;
+    }
+    setSaving(true);
+    try {
+      const updated = await updateBuildingAdmin(building.id, {
+        vericlock_job_guid: next || null,
+      });
+      onUpdated(updated);
+      setIsEditing(false);
+    } catch (e) {
+      onError(formatAdminFetchError(e, locale, t("buildingsGenericError")));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className={`${adminUi.card} mt-4 p-4 sm:p-5`}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold text-[var(--ml-ink)]">
+            {t("buildingsVericlockSection")}
+          </h2>
+          <p className="mt-1 text-xs text-[var(--ml-steel)]">
+            {t("buildingsVericlockJobGuidHint")}
+          </p>
+        </div>
+        {!isEditing ? (
+          <button
+            type="button"
+            onClick={() => {
+              setGuidDraft(building.vericlock_job_guid ?? "");
+              setIsEditing(true);
+            }}
+            aria-label={t("buildingsEdit")}
+            className={adminUi.btnSecondary + " !p-2"}
+          >
+            <PencilIcon />
+          </button>
+        ) : null}
+      </div>
+      {!isEditing ? (
+        <p className="mt-3 break-all text-sm text-[var(--ml-ink)]">
+          {building.vericlock_job_guid?.trim() || t("buildingsVericlockJobGuidEmpty")}
+        </p>
+      ) : (
+        <div className="mt-3 space-y-4">
+          <label className="block admin-field-label">
+            {t("buildingsVericlockJobGuid")}
+            <input
+              type="text"
+              value={guidDraft}
+              onChange={(e) => setGuidDraft(e.target.value)}
+              className={inputClass}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              spellCheck={false}
+            />
+          </label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <button
+              type="button"
+              onClick={() => {
+                setGuidDraft(building.vericlock_job_guid ?? "");
+                setIsEditing(false);
+              }}
+              disabled={saving}
+              className={adminUi.btnSecondary + " w-full sm:w-auto"}
+            >
+              {t("buildingsCancel")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void save()}
+              disabled={saving}
+              className={adminUi.btnPrimary + " w-full sm:w-auto"}
+            >
+              {saving ? t("buildingsSaving") : t("buildingsSave")}
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 type UnitRowProps = {
   unit: UnitAdmin;
   isEditing: boolean;
@@ -674,14 +789,24 @@ export default function BuildingsAdminPage() {
       </div>
 
       {selectedBuilding ? (
-        <BuildingJanitorSection
-          key={selectedBuilding.id}
-          building={selectedBuilding}
-          onUpdated={handleBuildingUpdated}
-          onError={setError}
-          t={t}
-          locale={locale}
-        />
+        <>
+          <BuildingJanitorSection
+            key={`janitor-${selectedBuilding.id}`}
+            building={selectedBuilding}
+            onUpdated={handleBuildingUpdated}
+            onError={setError}
+            t={t}
+            locale={locale}
+          />
+          <BuildingVericlockSection
+            key={`vericlock-${selectedBuilding.id}`}
+            building={selectedBuilding}
+            onUpdated={handleBuildingUpdated}
+            onError={setError}
+            t={t}
+            locale={locale}
+          />
+        </>
       ) : null}
 
       {loadingUnits && units.length > 0 ? (
