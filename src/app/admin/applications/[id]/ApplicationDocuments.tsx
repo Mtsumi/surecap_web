@@ -1,11 +1,16 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ApplicationMember } from "@/lib/adminApi";
-import { regenerateApplicationSummary } from "@/lib/adminApi";
+import type { ApplicationDetail, ApplicationMember } from "@/lib/adminApi";
+import {
+  regenerateApplicationSummary,
+  requestAdminCreditSignature,
+  uploadAdminMemberDocument,
+} from "@/lib/adminApi";
 import { adminUi } from "@/lib/adminUi";
 import { formatAdminFetchError } from "@/lib/adminFetchError";
 import {
+  JANITOR_REVIEW_UPLOAD_TYPES,
   MemberDocument,
   documentTypeLabel,
   fetchMemberDocumentBlob,
@@ -16,7 +21,12 @@ import {
   isPdfDocument,
   triggerBlobDownload,
 } from "@/lib/adminDocuments";
-import { useAdminLocaleContext } from "../../AdminLocaleContext";
+import { ACCEPTED_UPLOAD_TYPES } from "@/lib/documentUpload";
+import {
+  uploadQualityBanner,
+  uploadQualityTone,
+} from "@/lib/uploadQuality";
+import { useAdminCopy } from "../../AdminLocaleContext";
 
 export type DocumentReviewRequest = {
   memberId: number;
@@ -40,11 +50,13 @@ export type PreviewTarget =
 type ApplicationDocumentsProps = {
   applicationId: number;
   members: ApplicationMember[];
+  docsEditable?: boolean;
   summaryPdfAvailable: boolean;
   dropboxDossierReady: boolean;
   memberRoleLabel: (role: string) => string;
   memberDisplayName: (member: ApplicationMember) => string;
   onSummaryRegenerated?: () => void;
+  onApplicationUpdated?: (app: ApplicationDetail) => void;
   reviewRequest?: DocumentReviewRequest | null;
   /** Fired after a member document preview loads (e.g. ID viewed for identity gate). */
   onMemberDocumentPreviewed?: (document: MemberDocument) => void;
@@ -67,7 +79,7 @@ function DocumentPreviewModal({
   positionLabel?: string | null;
   onMemberDocumentPreviewed?: (document: MemberDocument) => void;
 }) {
-  const { locale } = useAdminLocaleContext();
+  const { locale } = useAdminCopy();
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -266,24 +278,100 @@ function DocumentPreviewModal({
 export default function ApplicationDocuments({
   applicationId,
   members,
+  docsEditable = false,
   summaryPdfAvailable,
   dropboxDossierReady,
   memberRoleLabel,
   memberDisplayName,
   onSummaryRegenerated,
+  onApplicationUpdated,
   reviewRequest,
   onMemberDocumentPreviewed,
 }: ApplicationDocumentsProps) {
-  const { locale } = useAdminLocaleContext();
+  const { locale, t } = useAdminCopy();
   const [previewQueue, setPreviewQueue] = useState<PreviewTarget[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const preview = previewQueue[previewIndex] ?? null;
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [regeneratingSummary, setRegeneratingSummary] = useState(false);
+  const [opsMemberId, setOpsMemberId] = useState<number | null>(
+    members[0]?.id ?? null
+  );
+  const [opsDocType, setOpsDocType] = useState(JANITOR_REVIEW_UPLOAD_TYPES[0]);
+  const [opsFiles, setOpsFiles] = useState<File[]>([]);
+  const [opsFileInputKey, setOpsFileInputKey] = useState(0);
+  const [opsBusy, setOpsBusy] = useState<"upload" | "sign" | null>(null);
+  const [opsQualityBanner, setOpsQualityBanner] = useState<string | null>(null);
+  const [opsQualityTone, setOpsQualityTone] = useState<"warn" | "fail" | null>(
+    null
+  );
 
   const membersWithDocs = members.filter((member) => (member.documents?.length ?? 0) > 0);
   const hasMemberDocs = membersWithDocs.length > 0;
+  const activeOpsMember =
+    members.find((m) => m.id === opsMemberId) ?? members[0] ?? null;
+
+  useEffect(() => {
+    if (!opsMemberId && members[0]) setOpsMemberId(members[0].id);
+  }, [members, opsMemberId]);
+
+  async function uploadOpsFiles() {
+    if (!activeOpsMember || opsFiles.length === 0 || !docsEditable) return;
+    setOpsBusy("upload");
+    setError(null);
+    setOpsQualityBanner(null);
+    setOpsQualityTone(null);
+    let lastApp: ApplicationDetail | null = null;
+    try {
+      for (const file of opsFiles) {
+        const result = await uploadAdminMemberDocument(
+          applicationId,
+          activeOpsMember.id,
+          opsDocType,
+          file
+        );
+        lastApp = result.application;
+        const banner = uploadQualityBanner(result.quality, locale);
+        const tone = uploadQualityTone(result.quality);
+        if (banner) {
+          setOpsQualityBanner(banner);
+          setOpsQualityTone(tone);
+        }
+      }
+      if (lastApp) onApplicationUpdated?.(lastApp);
+      setOpsFiles([]);
+      setOpsFileInputKey((k) => k + 1);
+    } catch (e) {
+      setError(
+        formatAdminFetchError(e, locale, t("reviewDocsUploadFail"))
+      );
+    } finally {
+      setOpsBusy(null);
+    }
+  }
+
+  async function askOpsSign() {
+    if (!activeOpsMember || !docsEditable) return;
+    if (!activeOpsMember.email) {
+      setError(t("reviewAskSignNoEmail"));
+      return;
+    }
+    setOpsBusy("sign");
+    setError(null);
+    try {
+      const updated = await requestAdminCreditSignature(
+        applicationId,
+        activeOpsMember.id,
+        locale === "en" ? "en" : "fr"
+      );
+      onApplicationUpdated?.(updated);
+    } catch (e) {
+      setError(formatAdminFetchError(e, locale, t("reviewAskSignFail")));
+    } finally {
+      setOpsBusy(null);
+    }
+  }
 
   useEffect(() => {
     if (!reviewRequest) return;
@@ -307,7 +395,12 @@ export default function ApplicationDocuments({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: members listed for read at request time
   }, [reviewRequest]);
 
-  if (!summaryPdfAvailable && !hasMemberDocs && !dropboxDossierReady) {
+  if (
+    !summaryPdfAvailable &&
+    !hasMemberDocs &&
+    !dropboxDossierReady &&
+    !docsEditable
+  ) {
     return <p className={adminUi.empty}>Aucun document téléversé pour cette demande.</p>;
   }
 
@@ -376,6 +469,11 @@ export default function ApplicationDocuments({
     }
   };
 
+  const consentSigned = Boolean(activeOpsMember?.credit_consent_signed);
+  const signaturePending = Boolean(
+    activeOpsMember?.credit_consent_signature_pending
+  );
+
   return (
     <>
       <p className="text-xs text-[var(--ml-steel)]">
@@ -383,6 +481,105 @@ export default function ApplicationDocuments({
       </p>
 
       {error ? <p className={`${adminUi.alertError} mt-3`}>{error}</p> : null}
+
+      {docsEditable && members.length > 0 ? (
+        <div className="mt-4 space-y-3 rounded border border-[var(--ml-line)] bg-white p-3">
+          <p className="text-sm font-medium text-[var(--ml-ink)]">
+            {t("reviewDocsTitle")}
+          </p>
+          <label className="block text-xs font-medium text-[var(--ml-steel)]">
+            {locale === "fr" ? "Membre" : "Member"}
+            <select
+              className="mt-1 w-full rounded border border-[var(--ml-line)] px-2 py-1.5 text-sm text-[var(--ml-ink)]"
+              value={activeOpsMember?.id ?? ""}
+              disabled={Boolean(opsBusy)}
+              onChange={(e) => setOpsMemberId(Number(e.target.value))}
+            >
+              {members.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {memberRoleLabel(m.role)} — {memberDisplayName(m)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs font-medium text-[var(--ml-steel)]">
+            {t("reviewDocsType")}
+            <select
+              className="mt-1 w-full rounded border border-[var(--ml-line)] px-2 py-1.5 text-sm text-[var(--ml-ink)]"
+              value={opsDocType}
+              disabled={Boolean(opsBusy)}
+              onChange={(e) => setOpsDocType(e.target.value)}
+            >
+              {JANITOR_REVIEW_UPLOAD_TYPES.map((type) => (
+                <option key={type} value={type}>
+                  {documentTypeLabel(type)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block text-xs font-medium text-[var(--ml-steel)]">
+            {t("reviewDocsFile")}
+            <input
+              key={opsFileInputKey}
+              type="file"
+              multiple
+              accept={ACCEPTED_UPLOAD_TYPES}
+              className="mt-1 block w-full text-sm"
+              disabled={Boolean(opsBusy)}
+              onChange={(e) =>
+                setOpsFiles(Array.from(e.target.files ?? []))
+              }
+            />
+          </label>
+          {opsFiles.length > 0 ? (
+            <p className="text-xs text-[var(--ml-steel)]">
+              {opsFiles.length} fichier{opsFiles.length === 1 ? "" : "s"}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className={adminUi.btnSecondary}
+              disabled={opsFiles.length === 0 || Boolean(opsBusy)}
+              onClick={() => void uploadOpsFiles()}
+            >
+              {opsBusy === "upload"
+                ? t("reviewDocsUploading")
+                : t("reviewDocsUpload")}
+            </button>
+            {!consentSigned ? (
+              <button
+                type="button"
+                className={adminUi.btnSecondary}
+                disabled={Boolean(opsBusy) || signaturePending}
+                onClick={() => void askOpsSign()}
+              >
+                {opsBusy === "sign"
+                  ? t("reviewAskSignSending")
+                  : signaturePending
+                    ? t("reviewAskSignSent")
+                    : t("reviewAskSign")}
+              </button>
+            ) : (
+              <span className="self-center text-xs text-[var(--ml-steel)]">
+                {t("reviewCreditConsent")}
+              </span>
+            )}
+          </div>
+          {opsQualityBanner ? (
+            <p
+              className={
+                opsQualityTone === "fail"
+                  ? "text-sm text-[#7f1d1d]"
+                  : "text-sm text-[#92400e]"
+              }
+              role="status"
+            >
+              {opsQualityBanner}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {dropboxDossierReady && !summaryPdfAvailable ? (
         <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -398,6 +595,7 @@ export default function ApplicationDocuments({
         </div>
       ) : null}
 
+      {summaryPdfAvailable || hasMemberDocs ? (
       <div className={`${adminUi.tableWrap} mt-4`}>
         <table className={adminUi.table}>
           <thead>
@@ -501,6 +699,7 @@ export default function ApplicationDocuments({
           </tbody>
         </table>
       </div>
+      ) : null}
 
       {!summaryPdfAvailable && !hasMemberDocs && dropboxDossierReady ? (
         <p className={`${adminUi.empty} mt-4`}>Aucun document membre pour cette demande.</p>

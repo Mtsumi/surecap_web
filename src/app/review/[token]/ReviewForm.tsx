@@ -194,7 +194,8 @@ function MemberCard({
   const [idError, setIdError] = useState<string | null>(null);
   const [identityBusy, setIdentityBusy] = useState(false);
   const [docType, setDocType] = useState(JANITOR_REVIEW_UPLOAD_TYPES[0]);
-  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docFiles, setDocFiles] = useState<File[]>([]);
+  const [docFileInputKey, setDocFileInputKey] = useState(0);
   const [docsBusy, setDocsBusy] = useState<"upload" | "sign" | null>(null);
   const [docsError, setDocsError] = useState<string | null>(null);
   const [uploadQuality, setUploadQuality] = useState<UploadQuality | null>(null);
@@ -278,20 +279,25 @@ function MemberCard({
   }
 
   async function uploadDoc() {
-    if (!docFile || !canUpload) return;
+    if (docFiles.length === 0 || !canUpload) return;
     setDocsBusy("upload");
     setDocsError(null);
     setUploadQuality(null);
     try {
-      const result = await uploadJanitorReviewDocument(
-        token,
-        member.id,
-        docType,
-        docFile
-      );
-      onIdentityUpdated(result.review);
-      setUploadQuality(result.quality);
-      setDocFile(null);
+      let lastQuality: UploadQuality | null = null;
+      for (const file of docFiles) {
+        const result = await uploadJanitorReviewDocument(
+          token,
+          member.id,
+          docType,
+          file
+        );
+        onIdentityUpdated(result.review);
+        lastQuality = result.quality;
+      }
+      setUploadQuality(lastQuality);
+      setDocFiles([]);
+      setDocFileInputKey((k) => k + 1);
       onIdentityFlash?.(t("reviewDocsUploadOk").replace("{name}", member.name));
     } catch (err: unknown) {
       setDocsError(formatAdminFetchError(err, locale, t("reviewDocsUploadFail")));
@@ -445,19 +451,29 @@ function MemberCard({
                 <label className="block text-xs font-medium text-[var(--ml-steel)]">
                   {t("reviewDocsFile")}
                   <input
+                    key={docFileInputKey}
                     type="file"
+                    multiple
                     accept={ACCEPTED_UPLOAD_TYPES}
                     className="mt-1 block w-full text-sm"
                     disabled={Boolean(docsBusy) || submitting}
                     onChange={(e) =>
-                      setDocFile(e.target.files?.[0] ?? null)
+                      setDocFiles(Array.from(e.target.files ?? []))
                     }
                   />
                 </label>
+                {docFiles.length > 1 ? (
+                  <p className="text-xs text-[var(--ml-steel)]">
+                    {docFiles.length}{" "}
+                    {locale === "fr" ? "fichiers" : "files"}
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   className={adminUi.btnSecondary}
-                  disabled={!docFile || Boolean(docsBusy) || submitting}
+                  disabled={
+                    docFiles.length === 0 || Boolean(docsBusy) || submitting
+                  }
                   onClick={() => void uploadDoc()}
                 >
                   {docsBusy === "upload"

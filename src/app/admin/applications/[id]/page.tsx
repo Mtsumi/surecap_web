@@ -1190,11 +1190,13 @@ export default function ApplicationDetailPage() {
             <ApplicationDocuments
               applicationId={app.id}
               members={sortedMembers}
+              docsEditable={Boolean(app.docs_editable)}
               summaryPdfAvailable={Boolean(app.summary_pdf_available)}
               dropboxDossierReady={Boolean(app.dropbox_dossier_ready)}
               memberRoleLabel={(role) => memberRoleLabel(role, t)}
               memberDisplayName={memberDisplayName}
               onSummaryRegenerated={load}
+              onApplicationUpdated={setApp}
               reviewRequest={reviewRequest}
               onMemberDocumentPreviewed={onMemberDocumentPreviewed}
             />
