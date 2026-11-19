@@ -199,18 +199,11 @@ function MemberCard({
   const [docsError, setDocsError] = useState<string | null>(null);
   const [uploadQuality, setUploadQuality] = useState<UploadQuality | null>(null);
   const signStorageKey = `janitor-credit-sign:${token}:${member.id}`;
-  const [signRequested, setSignRequested] = useState(() => {
-    if (typeof window === "undefined") return false;
-    try {
-      return window.sessionStorage.getItem(signStorageKey) === "1";
-    } catch {
-      return false;
-    }
-  });
+  const [signRequested, setSignRequested] = useState(false);
   const canUpload = Boolean(member.can_upload_documents) && !disabled;
   const consentSigned = Boolean(member.credit_consent_signed);
-  const signaturePending =
-    Boolean(member.credit_consent_signature_pending) || signRequested;
+  const apiPending = Boolean(member.credit_consent_signature_pending);
+  const signaturePending = apiPending || signRequested;
   const qualityBanner = uploadQualityBanner(uploadQuality, locale);
   const qualityTone = uploadQualityTone(uploadQuality);
 
@@ -221,10 +214,18 @@ function MemberCard({
   }, [idPreviewUrl]);
 
   useEffect(() => {
-    if (member.credit_consent_signature_pending || consentSigned) {
+    // Prefer server pending; clear sticky local/session state when the token expires.
+    if (apiPending || consentSigned) {
       setSignRequested(true);
+      return;
     }
-  }, [member.credit_consent_signature_pending, consentSigned]);
+    try {
+      window.sessionStorage.removeItem(signStorageKey);
+    } catch {
+      /* ignore */
+    }
+    setSignRequested(false);
+  }, [apiPending, consentSigned, signStorageKey]);
 
   async function openDoc(
     docId: number | null | undefined,
