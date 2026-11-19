@@ -88,6 +88,9 @@ export type ApplicationMember = {
   additional_monthly_net_income?: number | null;
   documents?: MemberDocument[];
   identity?: MemberIdentityStatus | null;
+  credit_consent_signed?: boolean;
+  credit_consent_signature_pending?: boolean;
+  can_upload_documents?: boolean;
 };
 
 export type MemberIdentityStatus = {
@@ -197,6 +200,20 @@ export type ApplicationDetail = {
   credit_check_requested_at?: string | null;
   accepted_at?: string | null;
   janitor_reviewed_at?: string | null;
+  /** True while draft/collecting/submitted — ops may attach ID/income docs. */
+  docs_editable?: boolean;
+};
+
+export type UploadQuality = {
+  level: "ok" | "warn" | "fail";
+  flags: string[];
+  message?: string | null;
+  upload_generation: number;
+};
+
+export type AdminMemberUploadResult = {
+  application: ApplicationDetail;
+  quality: UploadQuality;
 };
 
 export type ApplicationList = {
@@ -380,6 +397,37 @@ export function listApplications(params?: {
 
 export function getApplication(id: number) {
   return adminFetch<ApplicationDetail>(`/admin/applications/${id}`);
+}
+
+export async function uploadAdminMemberDocument(
+  applicationId: number,
+  memberId: number,
+  documentType: string,
+  file: File
+): Promise<AdminMemberUploadResult> {
+  const form = new FormData();
+  form.append("document_type", documentType);
+  form.append("file", file, file.name || "upload");
+  return adminFetch<AdminMemberUploadResult>(
+    `/admin/applications/${applicationId}/members/${memberId}/uploads`,
+    { method: "POST", body: form }
+  );
+}
+
+export function requestAdminCreditSignature(
+  applicationId: number,
+  memberId: number,
+  locale?: "fr" | "en"
+): Promise<ApplicationDetail> {
+  const params = new URLSearchParams();
+  if (locale) params.set("locale", locale);
+  const q = params.toString();
+  return adminFetch<ApplicationDetail>(
+    `/admin/applications/${applicationId}/members/${memberId}/request-credit-signature${
+      q ? `?${q}` : ""
+    }`,
+    { method: "POST" }
+  );
 }
 
 export function getApplicationJobs(id: number) {
