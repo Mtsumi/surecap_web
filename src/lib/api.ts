@@ -751,6 +751,14 @@ export type ApplicationIdentityGate = {
   }>;
 };
 
+export type JanitorReviewDocument = {
+  id: number;
+  document_type: string;
+  original_filename: string;
+  content_type: string;
+  byte_size: number;
+};
+
 export type JanitorReviewMember = {
   id: number;
   role: string;
@@ -766,6 +774,10 @@ export type JanitorReviewMember = {
   facebook_url?: string | null;
   linkedin_url?: string | null;
   credit_consent_document_id?: number | null;
+  credit_consent_signed?: boolean;
+  email?: string | null;
+  documents?: JanitorReviewDocument[];
+  can_upload_documents?: boolean;
   identity?: MemberIdentityStatus | null;
 };
 
@@ -792,6 +804,7 @@ export type JanitorReview = {
   has_guarantor?: boolean;
   guarantor_offer_sent_at?: string | null;
   token_expired: boolean;
+  docs_editable?: boolean;
   identity?: ApplicationIdentityGate | null;
 };
 
@@ -925,6 +938,67 @@ export function confirmReviewMemberIdentity(
           : {}),
         ...(options?.selfieMatches ? { selfie_matches: true } : {}),
       }),
+    }
+  );
+}
+
+export async function uploadJanitorReviewDocument(
+  token: string,
+  memberId: number,
+  documentType: string,
+  file: File
+): Promise<JanitorReview> {
+  const form = new FormData();
+  form.append("document_type", documentType);
+  form.append("file", file, file.name || "upload");
+  return apiFetchForm<JanitorReview>(
+    `/admin/janitor-review/${encodeURIComponent(token)}/members/${memberId}/uploads`,
+    form
+  );
+}
+
+export function requestJanitorCreditSignature(
+  token: string,
+  memberId: number,
+  locale?: "fr" | "en"
+): Promise<JanitorReview> {
+  const params = new URLSearchParams();
+  if (locale) params.set("locale", locale);
+  const q = params.toString();
+  return apiFetch<JanitorReview>(
+    `/admin/janitor-review/${encodeURIComponent(token)}/members/${memberId}/request-credit-signature${
+      q ? `?${q}` : ""
+    }`,
+    { method: "POST" }
+  );
+}
+
+export type CreditConsentSignContext = {
+  member_name: string;
+  building_name: string;
+  unit_number: string;
+  signed: boolean;
+  application_closed: boolean;
+  can_sign: boolean;
+};
+
+export function fetchCreditConsentSignContext(
+  token: string
+): Promise<CreditConsentSignContext> {
+  return apiFetch<CreditConsentSignContext>(
+    `/applications/credit-consent-sign/${encodeURIComponent(token)}`
+  );
+}
+
+export function signCreditConsentViaToken(
+  token: string,
+  signaturePngBase64: string
+): Promise<CreditConsentSignContext> {
+  return apiFetch<CreditConsentSignContext>(
+    `/applications/credit-consent-sign/${encodeURIComponent(token)}`,
+    {
+      method: "POST",
+      body: JSON.stringify({ signature_png_base64: signaturePngBase64 }),
     }
   );
 }

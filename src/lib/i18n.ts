@@ -206,6 +206,17 @@ export const messages = {
     consentEmpty: "Please draw your signature before continuing.",
     consentError: "Could not save your signature. Please try again.",
     consentRequiredToSubmit: "Sign above to enable submission.",
+    creditSignPageTitle: "Credit consent signature",
+    creditSignIntro:
+      "Your building concierge asked you to sign credit-check consent for your Montreal Living application.",
+    creditSignPlace: "{name} · {place}",
+    creditSignClosed:
+      "This application is closed. Signing is no longer available.",
+    creditSignUnavailable:
+      "This signature link is no longer available. Ask your concierge for a new one if needed.",
+    creditSignInvalid: "This link is invalid or expired.",
+    creditSignDone:
+      "Thank you — your signature was saved. Our team can continue reviewing your application.",
     addressManualHint: "Enter your address outside Canada.",
     addressPickHint: "Start typing, then pick an address from the list.",
     addressSuggestionsUnavailable:
@@ -554,6 +565,17 @@ export const messages = {
     consentEmpty: "Veuillez dessiner votre signature avant de continuer.",
     consentError: "Impossible d'enregistrer la signature. Veuillez réessayer.",
     consentRequiredToSubmit: "Signez ci-dessus pour activer la soumission.",
+    creditSignPageTitle: "Signature du consentement crédit",
+    creditSignIntro:
+      "Le concierge de l'immeuble vous demande de signer le consentement pour la vérification de crédit de votre demande Montreal Living.",
+    creditSignPlace: "{name} · {place}",
+    creditSignClosed:
+      "Cette demande est fermée. La signature n'est plus disponible.",
+    creditSignUnavailable:
+      "Ce lien de signature n'est plus disponible. Demandez un nouveau lien au concierge au besoin.",
+    creditSignInvalid: "Ce lien est invalide ou expiré.",
+    creditSignDone:
+      "Merci — votre signature a été enregistrée. Notre équipe peut poursuivre l'étude de votre demande.",
     addressManualHint: "Entrez votre adresse hors Canada.",
     addressPickHint: "Commencez à taper, puis choisissez une adresse dans la liste.",
     addressSuggestionsUnavailable:
