@@ -6,18 +6,31 @@ import {
   JanitorReview,
   JanitorReviewChecklist,
   JanitorReviewMember,
+  UploadQuality,
   confirmReviewMemberIdentity,
   fetchJanitorReview,
   fetchReviewCreditConsentBlob,
   fetchReviewDocumentBlob,
   fetchReviewGuarantorOfferEmailDraft,
   fetchReviewRejectionEmailDraft,
+  requestJanitorCreditSignature,
   submitJanitorReview,
+  uploadJanitorReviewDocument,
 } from "@/lib/api";
 import { applicationStatusLabel } from "@/lib/adminStatus";
+import {
+  JANITOR_REVIEW_UPLOAD_TYPES,
+  documentTypeLabel,
+  formatFileSize,
+} from "@/lib/adminDocuments";
 import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
+import { ACCEPTED_UPLOAD_TYPES } from "@/lib/documentUpload";
 import { facebookLink } from "@/lib/facebookSearch";
+import {
+  uploadQualityBanner,
+  uploadQualityTone,
+} from "@/lib/uploadQuality";
 import RejectionEmailComposer, {
   type RejectionComposeValues,
 } from "@/app/admin/components/RejectionEmailComposer";
@@ -180,12 +193,39 @@ function MemberCard({
   const [idIsPdf, setIdIsPdf] = useState(false);
   const [idError, setIdError] = useState<string | null>(null);
   const [identityBusy, setIdentityBusy] = useState(false);
+  const [docType, setDocType] = useState(JANITOR_REVIEW_UPLOAD_TYPES[0]);
+  const [docFile, setDocFile] = useState<File | null>(null);
+  const [docsBusy, setDocsBusy] = useState<"upload" | "sign" | null>(null);
+  const [docsError, setDocsError] = useState<string | null>(null);
+  const [uploadQuality, setUploadQuality] = useState<UploadQuality | null>(null);
+  const signStorageKey = `janitor-credit-sign:${token}:${member.id}`;
+  const [signRequested, setSignRequested] = useState(false);
+  const canUpload = Boolean(member.can_upload_documents) && !disabled;
+  const consentSigned = Boolean(member.credit_consent_signed);
+  const apiPending = Boolean(member.credit_consent_signature_pending);
+  const signaturePending = apiPending || signRequested;
+  const qualityBanner = uploadQualityBanner(uploadQuality, locale);
+  const qualityTone = uploadQualityTone(uploadQuality);
 
   useEffect(() => {
     return () => {
       if (idPreviewUrl) URL.revokeObjectURL(idPreviewUrl);
     };
   }, [idPreviewUrl]);
+
+  useEffect(() => {
+    // Prefer server pending; clear sticky local/session state when the token expires.
+    if (apiPending || consentSigned) {
+      setSignRequested(true);
+      return;
+    }
+    try {
+      window.sessionStorage.removeItem(signStorageKey);
+    } catch {
+      /* ignore */
+    }
+    setSignRequested(false);
+  }, [apiPending, consentSigned, signStorageKey]);
 
   async function openDoc(
     docId: number | null | undefined,
@@ -236,6 +276,56 @@ function MemberCard({
       setIdentityBusy(false);
     }
   }
+
+  async function uploadDoc() {
+    if (!docFile || !canUpload) return;
+    setDocsBusy("upload");
+    setDocsError(null);
+    setUploadQuality(null);
+    try {
+      const result = await uploadJanitorReviewDocument(
+        token,
+        member.id,
+        docType,
+        docFile
+      );
+      onIdentityUpdated(result.review);
+      setUploadQuality(result.quality);
+      setDocFile(null);
+      onIdentityFlash?.(t("reviewDocsUploadOk").replace("{name}", member.name));
+    } catch (err: unknown) {
+      setDocsError(formatAdminFetchError(err, locale, t("reviewDocsUploadFail")));
+    } finally {
+      setDocsBusy(null);
+    }
+  }
+
+  async function askSign() {
+    if (!canUpload || consentSigned) return;
+    if (!(member.email || "").trim()) {
+      setDocsError(t("reviewAskSignNoEmail"));
+      return;
+    }
+    setDocsBusy("sign");
+    setDocsError(null);
+    try {
+      const updated = await requestJanitorCreditSignature(token, member.id, locale);
+      onIdentityUpdated(updated);
+      setSignRequested(true);
+      try {
+        window.sessionStorage.setItem(signStorageKey, "1");
+      } catch {
+        /* ignore quota / private mode */
+      }
+      onIdentityFlash?.(t("reviewAskSignOk").replace("{name}", member.name));
+    } catch (err: unknown) {
+      setDocsError(formatAdminFetchError(err, locale, t("reviewAskSignFail")));
+    } finally {
+      setDocsBusy(null);
+    }
+  }
+
+  const documents = member.documents ?? [];
 
   return (
     <section className={adminUi.card}>
@@ -306,16 +396,123 @@ function MemberCard({
         <ContactRow label={t("reviewHrPhone")} value={member.hr_phone} />
         <FacebookRow member={member} />
         <ContactRow label="LinkedIn" value={member.linkedin_url} />
+        <div className="sm:col-span-2">
+          <dt className="admin-field-label">{t("reviewDocsTitle")}</dt>
+          <dd className="admin-field-value">
+            {documents.length === 0 ? (
+              <p className="text-[var(--ml-steel)]">{t("reviewDocsEmpty")}</p>
+            ) : (
+              <ul className="space-y-1 text-sm">
+                {documents.map((doc) => (
+                  <li key={doc.id}>
+                    <button
+                      type="button"
+                      className={adminUi.link}
+                      onClick={() =>
+                        void openDoc(doc.id, t("reviewDocsUploadFail"))
+                      }
+                    >
+                      {documentTypeLabel(doc.document_type)}
+                    </button>
+                    <span className="text-[var(--ml-steel)]">
+                      {" "}
+                      · {doc.original_filename}
+                      {doc.byte_size
+                        ? ` · ${formatFileSize(doc.byte_size)}`
+                        : ""}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {canUpload ? (
+              <div className="mt-3 space-y-2 rounded border border-[var(--ml-line)] bg-white p-3">
+                <label className="block text-xs font-medium text-[var(--ml-steel)]">
+                  {t("reviewDocsType")}
+                  <select
+                    className="mt-1 w-full rounded border border-[var(--ml-line)] px-2 py-1.5 text-sm text-[var(--ml-ink)]"
+                    value={docType}
+                    disabled={Boolean(docsBusy) || submitting}
+                    onChange={(e) => setDocType(e.target.value)}
+                  >
+                    {JANITOR_REVIEW_UPLOAD_TYPES.map((type) => (
+                      <option key={type} value={type}>
+                        {documentTypeLabel(type)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="block text-xs font-medium text-[var(--ml-steel)]">
+                  {t("reviewDocsFile")}
+                  <input
+                    type="file"
+                    accept={ACCEPTED_UPLOAD_TYPES}
+                    className="mt-1 block w-full text-sm"
+                    disabled={Boolean(docsBusy) || submitting}
+                    onChange={(e) =>
+                      setDocFile(e.target.files?.[0] ?? null)
+                    }
+                  />
+                </label>
+                <button
+                  type="button"
+                  className={adminUi.btnSecondary}
+                  disabled={!docFile || Boolean(docsBusy) || submitting}
+                  onClick={() => void uploadDoc()}
+                >
+                  {docsBusy === "upload"
+                    ? t("reviewDocsUploading")
+                    : t("reviewDocsUpload")}
+                </button>
+                {qualityBanner ? (
+                  <p
+                    className={
+                      qualityTone === "fail"
+                        ? "text-sm text-[#7f1d1d]"
+                        : "text-sm text-[#92400e]"
+                    }
+                    role="status"
+                  >
+                    {qualityBanner}
+                  </p>
+                ) : null}
+              </div>
+            ) : null}
+          </dd>
+        </div>
         {member.credit_consent_document_id ? (
           <CreditConsentPreview token={token} documentId={member.credit_consent_document_id} />
         ) : (
           <div className="sm:col-span-2">
             <dt className="admin-field-label">{t("reviewCreditConsent")}</dt>
             <dd className="admin-field-value text-[var(--ml-steel)]">
-              {t("reviewCreditConsentMissing")}
+              {consentSigned
+                ? t("reviewCreditConsent")
+                : t("reviewCreditConsentUnsigned")}
+              {canUpload && !consentSigned ? (
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    className={adminUi.btnSecondary}
+                    disabled={
+                      Boolean(docsBusy) || submitting || signaturePending
+                    }
+                    onClick={() => void askSign()}
+                  >
+                    {docsBusy === "sign"
+                      ? t("reviewAskSignSending")
+                      : signaturePending
+                        ? t("reviewAskSignSent")
+                        : t("reviewAskSign")}
+                  </button>
+                </div>
+              ) : null}
             </dd>
           </div>
         )}
+        {docsError ? (
+          <div className="sm:col-span-2 text-sm text-[#7f1d1d]">{docsError}</div>
+        ) : null}
       </dl>
     </section>
   );
@@ -363,6 +560,39 @@ export default function ReviewForm({ token }: { token: string }) {
       cancelled = true;
     };
   }, [token]);
+
+  // Soft-refresh while waiting for a tenant signature (focus + light poll).
+  const awaitingConsentSignature = Boolean(
+    review?.members.some(
+      (member) =>
+        !member.credit_consent_signed && !member.credit_consent_document_id
+    )
+  );
+  useEffect(() => {
+    if (!awaitingConsentSignature) return;
+    let cancelled = false;
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      void fetchJanitorReview(token)
+        .then((data) => {
+          if (cancelled) return;
+          setReview(data);
+          if (data.checklist) setChecklist(data.checklist);
+        })
+        .catch(() => {
+          /* keep current review; next tick / focus can retry */
+        });
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    const intervalId = window.setInterval(refresh, 15_000);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+      window.clearInterval(intervalId);
+    };
+  }, [token, awaitingConsentSignature]);
 
   const showLandlordCheck = useMemo(
     () =>

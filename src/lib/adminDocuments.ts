@@ -57,6 +57,14 @@ export const INCOME_REVIEW_DOCUMENT_TYPES = [
   "proof_of_income",
 ];
 
+/** ID + income + NOA — allowed for janitor review-token upload before credit. */
+export const JANITOR_REVIEW_UPLOAD_TYPES = [
+  ...ID_REVIEW_DOCUMENT_TYPES,
+  ...INCOME_REVIEW_DOCUMENT_TYPES,
+  "notice_of_assessment_year_1",
+  "notice_of_assessment_year_2",
+];
+
 export function documentTypeLabel(documentType: string): string {
   return DOCUMENT_TYPE_LABELS[documentType] ?? documentType.replaceAll("_", " ");
 }
