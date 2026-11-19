@@ -192,6 +192,7 @@ function MemberCard({
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docsBusy, setDocsBusy] = useState<"upload" | "sign" | null>(null);
   const [docsError, setDocsError] = useState<string | null>(null);
+  const [signRequested, setSignRequested] = useState(false);
   const canUpload = Boolean(member.can_upload_documents) && !disabled;
   const consentSigned = Boolean(member.credit_consent_signed);
 
@@ -283,6 +284,7 @@ function MemberCard({
     try {
       const updated = await requestJanitorCreditSignature(token, member.id, locale);
       onIdentityUpdated(updated);
+      setSignRequested(true);
       onIdentityFlash?.(t("reviewAskSignOk").replace("{name}", member.name));
     } catch (err: unknown) {
       setDocsError(formatAdminFetchError(err, locale, t("reviewAskSignFail")));
@@ -448,12 +450,16 @@ function MemberCard({
                   <button
                     type="button"
                     className={adminUi.btnSecondary}
-                    disabled={Boolean(docsBusy) || submitting}
+                    disabled={
+                      Boolean(docsBusy) || submitting || signRequested
+                    }
                     onClick={() => void askSign()}
                   >
                     {docsBusy === "sign"
                       ? t("reviewAskSignSending")
-                      : t("reviewAskSign")}
+                      : signRequested
+                        ? t("reviewAskSignSent")
+                        : t("reviewAskSign")}
                   </button>
                 </div>
               ) : null}
