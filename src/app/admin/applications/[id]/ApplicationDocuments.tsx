@@ -353,7 +353,7 @@ export default function ApplicationDocuments({
 
   async function askOpsSign() {
     if (!activeOpsMember || !docsEditable) return;
-    if (!activeOpsMember.email) {
+    if (!(activeOpsMember.email || activeOpsMember.invited_email)) {
       setError(t("reviewAskSignNoEmail"));
       return;
     }
@@ -401,7 +401,7 @@ export default function ApplicationDocuments({
     !dropboxDossierReady &&
     !docsEditable
   ) {
-    return <p className={adminUi.empty}>Aucun document téléversé pour cette demande.</p>;
+    return <p className={adminUi.empty}>{t("appDetailDocsNoneUploaded")}</p>;
   }
 
   const onDownloadMember = async (document: MemberDocument) => {
@@ -483,14 +483,11 @@ export default function ApplicationDocuments({
       {error ? <p className={`${adminUi.alertError} mt-3`}>{error}</p> : null}
 
       {docsEditable && members.length > 0 ? (
-        <div className="mt-4 space-y-3 rounded border border-[var(--ml-line)] bg-white p-3">
-          <p className="text-sm font-medium text-[var(--ml-ink)]">
-            {t("reviewDocsTitle")}
-          </p>
+        <div className="mt-4 space-y-4">
           <label className="block text-xs font-medium text-[var(--ml-steel)]">
-            {locale === "fr" ? "Membre" : "Member"}
+            {t("appDetailDocsMember")}
             <select
-              className="mt-1 w-full rounded border border-[var(--ml-line)] px-2 py-1.5 text-sm text-[var(--ml-ink)]"
+              className="mt-1 w-full rounded border border-[var(--ml-line)] bg-white px-2 py-1.5 text-sm text-[var(--ml-ink)]"
               value={activeOpsMember?.id ?? ""}
               disabled={Boolean(opsBusy)}
               onChange={(e) => setOpsMemberId(Number(e.target.value))}
@@ -502,41 +499,53 @@ export default function ApplicationDocuments({
               ))}
             </select>
           </label>
-          <label className="block text-xs font-medium text-[var(--ml-steel)]">
-            {t("reviewDocsType")}
-            <select
-              className="mt-1 w-full rounded border border-[var(--ml-line)] px-2 py-1.5 text-sm text-[var(--ml-ink)]"
-              value={opsDocType}
-              disabled={Boolean(opsBusy)}
-              onChange={(e) => setOpsDocType(e.target.value)}
-            >
-              {JANITOR_REVIEW_UPLOAD_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {documentTypeLabel(type)}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block text-xs font-medium text-[var(--ml-steel)]">
-            {t("reviewDocsFile")}
-            <input
-              key={opsFileInputKey}
-              type="file"
-              multiple
-              accept={ACCEPTED_UPLOAD_TYPES}
-              className="mt-1 block w-full text-sm"
-              disabled={Boolean(opsBusy)}
-              onChange={(e) =>
-                setOpsFiles(Array.from(e.target.files ?? []))
-              }
-            />
-          </label>
-          {opsFiles.length > 0 ? (
-            <p className="text-xs text-[var(--ml-steel)]">
-              {opsFiles.length} fichier{opsFiles.length === 1 ? "" : "s"}
-            </p>
-          ) : null}
-          <div className="flex flex-wrap gap-2">
+
+          <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white p-3">
+            <div>
+              <p className="text-sm font-medium text-[var(--ml-ink)]">
+                {t("appDetailDocsAttachTitle")}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--ml-steel)]">
+                {t("appDetailDocsAttachHint")}
+              </p>
+            </div>
+            <label className="block text-xs font-medium text-[var(--ml-steel)]">
+              {t("reviewDocsType")}
+              <select
+                className="mt-1 w-full rounded border border-[var(--ml-line)] px-2 py-1.5 text-sm text-[var(--ml-ink)]"
+                value={opsDocType}
+                disabled={Boolean(opsBusy)}
+                onChange={(e) => setOpsDocType(e.target.value)}
+              >
+                {JANITOR_REVIEW_UPLOAD_TYPES.map((type) => (
+                  <option key={type} value={type}>
+                    {documentTypeLabel(type)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block text-xs font-medium text-[var(--ml-steel)]">
+              {t("reviewDocsFile")}
+              <input
+                key={opsFileInputKey}
+                type="file"
+                multiple
+                accept={ACCEPTED_UPLOAD_TYPES}
+                className="mt-1 block w-full text-sm"
+                disabled={Boolean(opsBusy)}
+                onChange={(e) =>
+                  setOpsFiles(Array.from(e.target.files ?? []))
+                }
+              />
+            </label>
+            {opsFiles.length > 0 ? (
+              <p className="text-xs text-[var(--ml-steel)]">
+                {opsFiles.length}{" "}
+                {locale === "fr"
+                  ? `fichier${opsFiles.length === 1 ? "" : "s"}`
+                  : `file${opsFiles.length === 1 ? "" : "s"}`}
+              </p>
+            ) : null}
             <button
               type="button"
               className={adminUi.btnSecondary}
@@ -547,6 +556,36 @@ export default function ApplicationDocuments({
                 ? t("reviewDocsUploading")
                 : t("reviewDocsUpload")}
             </button>
+            {opsQualityBanner ? (
+              <p
+                className={
+                  opsQualityTone === "fail"
+                    ? "text-sm text-[#7f1d1d]"
+                    : "text-sm text-[#92400e]"
+                }
+                role="status"
+              >
+                {opsQualityBanner}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white p-3">
+            <div>
+              <p className="text-sm font-medium text-[var(--ml-ink)]">
+                {t("appDetailDocsConsentTitle")}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--ml-steel)]">
+                {t("appDetailDocsConsentHint")}
+              </p>
+            </div>
+            <p className="text-sm text-[var(--ml-ink)]">
+              {consentSigned
+                ? t("reviewCreditConsent")
+                : signaturePending
+                  ? t("reviewAskSignSent")
+                  : t("reviewCreditConsentUnsigned")}
+            </p>
             {!consentSigned ? (
               <button
                 type="button"
@@ -560,24 +599,8 @@ export default function ApplicationDocuments({
                     ? t("reviewAskSignSent")
                     : t("reviewAskSign")}
               </button>
-            ) : (
-              <span className="self-center text-xs text-[var(--ml-steel)]">
-                {t("reviewCreditConsent")}
-              </span>
-            )}
+            ) : null}
           </div>
-          {opsQualityBanner ? (
-            <p
-              className={
-                opsQualityTone === "fail"
-                  ? "text-sm text-[#7f1d1d]"
-                  : "text-sm text-[#92400e]"
-              }
-              role="status"
-            >
-              {opsQualityBanner}
-            </p>
-          ) : null}
         </div>
       ) : null}
 
