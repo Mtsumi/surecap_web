@@ -253,25 +253,35 @@ function BuildingVericlockSection({
 }: BuildingVericlockSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [guidDraft, setGuidDraft] = useState(building.vericlock_job_guid ?? "");
+  const [routeDraft, setRouteDraft] = useState(building.vericlock_route_job_guid ?? "");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!isEditing) {
       setGuidDraft(building.vericlock_job_guid ?? "");
+      setRouteDraft(building.vericlock_route_job_guid ?? "");
     }
-  }, [building.id, building.vericlock_job_guid, isEditing]);
+  }, [
+    building.id,
+    building.vericlock_job_guid,
+    building.vericlock_route_job_guid,
+    isEditing,
+  ]);
 
   const save = async () => {
-    const next = guidDraft.trim();
-    const current = (building.vericlock_job_guid ?? "").trim();
-    if (next === current) {
+    const nextJob = guidDraft.trim();
+    const nextRoute = routeDraft.trim();
+    const currentJob = (building.vericlock_job_guid ?? "").trim();
+    const currentRoute = (building.vericlock_route_job_guid ?? "").trim();
+    if (nextJob === currentJob && nextRoute === currentRoute) {
       setIsEditing(false);
       return;
     }
     setSaving(true);
     try {
       const updated = await updateBuildingAdmin(building.id, {
-        vericlock_job_guid: next || null,
+        vericlock_job_guid: nextJob || null,
+        vericlock_route_job_guid: nextRoute || null,
       });
       onUpdated(updated);
       setIsEditing(false);
@@ -298,6 +308,7 @@ function BuildingVericlockSection({
             type="button"
             onClick={() => {
               setGuidDraft(building.vericlock_job_guid ?? "");
+              setRouteDraft(building.vericlock_route_job_guid ?? "");
               setIsEditing(true);
             }}
             aria-label={t("buildingsEdit")}
@@ -308,9 +319,25 @@ function BuildingVericlockSection({
         ) : null}
       </div>
       {!isEditing ? (
-        <p className="mt-3 break-all text-sm text-[var(--ml-ink)]">
-          {building.vericlock_job_guid?.trim() || t("buildingsVericlockJobGuidEmpty")}
-        </p>
+        <div className="mt-3 space-y-3 text-sm text-[var(--ml-ink)]">
+          <div>
+            <p className="text-xs font-medium text-[var(--ml-steel)]">
+              {t("buildingsVericlockJobGuid")}
+            </p>
+            <p className="break-all">
+              {building.vericlock_job_guid?.trim() || t("buildingsVericlockJobGuidEmpty")}
+            </p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-[var(--ml-steel)]">
+              {t("buildingsVericlockRouteJobGuid")}
+            </p>
+            <p className="break-all">
+              {building.vericlock_route_job_guid?.trim() ||
+                t("buildingsVericlockRouteJobGuidEmpty")}
+            </p>
+          </div>
+        </div>
       ) : (
         <div className="mt-3 space-y-4">
           <label className="block admin-field-label">
@@ -324,11 +351,23 @@ function BuildingVericlockSection({
               spellCheck={false}
             />
           </label>
+          <label className="block admin-field-label">
+            {t("buildingsVericlockRouteJobGuid")}
+            <input
+              type="text"
+              value={routeDraft}
+              onChange={(e) => setRouteDraft(e.target.value)}
+              className={inputClass}
+              placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+              spellCheck={false}
+            />
+          </label>
           <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => {
                 setGuidDraft(building.vericlock_job_guid ?? "");
+                setRouteDraft(building.vericlock_route_job_guid ?? "");
                 setIsEditing(false);
               }}
               disabled={saving}
