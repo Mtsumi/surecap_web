@@ -942,16 +942,21 @@ export function confirmReviewMemberIdentity(
   );
 }
 
+export type JanitorReviewUploadResult = {
+  review: JanitorReview;
+  quality: UploadQuality;
+};
+
 export async function uploadJanitorReviewDocument(
   token: string,
   memberId: number,
   documentType: string,
   file: File
-): Promise<JanitorReview> {
+): Promise<JanitorReviewUploadResult> {
   const form = new FormData();
   form.append("document_type", documentType);
   form.append("file", file, file.name || "upload");
-  return apiFetchForm<JanitorReview>(
+  return apiFetchForm<JanitorReviewUploadResult>(
     `/admin/janitor-review/${encodeURIComponent(token)}/members/${memberId}/uploads`,
     form
   );

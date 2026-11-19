@@ -14,7 +14,7 @@ import { Locale, t } from "@/lib/i18n";
 export default function CreditConsentSignForm({ token }: { token: string }) {
   const [locale, setLocale] = useState<Locale>("fr");
   const [ctx, setCtx] = useState<CreditConsentSignContext | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
   const [loading, setLoading] = useState(true);
   const [signing, setSigning] = useState(false);
   const [signError, setSignError] = useState<string | null>(null);
@@ -26,14 +26,13 @@ export default function CreditConsentSignForm({ token }: { token: string }) {
       .then((data) => {
         if (!cancelled) {
           setCtx(data);
-          setError(null);
+          setLoadError(null);
         }
       })
       .catch((err: unknown) => {
         if (!cancelled) {
-          setError(
-            formatClientFetchError(err, "fr", t("fr", "creditSignInvalid"))
-          );
+          setCtx(null);
+          setLoadError(err);
         }
       })
       .finally(() => {
@@ -43,6 +42,10 @@ export default function CreditConsentSignForm({ token }: { token: string }) {
       cancelled = true;
     };
   }, [token]);
+
+  const error = loadError
+    ? formatClientFetchError(loadError, locale, t(locale, "creditSignInvalid"))
+    : null;
 
   const place = useMemo(() => {
     if (!ctx) return "";

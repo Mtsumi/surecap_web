@@ -6,6 +6,7 @@ import {
   JanitorReview,
   JanitorReviewChecklist,
   JanitorReviewMember,
+  UploadQuality,
   confirmReviewMemberIdentity,
   fetchJanitorReview,
   fetchReviewCreditConsentBlob,
@@ -26,6 +27,10 @@ import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
 import { ACCEPTED_UPLOAD_TYPES } from "@/lib/documentUpload";
 import { facebookLink } from "@/lib/facebookSearch";
+import {
+  uploadQualityBanner,
+  uploadQualityTone,
+} from "@/lib/uploadQuality";
 import RejectionEmailComposer, {
   type RejectionComposeValues,
 } from "@/app/admin/components/RejectionEmailComposer";
@@ -192,9 +197,12 @@ function MemberCard({
   const [docFile, setDocFile] = useState<File | null>(null);
   const [docsBusy, setDocsBusy] = useState<"upload" | "sign" | null>(null);
   const [docsError, setDocsError] = useState<string | null>(null);
+  const [uploadQuality, setUploadQuality] = useState<UploadQuality | null>(null);
   const [signRequested, setSignRequested] = useState(false);
   const canUpload = Boolean(member.can_upload_documents) && !disabled;
   const consentSigned = Boolean(member.credit_consent_signed);
+  const qualityBanner = uploadQualityBanner(uploadQuality, locale);
+  const qualityTone = uploadQualityTone(uploadQuality);
 
   useEffect(() => {
     return () => {
@@ -256,14 +264,16 @@ function MemberCard({
     if (!docFile || !canUpload) return;
     setDocsBusy("upload");
     setDocsError(null);
+    setUploadQuality(null);
     try {
-      const updated = await uploadJanitorReviewDocument(
+      const result = await uploadJanitorReviewDocument(
         token,
         member.id,
         docType,
         docFile
       );
-      onIdentityUpdated(updated);
+      onIdentityUpdated(result.review);
+      setUploadQuality(result.quality);
       setDocFile(null);
       onIdentityFlash?.(t("reviewDocsUploadOk").replace("{name}", member.name));
     } catch (err: unknown) {
@@ -432,6 +442,18 @@ function MemberCard({
                     ? t("reviewDocsUploading")
                     : t("reviewDocsUpload")}
                 </button>
+                {qualityBanner ? (
+                  <p
+                    className={
+                      qualityTone === "fail"
+                        ? "text-sm text-[#7f1d1d]"
+                        : "text-sm text-[#92400e]"
+                    }
+                    role="status"
+                  >
+                    {qualityBanner}
+                  </p>
+                ) : null}
               </div>
             ) : null}
           </dd>
@@ -516,6 +538,37 @@ export default function ReviewForm({ token }: { token: string }) {
       cancelled = true;
     };
   }, [token]);
+
+  // Soft-refresh when the janitor returns to this tab after the tenant signs.
+  const awaitingConsentSignature = Boolean(
+    review?.members.some(
+      (member) =>
+        !member.credit_consent_signed && !member.credit_consent_document_id
+    )
+  );
+  useEffect(() => {
+    if (!awaitingConsentSignature) return;
+    let cancelled = false;
+    const refresh = () => {
+      if (document.visibilityState === "hidden") return;
+      void fetchJanitorReview(token)
+        .then((data) => {
+          if (cancelled) return;
+          setReview(data);
+          if (data.checklist) setChecklist(data.checklist);
+        })
+        .catch(() => {
+          /* keep current review; next focus can retry */
+        });
+    };
+    document.addEventListener("visibilitychange", refresh);
+    window.addEventListener("focus", refresh);
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", refresh);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [token, awaitingConsentSignature]);
 
   const showLandlordCheck = useMemo(
     () =>
