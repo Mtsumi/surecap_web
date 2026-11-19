@@ -193,8 +193,7 @@ export const adminMessages = {
       "Job immeuble + job Route/matériel. Laisser un champ vide = non mappé (pas de repli silencieux pour la Route).",
     buildingsVericlockJobGuidEmpty: "Non mappé (utilisera le job par défaut)",
     buildingsVericlockRouteJobGuid: "GUID du job Route VeriClock",
-    buildingsVericlockRouteJobGuidEmpty:
-      "Non mappé — Route/matériel bloqué jusqu’au mapping",
+    buildingsVericlockRouteJobGuidEmpty: "Non mappé — Route/matériel bloqué jusqu’au mapping",
     buildingsJanitorPhone: "Téléphone du concierge",
     buildingsJanitorPhoneHint:
       "Inclus dans le courriel au demandeur s'il faut ajouter un garant. Sans numéro, on envoie le courriel du concierge.",
@@ -778,8 +777,7 @@ export const adminMessages = {
       "Building job + Route/parts job. Empty Route GUID blocks Route/materials until mapped.",
     buildingsVericlockJobGuidEmpty: "Not mapped (uses default job)",
     buildingsVericlockRouteJobGuid: "VeriClock Route job GUID",
-    buildingsVericlockRouteJobGuidEmpty:
-      "Not mapped — Route/materials blocked until set",
+    buildingsVericlockRouteJobGuidEmpty: "Not mapped — Route/materials blocked until set",
     buildingsJanitorPhone: "Janitor phone",
     buildingsJanitorPhoneHint:
       "Included in the applicant email when they can add a guarantor. If empty, the janitor email is used.",
