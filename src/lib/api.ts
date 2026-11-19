@@ -775,6 +775,8 @@ export type JanitorReviewMember = {
   linkedin_url?: string | null;
   credit_consent_document_id?: number | null;
   credit_consent_signed?: boolean;
+  /** True when an unused credit-consent sign token is still live for this member. */
+  credit_consent_signature_pending?: boolean;
   email?: string | null;
   documents?: JanitorReviewDocument[];
   can_upload_documents?: boolean;

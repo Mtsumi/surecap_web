@@ -198,9 +198,19 @@ function MemberCard({
   const [docsBusy, setDocsBusy] = useState<"upload" | "sign" | null>(null);
   const [docsError, setDocsError] = useState<string | null>(null);
   const [uploadQuality, setUploadQuality] = useState<UploadQuality | null>(null);
-  const [signRequested, setSignRequested] = useState(false);
+  const signStorageKey = `janitor-credit-sign:${token}:${member.id}`;
+  const [signRequested, setSignRequested] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      return window.sessionStorage.getItem(signStorageKey) === "1";
+    } catch {
+      return false;
+    }
+  });
   const canUpload = Boolean(member.can_upload_documents) && !disabled;
   const consentSigned = Boolean(member.credit_consent_signed);
+  const signaturePending =
+    Boolean(member.credit_consent_signature_pending) || signRequested;
   const qualityBanner = uploadQualityBanner(uploadQuality, locale);
   const qualityTone = uploadQualityTone(uploadQuality);
 
@@ -209,6 +219,12 @@ function MemberCard({
       if (idPreviewUrl) URL.revokeObjectURL(idPreviewUrl);
     };
   }, [idPreviewUrl]);
+
+  useEffect(() => {
+    if (member.credit_consent_signature_pending || consentSigned) {
+      setSignRequested(true);
+    }
+  }, [member.credit_consent_signature_pending, consentSigned]);
 
   async function openDoc(
     docId: number | null | undefined,
@@ -295,6 +311,11 @@ function MemberCard({
       const updated = await requestJanitorCreditSignature(token, member.id, locale);
       onIdentityUpdated(updated);
       setSignRequested(true);
+      try {
+        window.sessionStorage.setItem(signStorageKey, "1");
+      } catch {
+        /* ignore quota / private mode */
+      }
       onIdentityFlash?.(t("reviewAskSignOk").replace("{name}", member.name));
     } catch (err: unknown) {
       setDocsError(formatAdminFetchError(err, locale, t("reviewAskSignFail")));
@@ -473,13 +494,13 @@ function MemberCard({
                     type="button"
                     className={adminUi.btnSecondary}
                     disabled={
-                      Boolean(docsBusy) || submitting || signRequested
+                      Boolean(docsBusy) || submitting || signaturePending
                     }
                     onClick={() => void askSign()}
                   >
                     {docsBusy === "sign"
                       ? t("reviewAskSignSending")
-                      : signRequested
+                      : signaturePending
                         ? t("reviewAskSignSent")
                         : t("reviewAskSign")}
                   </button>
@@ -539,7 +560,7 @@ export default function ReviewForm({ token }: { token: string }) {
     };
   }, [token]);
 
-  // Soft-refresh when the janitor returns to this tab after the tenant signs.
+  // Soft-refresh while waiting for a tenant signature (focus + light poll).
   const awaitingConsentSignature = Boolean(
     review?.members.some(
       (member) =>
@@ -558,15 +579,17 @@ export default function ReviewForm({ token }: { token: string }) {
           if (data.checklist) setChecklist(data.checklist);
         })
         .catch(() => {
-          /* keep current review; next focus can retry */
+          /* keep current review; next tick / focus can retry */
         });
     };
     document.addEventListener("visibilitychange", refresh);
     window.addEventListener("focus", refresh);
+    const intervalId = window.setInterval(refresh, 15_000);
     return () => {
       cancelled = true;
       document.removeEventListener("visibilitychange", refresh);
       window.removeEventListener("focus", refresh);
+      window.clearInterval(intervalId);
     };
   }, [token, awaitingConsentSignature]);
 

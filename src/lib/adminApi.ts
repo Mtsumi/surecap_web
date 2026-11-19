@@ -228,6 +228,7 @@ export type BuildingAdmin = {
   janitor_phone: string | null;
   dropbox_area?: string | null;
   vericlock_job_guid?: string | null;
+  vericlock_route_job_guid?: string | null;
 };
 
 export type UnitPhotoAdmin = {
@@ -530,7 +531,14 @@ export function listUnitsAdmin(buildingId: number) {
 export function updateBuildingAdmin(
   buildingId: number,
   data: Partial<
-    Pick<BuildingAdmin, "janitor_email" | "janitor_phone" | "dropbox_area" | "vericlock_job_guid">
+    Pick<
+      BuildingAdmin,
+      | "janitor_email"
+      | "janitor_phone"
+      | "dropbox_area"
+      | "vericlock_job_guid"
+      | "vericlock_route_job_guid"
+    >
   >
 ) {
   return adminFetch<BuildingAdmin>(`/admin/buildings/${buildingId}`, {
