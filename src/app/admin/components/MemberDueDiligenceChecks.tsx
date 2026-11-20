@@ -61,14 +61,11 @@ function CheckMeta({
     return (
       <span className={metaClass}>
         {contact ? (
-          <>
-            {contact.tel ? (
-              <MetaLink href={contact.tel}>{contact.label}</MetaLink>
-            ) : (
-              contact.label
-            )}
-            {member.hr_phone && !contact.tel ? ` · ${member.hr_phone}` : null}
-          </>
+          contact.tel ? (
+            <MetaLink href={contact.tel}>{contact.label}</MetaLink>
+          ) : (
+            contact.label
+          )
         ) : (
           t("reviewCheckNoEmployerContact")
         )}
