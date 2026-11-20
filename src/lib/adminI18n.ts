@@ -511,6 +511,16 @@ export const adminMessages = {
     appDetailApplicantInfo: "Informations du demandeur",
     appDetailDocumentsTitle: "Documents",
     appDetailDocumentsEmpty: "Aucun document pour le moment",
+    appDetailDocumentsOpsHint:
+      "Joindre une pièce manquante ou demander la signature du consentement crédit",
+    appDetailDocsAttachTitle: "Joindre un document manquant",
+    appDetailDocsAttachHint:
+      "Pièce d'identité, bulletins de paie ou avis de cotisation pour ce membre.",
+    appDetailDocsConsentTitle: "Consentement crédit",
+    appDetailDocsConsentHint:
+      "Indépendant des pièces jointes : envoie un lien de signature au locataire.",
+    appDetailDocsMember: "Membre",
+    appDetailDocsNoneUploaded: "Aucun document téléversé pour cette demande.",
     appDetailScreeningTitle: "Screening",
     appDetailScreeningEmpty: "Aucun résultat pour le moment",
     appDetailMemberFallback: "Membre #{id}",
@@ -1094,6 +1104,16 @@ export const adminMessages = {
     appDetailApplicantInfo: "Applicant information",
     appDetailDocumentsTitle: "Documents",
     appDetailDocumentsEmpty: "No documents yet",
+    appDetailDocumentsOpsHint:
+      "Attach a missing file or request the credit-consent signature",
+    appDetailDocsAttachTitle: "Attach a missing document",
+    appDetailDocsAttachHint:
+      "ID, payslips, or notice of assessment for this member.",
+    appDetailDocsConsentTitle: "Credit consent",
+    appDetailDocsConsentHint:
+      "Separate from file uploads: emails the tenant a signature link.",
+    appDetailDocsMember: "Member",
+    appDetailDocsNoneUploaded: "No documents uploaded for this application.",
     appDetailScreeningTitle: "Screening",
     appDetailScreeningEmpty: "No results yet",
     appDetailMemberFallback: "Member #{id}",

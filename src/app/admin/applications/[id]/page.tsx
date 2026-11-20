@@ -1184,7 +1184,9 @@ export default function ApplicationDetailPage() {
             subtitle={
               documentCount > 0
                 ? `${documentCount} fichier${documentCount === 1 ? "" : "s"}`
-                : t("appDetailDocumentsEmpty")
+                : app.docs_editable
+                  ? t("appDetailDocumentsOpsHint")
+                  : t("appDetailDocumentsEmpty")
             }
           >
             <ApplicationDocuments
