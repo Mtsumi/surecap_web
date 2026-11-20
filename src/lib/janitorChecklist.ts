@@ -144,16 +144,27 @@ export function telHref(phone: string | null | undefined): string | null {
   return `tel:${digits}`;
 }
 
+function contactDisplayLabel(
+  name: string | null,
+  phone: string | null | undefined
+): string {
+  const n = (name || "").trim() || null;
+  const p = (phone || "").trim() || null;
+  if (n && p) return `${n} · ${p}`;
+  return n || p || "";
+}
+
 export function employerContactLine(member: DueDiligenceMember): {
   label: string;
   tel: string | null;
 } | null {
   const name =
     [member.employer_name, member.hr_name].filter(Boolean).join(" · ") || null;
-  const tel = telHref(member.hr_phone);
-  if (!name && !tel && !member.hr_phone) return null;
+  const phone = member.hr_phone;
+  const tel = telHref(phone);
+  if (!name && !tel && !phone) return null;
   return {
-    label: name || member.hr_phone || "",
+    label: contactDisplayLabel(name, phone),
     tel,
   };
 }
@@ -170,7 +181,7 @@ export function landlordContactLine(member: DueDiligenceMember): {
   const phone = member.landlord_phone || member.previous_landlord_phone;
   const tel = telHref(phone);
   if (!name && !phone) return null;
-  return { label: name || phone || "", tel };
+  return { label: contactDisplayLabel(name, phone), tel };
 }
 
 export function facebookCheckLink(member: DueDiligenceMember) {
