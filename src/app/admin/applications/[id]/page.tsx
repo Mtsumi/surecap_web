@@ -9,7 +9,6 @@ import {
   ApplicationDetail,
   ApplicationJob,
   ApplicationMember,
-  JanitorReviewChecklist,
   acceptApplication,
   adminMe,
   confirmMemberIdentity,
@@ -21,6 +20,13 @@ import {
   rejectApplication,
   requestCreditCheck,
 } from "@/lib/adminApi";
+import {
+  checklistComplete as memberChecklistComplete,
+  emptyChecklist,
+  parseChecklist,
+  type JanitorReviewChecklist,
+} from "@/lib/janitorChecklist";
+import MemberDueDiligenceChecks from "../../components/MemberDueDiligenceChecks";
 import { formatAddressDateRange } from "@/lib/addressFormUtils";
 import { adminUi, applicationStatusClass } from "@/lib/adminUi";
 import { guarantorAddressOutsideQuebec } from "@/lib/quebecAddress";
@@ -52,26 +58,6 @@ import MemberIdentityPanel, {
   IdentityGateBanner,
   IdentityUnlockStrip,
 } from "../../components/MemberIdentityPanel";
-
-const EMPTY_CHECKLIST: JanitorReviewChecklist = {
-  called_employer: false,
-  called_landlord: false,
-  checked_social: false,
-};
-
-const CHECKLIST_KEYS: Array<{
-  key: keyof JanitorReviewChecklist;
-  labelKey: AdminMessageKey;
-  hideForGuarantorOnly?: boolean;
-}> = [
-  { key: "called_employer", labelKey: "reviewCheckEmployer" },
-  {
-    key: "called_landlord",
-    labelKey: "reviewCheckLandlord",
-    hideForGuarantorOnly: true,
-  },
-  { key: "checked_social", labelKey: "reviewCheckSocial" },
-];
 
 function formatLivedDates(
   from: string | null | undefined,
@@ -366,7 +352,8 @@ export default function ApplicationDetailPage() {
   const [jobs, setJobs] = useState<ApplicationJob[]>([]);
   const [reason, setReason] = useState("");
   const [acceptNote, setAcceptNote] = useState("");
-  const [checklist, setChecklist] = useState<JanitorReviewChecklist>(EMPTY_CHECKLIST);
+  const [checklist, setChecklist] =
+    useState<JanitorReviewChecklist>(emptyChecklist);
   const [showRefuse, setShowRefuse] = useState(false);
   const [showOffer, setShowOffer] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -386,13 +373,9 @@ export default function ApplicationDetailPage() {
         setApp(a);
         setJobs(j);
         if (a.janitor_review_checklist) {
-          setChecklist({
-            called_employer: Boolean(a.janitor_review_checklist.called_employer),
-            called_landlord: Boolean(a.janitor_review_checklist.called_landlord),
-            checked_social: Boolean(a.janitor_review_checklist.checked_social),
-          });
+          setChecklist(parseChecklist(a.janitor_review_checklist));
         } else if (a.status === "submitted") {
-          setChecklist(EMPTY_CHECKLIST);
+          setChecklist(emptyChecklist());
         }
       })
       .catch((e) => setError(formatAdminFetchError(e, locale, t("teamError"))));
@@ -538,23 +521,43 @@ export default function ApplicationDetailPage() {
     return `${memberRoleLabel(member.role, t)} - ${memberDisplayName(member)}`;
   };
 
-  const showLandlordCheck = useMemo(
-    () => members.some((member) => member.role !== "guarantor"),
-    [members]
-  );
-
-  const checklistComplete =
-    checklist.called_employer &&
-    checklist.checked_social &&
-    (!showLandlordCheck || checklist.called_landlord);
-
-  const visibleChecklistKeys = useMemo(
+  const dueDiligenceMembers = useMemo(
     () =>
-      CHECKLIST_KEYS.filter(
-        (item) => !(item.hideForGuarantorOnly && !showLandlordCheck)
-      ),
-    [showLandlordCheck]
+      sortedMembers.map((m) => ({
+        id: m.id,
+        role: m.role,
+        member_status: m.member_status,
+        name: memberDisplayName(m),
+        phone: m.phone,
+        employer_name: m.employer_name,
+        hr_name: m.hr_name,
+        hr_phone: m.hr_phone,
+        landlord_name: m.landlord_name,
+        landlord_phone: m.landlord_phone,
+        previous_landlord_name: m.previous_landlord_name,
+        previous_landlord_phone: m.previous_landlord_phone,
+        no_previous_landlord_contact: m.no_previous_landlord_contact,
+        facebook_url: m.facebook_url,
+        identity: m.identity,
+      })),
+    [sortedMembers]
   );
+
+  const checklistComplete = memberChecklistComplete(
+    checklist,
+    dueDiligenceMembers
+  );
+
+  const openMemberId = (memberId: number) => {
+    setReviewRequest({
+      memberId,
+      documentTypes: ID_REVIEW_DOCUMENT_TYPES,
+      nonce: Date.now(),
+    });
+    document
+      .getElementById("documents-section")
+      ?.scrollIntoView({ behavior: "smooth" });
+  };
 
   const onRequestCreditCheck = async () => {
     setBusy(true);
@@ -562,6 +565,9 @@ export default function ApplicationDetailPage() {
     try {
       const updated = await requestCreditCheck(id, checklist);
       setApp(updated);
+      if (updated.janitor_review_checklist) {
+        setChecklist(parseChecklist(updated.janitor_review_checklist));
+      }
       setIdentityFlash(t("appDetailCreditRequested"));
     } catch (e) {
       setError(formatAdminFetchError(e, locale, t("teamError")));
@@ -810,22 +816,7 @@ export default function ApplicationDetailPage() {
                     {t("appDetailJanitorChecksSubtitle")}
                   </p>
                 </div>
-                <div className={`${adminUi.cardPad} space-y-2`}>
-                  {visibleChecklistKeys.map(({ key, labelKey }) => (
-                    <label
-                      key={key}
-                      className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
-                    >
-                      <input
-                        type="checkbox"
-                        className="mt-0.5"
-                        checked={Boolean(checklist[key])}
-                        disabled
-                        readOnly
-                      />
-                      <span>{t(labelKey)}</span>
-                    </label>
-                  ))}
+                <div className={`${adminUi.cardPad} space-y-3`}>
                   <label className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">
                     <input
                       type="checkbox"
@@ -836,6 +827,13 @@ export default function ApplicationDetailPage() {
                     />
                     <span>{t("reviewIdentityConfirmedCheckbox")}</span>
                   </label>
+                  <MemberDueDiligenceChecks
+                    members={dueDiligenceMembers}
+                    checklist={checklist}
+                    disabled
+                    onOpenId={(m) => openMemberId(m.id)}
+                    showLegacyHousehold
+                  />
                 </div>
               </section>
               <ScreeningAcceptBanner
@@ -914,26 +912,13 @@ export default function ApplicationDetailPage() {
                         ) : null}
                       </span>
                     </label>
-                    {visibleChecklistKeys.map(({ key, labelKey }) => (
-                      <label
-                        key={key}
-                        className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
-                      >
-                        <input
-                          type="checkbox"
-                          className="mt-0.5"
-                          checked={checklist[key]}
-                          disabled={busy}
-                          onChange={(event) =>
-                            setChecklist((current) => ({
-                              ...current,
-                              [key]: event.target.checked,
-                            }))
-                          }
-                        />
-                        <span>{t(labelKey)}</span>
-                      </label>
-                    ))}
+                    <MemberDueDiligenceChecks
+                      members={dueDiligenceMembers}
+                      checklist={checklist}
+                      disabled={busy}
+                      onChange={setChecklist}
+                      onOpenId={(m) => openMemberId(m.id)}
+                    />
                   </div>
                   {!identityReady ? (
                     <div className="space-y-3 border-t border-[var(--ml-line)] pt-3">

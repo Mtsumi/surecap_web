@@ -1,6 +1,12 @@
 import { clearAdminToken, getAdminToken } from "./adminAuth";
 import { AdminNetworkError, isAdminNetworkError } from "./adminFetchError";
 import type { MemberDocument } from "./adminDocuments";
+import type { JanitorReviewChecklist } from "./janitorChecklist";
+
+export type {
+  JanitorReviewChecklist,
+  MemberChecklistFlags,
+} from "./janitorChecklist";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -122,12 +128,6 @@ export type HouseholdAffordability = {
   ocr_ratio: number | null;
   ocr_tone: string;
   ocr_label: string;
-};
-
-export type JanitorReviewChecklist = {
-  called_employer: boolean;
-  called_landlord: boolean;
-  checked_social: boolean;
 };
 
 export type ApplicationDetail = {

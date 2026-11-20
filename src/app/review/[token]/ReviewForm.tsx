@@ -4,7 +4,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import {
   JanitorReview,
-  JanitorReviewChecklist,
   JanitorReviewMember,
   UploadQuality,
   confirmReviewMemberIdentity,
@@ -39,15 +38,16 @@ import MemberIdentityPanel, {
   IdentityGateBanner,
   IdentityUnlockStrip,
 } from "@/app/admin/components/MemberIdentityPanel";
+import MemberDueDiligenceChecks from "@/app/admin/components/MemberDueDiligenceChecks";
 import LocaleToggle from "@/components/LocaleToggle";
 import { useAdminCopy } from "@/app/admin/AdminLocaleContext";
 import type { AdminMessageKey } from "@/lib/adminI18n";
-
-const EMPTY_CHECKLIST: JanitorReviewChecklist = {
-  called_employer: false,
-  called_landlord: false,
-  checked_social: false,
-};
+import {
+  checklistComplete as memberChecklistComplete,
+  emptyChecklist,
+  parseChecklist,
+  type JanitorReviewChecklist,
+} from "@/lib/janitorChecklist";
 
 function roleLabel(role: string, t: (key: AdminMessageKey) => string): string {
   switch (role) {
@@ -542,7 +542,8 @@ export default function ReviewForm({ token }: { token: string }) {
   const [submitting, setSubmitting] = useState(false);
   const [showRefuse, setShowRefuse] = useState(false);
   const [showOffer, setShowOffer] = useState(false);
-  const [checklist, setChecklist] = useState<JanitorReviewChecklist>(EMPTY_CHECKLIST);
+  const [checklist, setChecklist] =
+    useState<JanitorReviewChecklist>(emptyChecklist);
   const [stripBusy, setStripBusy] = useState(false);
   const [stripIdPreviewUrl, setStripIdPreviewUrl] = useState<string | null>(null);
   const [stripIdIsPdf, setStripIdIsPdf] = useState(false);
@@ -562,7 +563,7 @@ export default function ReviewForm({ token }: { token: string }) {
       .then((data) => {
         if (cancelled) return;
         setReview(data);
-        if (data.checklist) setChecklist(data.checklist);
+        if (data.checklist) setChecklist(parseChecklist(data.checklist));
         setError(null);
       })
       .catch((err: unknown) => {
@@ -593,7 +594,7 @@ export default function ReviewForm({ token }: { token: string }) {
         .then((data) => {
           if (cancelled) return;
           setReview(data);
-          if (data.checklist) setChecklist(data.checklist);
+          if (data.checklist) setChecklist(parseChecklist(data.checklist));
         })
         .catch(() => {
           /* keep current review; next tick / focus can retry */
@@ -610,20 +611,29 @@ export default function ReviewForm({ token }: { token: string }) {
     };
   }, [token, awaitingConsentSignature]);
 
-  const showLandlordCheck = useMemo(
-    () =>
-      Boolean(
-        review?.members?.some((member) => member.role !== "guarantor")
-      ),
-    [review?.members]
-  );
-
   const allChecked = useMemo(
     () =>
-      checklist.called_employer &&
-      checklist.checked_social &&
-      (!showLandlordCheck || checklist.called_landlord),
-    [checklist, showLandlordCheck]
+      memberChecklistComplete(
+        checklist,
+        (review?.members || []).map((m) => ({
+          id: m.id,
+          role: m.role,
+          member_status: m.member_status,
+          name: m.name,
+          phone: m.phone,
+          employer_name: m.employer_name,
+          hr_name: m.hr_name,
+          hr_phone: m.hr_phone,
+          landlord_name: m.landlord_name,
+          landlord_phone: m.landlord_phone,
+          previous_landlord_name: m.previous_landlord_name,
+          previous_landlord_phone: m.previous_landlord_phone,
+          no_previous_landlord_contact: m.no_previous_landlord_contact,
+          facebook_url: m.facebook_url,
+          identity: m.identity,
+        }))
+      ),
+    [checklist, review?.members]
   );
 
   async function openStripDoc(
@@ -715,7 +725,7 @@ export default function ReviewForm({ token }: { token: string }) {
             : undefined,
       });
       setReview(updated);
-      if (updated.checklist) setChecklist(updated.checklist);
+      if (updated.checklist) setChecklist(parseChecklist(updated.checklist));
       setShowRefuse(false);
       setShowOffer(false);
     } catch (err: unknown) {
@@ -915,56 +925,24 @@ export default function ReviewForm({ token }: { token: string }) {
             </p>
           </div>
           <div className={`${adminUi.cardPad} space-y-4`}>
-            <div className="space-y-3">
-              <label className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">
-                <input
-                  type="checkbox"
-                  className="mt-0.5"
-                  checked={review.identity?.ready_for_accept !== false}
-                  disabled
-                  readOnly
-                />
-                <span>
-                  {t("reviewIdentityConfirmedCheckbox")}
-                  {review.stage === "janitor" &&
-                  review.identity?.ready_for_accept === false ? (
-                    <span className="mt-0.5 block text-[var(--ml-steel)]">
-                      {t("reviewIdentityOpenThenYesNo")}
-                    </span>
-                  ) : null}
-                </span>
-              </label>
-              {(
-                [
-                  ["called_employer", "reviewCheckEmployer"],
-                  ...(showLandlordCheck
-                    ? ([["called_landlord", "reviewCheckLandlord"]] as const)
-                    : []),
-                  ["checked_social", "reviewCheckSocial"],
-                ] as const
-              ).map(([key, labelKey]) => (
-                <label
-                  key={key}
-                  className="flex items-start gap-3 text-sm text-[var(--ml-ink)]"
-                >
-                  <input
-                    type="checkbox"
-                    className="mt-0.5"
-                    checked={checklist[key]}
-                    disabled={
-                      review.stage !== "janitor" || submitting || showRefuse
-                    }
-                    onChange={(event) =>
-                      setChecklist((current) => ({
-                        ...current,
-                        [key]: event.target.checked,
-                      }))
-                    }
-                  />
-                  <span>{t(labelKey)}</span>
-                </label>
-              ))}
-            </div>
+            <label className="flex items-start gap-3 text-sm text-[var(--ml-ink)]">
+              <input
+                type="checkbox"
+                className="mt-0.5"
+                checked={review.identity?.ready_for_accept !== false}
+                disabled
+                readOnly
+              />
+              <span>
+                {t("reviewIdentityConfirmedCheckbox")}
+                {review.stage === "janitor" &&
+                review.identity?.ready_for_accept === false ? (
+                  <span className="mt-0.5 block text-[var(--ml-steel)]">
+                    {t("reviewIdentityOpenThenYesNo")}
+                  </span>
+                ) : null}
+              </span>
+            </label>
             {review.stage === "janitor" &&
             review.identity?.ready_for_accept === false ? (
               <div className="space-y-3 border-t border-[var(--ml-line)] pt-3">
@@ -996,6 +974,25 @@ export default function ReviewForm({ token }: { token: string }) {
                   ))}
               </div>
             ) : null}
+            <div className="border-t border-[var(--ml-line)] pt-3">
+              <MemberDueDiligenceChecks
+                members={review.members}
+                checklist={checklist}
+                disabled={
+                  review.stage !== "janitor" || submitting || showRefuse
+                }
+                onChange={
+                  review.stage === "janitor" && !submitting && !showRefuse
+                    ? setChecklist
+                    : undefined
+                }
+                onOpenId={(m) => {
+                  const full = review.members.find((x) => x.id === m.id);
+                  if (full) void openStripId(full);
+                }}
+                showLegacyHousehold={review.stage !== "janitor"}
+              />
+            </div>
           </div>
         </section>
       ) : null}

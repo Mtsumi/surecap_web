@@ -1,10 +1,16 @@
 import { ClientNetworkError, isClientNetworkError } from "./clientFetchError";
+import type { JanitorReviewChecklist } from "./janitorChecklist";
 import {
   isRetryableUploadError,
   sleep,
   uploadNetworkErrorMessage,
   uploadTimeoutErrorMessage,
 } from "./uploadErrors";
+
+export type {
+  JanitorReviewChecklist,
+  MemberChecklistFlags,
+} from "./janitorChecklist";
 
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -762,6 +768,7 @@ export type JanitorReviewDocument = {
 export type JanitorReviewMember = {
   id: number;
   role: string;
+  member_status?: string | null;
   name: string;
   landlord_name?: string | null;
   landlord_phone?: string | null;
@@ -778,15 +785,10 @@ export type JanitorReviewMember = {
   /** True when an unused credit-consent sign token is still live for this member. */
   credit_consent_signature_pending?: boolean;
   email?: string | null;
+  phone?: string | null;
   documents?: JanitorReviewDocument[];
   can_upload_documents?: boolean;
   identity?: MemberIdentityStatus | null;
-};
-
-export type JanitorReviewChecklist = {
-  called_employer: boolean;
-  called_landlord: boolean;
-  checked_social: boolean;
 };
 
 export type JanitorReview = {
