@@ -501,10 +501,10 @@ export const adminMessages = {
     appDetailAcceptNote: "Note d'acceptation: {note}",
     appDetailJanitorChecksTitle: "Vérifications du concierge",
     appDetailJanitorChecksSubtitle:
-      "Contrôles déjà faits avant la demande de crédit (employeur, Facebook, identité).",
+      "Contrôles déjà faits avant la demande de crédit (par candidat : employeur, Facebook, identité).",
     appDetailChecksTitle: "Vérifications",
     appDetailChecksSubtitle:
-      "Complétez l'identité, l'appel à l'employeur et la vérification Facebook, puis envoyez le dossier à Steve pour la vérification de crédit. Cela ne crée pas de dossier prospect ni n'approuve le bail.",
+      "Pour chaque candidat : identité, appel employeur, Facebook (et propriétaire si applicable), puis envoyez le dossier à Steve. Cela ne crée pas de dossier prospect ni n'approuve le bail.",
     appDetailCreditRequested:
       "Vérification de crédit demandée: Steve a été notifié. Aucun dossier prospect créé.",
     appDetailMembersTitle: "Membres du dossier",
@@ -584,7 +584,7 @@ export const adminMessages = {
     reviewSubjectPrefix: "Objet : {subject}",
     reviewChecksTitle: "Vérifications",
     reviewChecksJanitor:
-      "Complétez l'identité, l'appel à l'employeur et la vérification Facebook avant d'envoyer le dossier à Steve.",
+      "Pour chaque candidat : identité, appel employeur, Facebook (et propriétaire si applicable), puis envoyez le dossier à Steve.",
     reviewChecksSteve:
       "Contrôles déjà faits par le concierge. Après le crédit, choisissez ci-dessous.",
     reviewIdentityConfirmedCheckbox:
@@ -594,11 +594,20 @@ export const adminMessages = {
     reviewCheckEmployer: "J'ai appelé l'employeur / les RH",
     reviewCheckLandlord: "J'ai appelé le propriétaire",
     reviewCheckSocial: "J'ai vérifié Facebook",
+    reviewCheckOpenId: "Ouvrir la pièce d'identité",
+    reviewCheckOpenFacebook: "Ouvrir le profil Facebook",
+    reviewCheckSearchFacebook: "Rechercher sur Facebook",
+    reviewCheckNoEmployerContact: "Aucun contact employeur / RH au dossier",
+    reviewCheckNoLandlordContact: "Aucun contact propriétaire au dossier",
+    reviewCheckNoFacebook: "Pas de lien Facebook — cherchez le nom manuellement",
+    reviewCheckNoTargets: "Aucun candidat soumis à vérifier.",
+    reviewCheckLegacyNote:
+      "Ancienne vérification globale (avant les cases par personne).",
     reviewTenantsIdentity: "Identité",
     reviewReadyForCredit: "Prêt pour la vérification de crédit",
     reviewRefuse: "Refuser",
     reviewRejectNeedChecks:
-      "Cochez l'appel à l'employeur et la vérification Facebook avant de refuser.",
+      "Cochez l'employeur et Facebook pour chaque candidat avant de refuser.",
     reviewUpdateFailed: "La mise à jour a échoué",
     reviewTenantFallback: "le locataire",
     reviewStripIdAlt: "Pièce d'identité",
@@ -1099,10 +1108,10 @@ export const adminMessages = {
     appDetailAcceptNote: "Acceptance note: {note}",
     appDetailJanitorChecksTitle: "Janitor checks",
     appDetailJanitorChecksSubtitle:
-      "Checks already done before the credit request (employer, Facebook, identity).",
+      "Checks already done before the credit request (per applicant: employer, Facebook, identity).",
     appDetailChecksTitle: "Checks",
     appDetailChecksSubtitle:
-      "Complete identity, the employer call, and the Facebook check, then send the file to Steve for the credit check. This does not create a prospect folder or approve the lease.",
+      "For each applicant: identity, employer call, Facebook (and landlord when it applies), then send the file to Steve. This does not create a prospect folder or approve the lease.",
     appDetailCreditRequested:
       "Credit check requested: Steve was notified. No prospect folder created.",
     appDetailMembersTitle: "Household members",
@@ -1182,7 +1191,7 @@ export const adminMessages = {
     reviewSubjectPrefix: "Subject: {subject}",
     reviewChecksTitle: "Checks",
     reviewChecksJanitor:
-      "Complete identity, the employer call, and the Facebook check before sending the file to Steve.",
+      "For each applicant: identity, employer call, Facebook (and landlord when it applies), then send the file to Steve.",
     reviewChecksSteve:
       "Checks already done by the janitor. After credit, choose below.",
     reviewIdentityConfirmedCheckbox:
@@ -1192,11 +1201,20 @@ export const adminMessages = {
     reviewCheckEmployer: "I called the employer / HR",
     reviewCheckLandlord: "I called the landlord",
     reviewCheckSocial: "I checked Facebook",
+    reviewCheckOpenId: "Open ID document",
+    reviewCheckOpenFacebook: "Open Facebook profile",
+    reviewCheckSearchFacebook: "Search on Facebook",
+    reviewCheckNoEmployerContact: "No employer / HR contact on file",
+    reviewCheckNoLandlordContact: "No landlord contact on file",
+    reviewCheckNoFacebook: "No Facebook link — search the name manually",
+    reviewCheckNoTargets: "No submitted applicants to check.",
+    reviewCheckLegacyNote:
+      "Older household-level checklist (before per-person boxes).",
     reviewTenantsIdentity: "Identity",
     reviewReadyForCredit: "Ready for credit check",
     reviewRefuse: "Refuse",
     reviewRejectNeedChecks:
-      "Check the employer call and the Facebook check before refusing.",
+      "Check employer and Facebook for each applicant before refusing.",
     reviewUpdateFailed: "Update failed",
     reviewTenantFallback: "the tenant",
     reviewStripIdAlt: "ID document",
