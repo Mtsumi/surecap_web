@@ -26,6 +26,7 @@ import {
   uploadQualityBanner,
   uploadQualityTone,
 } from "@/lib/uploadQuality";
+import { formatAdminDateTime } from "@/lib/adminDateTime";
 import { useAdminCopy } from "../../AdminLocaleContext";
 
 export type DocumentReviewRequest = {
@@ -51,6 +52,8 @@ type ApplicationDocumentsProps = {
   applicationId: number;
   members: ApplicationMember[];
   docsEditable?: boolean;
+  /** ISO timestamp when credit check was requested; locks ops attach/sign. */
+  creditCheckRequestedAt?: string | null;
   summaryPdfAvailable: boolean;
   dropboxDossierReady: boolean;
   memberRoleLabel: (role: string) => string;
@@ -279,6 +282,7 @@ export default function ApplicationDocuments({
   applicationId,
   members,
   docsEditable = false,
+  creditCheckRequestedAt = null,
   summaryPdfAvailable,
   dropboxDossierReady,
   memberRoleLabel,
@@ -395,11 +399,14 @@ export default function ApplicationDocuments({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional: members listed for read at request time
   }, [reviewRequest]);
 
+  const creditAlreadyRequested = Boolean(creditCheckRequestedAt);
+
   if (
     !summaryPdfAvailable &&
     !hasMemberDocs &&
     !dropboxDossierReady &&
-    !docsEditable
+    !docsEditable &&
+    !creditAlreadyRequested
   ) {
     return <p className={adminUi.empty}>{t("appDetailDocsNoneUploaded")}</p>;
   }
@@ -482,12 +489,31 @@ export default function ApplicationDocuments({
 
       {error ? <p className={`${adminUi.alertError} mt-3`}>{error}</p> : null}
 
+      {creditAlreadyRequested && !docsEditable ? (
+        <div className="mt-4 rounded border border-[var(--ml-line)] bg-white p-3">
+          <p className="text-sm font-medium text-[var(--ml-ink)]">
+            {t("appDetailDocsCreditSentTitle")}
+          </p>
+          <p className="mt-1 text-xs text-[var(--ml-steel)]">
+            {t("appDetailDocsCreditSentBody")}
+          </p>
+          {(() => {
+            const when = formatAdminDateTime(creditCheckRequestedAt, locale);
+            return when ? (
+              <p className="mt-2 text-xs text-[var(--ml-steel)]">
+                {t("appDetailDocsCreditSentAt").replace("{when}", when)}
+              </p>
+            ) : null;
+          })()}
+        </div>
+      ) : null}
+
       {docsEditable && members.length > 0 ? (
-        <div className="mt-4 space-y-4">
+        <div className="mt-4 space-y-4 rounded border border-[var(--ml-line)] bg-white p-3">
           <label className="block text-xs font-medium text-[var(--ml-steel)]">
             {t("appDetailDocsMember")}
             <select
-              className="mt-1 w-full rounded border border-[var(--ml-line)] bg-white px-2 py-1.5 text-sm text-[var(--ml-ink)]"
+              className="mt-1 w-full rounded border border-[var(--ml-line)] px-2 py-1.5 text-sm text-[var(--ml-ink)]"
               value={activeOpsMember?.id ?? ""}
               disabled={Boolean(opsBusy)}
               onChange={(e) => setOpsMemberId(Number(e.target.value))}
@@ -500,7 +526,7 @@ export default function ApplicationDocuments({
             </select>
           </label>
 
-          <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white p-3">
+          <div className="space-y-2 border-t border-[var(--ml-line)] pt-3">
             <div>
               <p className="text-sm font-medium text-[var(--ml-ink)]">
                 {t("appDetailDocsAttachTitle")}
@@ -570,7 +596,7 @@ export default function ApplicationDocuments({
             ) : null}
           </div>
 
-          <div className="space-y-2 rounded border border-[var(--ml-line)] bg-white p-3">
+          <div className="space-y-2 border-t border-[var(--ml-line)] pt-3">
             <div>
               <p className="text-sm font-medium text-[var(--ml-ink)]">
                 {t("appDetailDocsConsentTitle")}

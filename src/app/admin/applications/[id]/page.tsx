@@ -1186,13 +1186,16 @@ export default function ApplicationDetailPage() {
                 ? `${documentCount} fichier${documentCount === 1 ? "" : "s"}`
                 : app.docs_editable
                   ? t("appDetailDocumentsOpsHint")
-                  : t("appDetailDocumentsEmpty")
+                  : app.credit_check_requested_at
+                    ? t("appDetailDocumentsCreditSentHint")
+                    : t("appDetailDocumentsEmpty")
             }
           >
             <ApplicationDocuments
               applicationId={app.id}
               members={sortedMembers}
               docsEditable={Boolean(app.docs_editable)}
+              creditCheckRequestedAt={app.credit_check_requested_at ?? null}
               summaryPdfAvailable={Boolean(app.summary_pdf_available)}
               dropboxDossierReady={Boolean(app.dropbox_dossier_ready)}
               memberRoleLabel={(role) => memberRoleLabel(role, t)}

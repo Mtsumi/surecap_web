@@ -521,6 +521,11 @@ export const adminMessages = {
       "Indépendant des pièces jointes : envoie un lien de signature au locataire.",
     appDetailDocsMember: "Membre",
     appDetailDocsNoneUploaded: "Aucun document téléversé pour cette demande.",
+    appDetailDocsCreditSentTitle: "Vérification de crédit déjà demandée",
+    appDetailDocsCreditSentBody:
+      "Steve a été notifié. Les pièces et le consentement ne peuvent plus être modifiés ici.",
+    appDetailDocsCreditSentAt: "Demandée le {when}",
+    appDetailDocumentsCreditSentHint: "Crédit demandé — lecture seule",
     appDetailScreeningTitle: "Screening",
     appDetailScreeningEmpty: "Aucun résultat pour le moment",
     appDetailMemberFallback: "Membre #{id}",
@@ -1114,6 +1119,11 @@ export const adminMessages = {
       "Separate from file uploads: emails the tenant a signature link.",
     appDetailDocsMember: "Member",
     appDetailDocsNoneUploaded: "No documents uploaded for this application.",
+    appDetailDocsCreditSentTitle: "Credit check already requested",
+    appDetailDocsCreditSentBody:
+      "Steve was notified. Documents and consent can no longer be changed here.",
+    appDetailDocsCreditSentAt: "Requested {when}",
+    appDetailDocumentsCreditSentHint: "Credit requested — read only",
     appDetailScreeningTitle: "Screening",
     appDetailScreeningEmpty: "No results yet",
     appDetailMemberFallback: "Member #{id}",
