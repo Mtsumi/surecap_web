@@ -310,6 +310,7 @@ export default function ApplicationDocuments({
   const [opsQualityTone, setOpsQualityTone] = useState<"warn" | "fail" | null>(
     null
   );
+  const [opsSuccess, setOpsSuccess] = useState<string | null>(null);
 
   const membersWithDocs = members.filter((member) => (member.documents?.length ?? 0) > 0);
   const hasMemberDocs = membersWithDocs.length > 0;
@@ -324,6 +325,7 @@ export default function ApplicationDocuments({
     if (!activeOpsMember || opsFiles.length === 0 || !docsEditable) return;
     setOpsBusy("upload");
     setError(null);
+    setOpsSuccess(null);
     setOpsQualityBanner(null);
     setOpsQualityTone(null);
     let lastApp: ApplicationDetail | null = null;
@@ -336,6 +338,8 @@ export default function ApplicationDocuments({
           file
         );
         lastApp = result.application;
+        // Refresh list after each file so partial success is visible.
+        onApplicationUpdated?.(result.application);
         const banner = uploadQualityBanner(result.quality, locale);
         const tone = uploadQualityTone(result.quality);
         if (banner) {
@@ -343,7 +347,14 @@ export default function ApplicationDocuments({
           setOpsQualityTone(tone);
         }
       }
-      if (lastApp) onApplicationUpdated?.(lastApp);
+      if (lastApp) {
+        setOpsSuccess(
+          t("reviewDocsUploadOk").replace(
+            "{name}",
+            memberDisplayName(activeOpsMember)
+          )
+        );
+      }
       setOpsFiles([]);
       setOpsFileInputKey((k) => k + 1);
     } catch (e) {
@@ -363,6 +374,7 @@ export default function ApplicationDocuments({
     }
     setOpsBusy("sign");
     setError(null);
+    setOpsSuccess(null);
     try {
       const updated = await requestAdminCreditSignature(
         applicationId,
@@ -488,6 +500,11 @@ export default function ApplicationDocuments({
       </p>
 
       {error ? <p className={`${adminUi.alertError} mt-3`}>{error}</p> : null}
+      {opsSuccess ? (
+        <p className="mt-3 text-sm text-[var(--ml-ink)]" role="status">
+          {opsSuccess}
+        </p>
+      ) : null}
 
       {creditAlreadyRequested && !docsEditable ? (
         <div className="mt-4 rounded border border-[var(--ml-line)] bg-white p-3">
