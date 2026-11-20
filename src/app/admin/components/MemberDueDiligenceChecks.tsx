@@ -52,10 +52,14 @@ function CheckMeta({
 }) {
   const { t } = useAdminCopy();
 
+  // Full-width under the label on phones; sit beside on sm+.
+  const metaClass =
+    "text-xs text-[var(--ml-steel)] basis-full sm:basis-auto";
+
   if (checkKey === "called_employer") {
     const contact = employerContactLine(member);
     return (
-      <span className="mt-0.5 block text-xs text-[var(--ml-steel)]">
+      <span className={metaClass}>
         {contact ? (
           <>
             {contact.tel ? (
@@ -75,21 +79,17 @@ function CheckMeta({
   if (checkKey === "called_landlord") {
     if (member.no_previous_landlord_contact && !member.landlord_phone) {
       return (
-        <span className="mt-0.5 block text-xs text-[var(--ml-steel)]">
-          {t("reviewCheckNoLandlordContact")}
-        </span>
+        <span className={metaClass}>{t("reviewCheckNoLandlordContact")}</span>
       );
     }
     const contact = landlordContactLine(member);
     if (!contact) {
       return (
-        <span className="mt-0.5 block text-xs text-[var(--ml-steel)]">
-          {t("reviewCheckNoLandlordContact")}
-        </span>
+        <span className={metaClass}>{t("reviewCheckNoLandlordContact")}</span>
       );
     }
     return (
-      <span className="mt-0.5 block text-xs text-[var(--ml-steel)]">
+      <span className={metaClass}>
         {contact.tel ? (
           <MetaLink href={contact.tel}>{contact.label}</MetaLink>
         ) : (
@@ -101,7 +101,7 @@ function CheckMeta({
 
   const fb = facebookCheckLink(member);
   return (
-    <span className="mt-0.5 block text-xs text-[var(--ml-steel)]">
+    <span className={metaClass}>
       {fb ? (
         <MetaLink href={fb.href}>
           {fb.provided
@@ -215,7 +215,7 @@ export default function MemberDueDiligenceChecks({
               >
                 <input
                   type="checkbox"
-                  className="mt-0.5"
+                  className="mt-0.5 shrink-0"
                   checked={flags[key]}
                   disabled={disabled || !onChange}
                   onChange={(event) => {
@@ -230,8 +230,8 @@ export default function MemberDueDiligenceChecks({
                     );
                   }}
                 />
-                <span>
-                  {t(CHECK_LABELS[key])}
+                <span className="flex min-w-0 flex-1 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                  <span>{t(CHECK_LABELS[key])}</span>
                   <CheckMeta member={member} checkKey={key} />
                 </span>
               </label>
