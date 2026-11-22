@@ -62,6 +62,7 @@ export default function MaintenanceDetailPage() {
   const [canViewContact, setCanViewContact] = useState(false);
   const [tenantContact, setTenantContact] = useState<UnitTenantContact | null>(null);
   const [contactMissing, setContactMissing] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
   const [visitVacant, setVisitVacant] = useState(false);
   const [visitEmail, setVisitEmail] = useState("");
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
@@ -122,14 +123,22 @@ export default function MaintenanceDetailPage() {
             .then((c) => {
               setTenantContact(c);
               setContactMissing(false);
+              setContactError(null);
             })
-            .catch(() => {
+            .catch((e) => {
               setTenantContact(null);
-              setContactMissing(true);
+              const msg = e instanceof Error ? e.message : "";
+              const missing =
+                /no tenant contact/i.test(msg) || /has no unit/i.test(msg);
+              setContactMissing(missing);
+              setContactError(
+                missing ? null : t("maintenanceTenantContactLoadError")
+              );
             });
         } else {
           setTenantContact(null);
           setContactMissing(false);
+          setContactError(null);
         }
       })
       .catch((e) => {
@@ -346,8 +355,10 @@ export default function MaintenanceDetailPage() {
             </>
           ) : contactMissing ? (
             <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceTenantContactNone")}</p>
+          ) : contactError ? (
+            <p className="text-sm text-[var(--ml-brick)]">{contactError}</p>
           ) : (
-            <p className="text-sm text-[var(--ml-steel)]">…</p>
+            <p className="text-sm text-[var(--ml-steel)]">{t("loading")}</p>
           )}
         </div>
       ) : null}
