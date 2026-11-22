@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AdminUser, adminMe } from "@/lib/adminApi";
 import { clearAdminToken, isAdminLoggedIn } from "@/lib/adminAuth";
+import { adminLoginHref } from "@/lib/adminLoginRedirect";
 import { canAccessMaintenance, isMaintenanceOnlyUser, maintenanceRoleLabel } from "@/lib/maintenanceAdmin";
 import { useAdminLocaleContext } from "./AdminLocaleContext";
 import LocaleToggle from "@/components/LocaleToggle";
@@ -49,7 +50,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!isAdminLoggedIn()) {
-      router.replace("/admin/login");
+      const returnPath =
+        typeof window !== "undefined"
+          ? window.location.pathname + window.location.search
+          : pathname;
+      router.replace(adminLoginHref(returnPath));
       return;
     }
 
@@ -67,7 +72,11 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         .catch(() => {
           if (!cancelled) {
             clearCachedAdminUser();
-            router.replace("/admin/login");
+            const returnPath =
+              typeof window !== "undefined"
+                ? window.location.pathname + window.location.search
+                : pathname;
+            router.replace(adminLoginHref(returnPath));
           }
         });
       return () => {
@@ -83,7 +92,13 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         setLoading(false);
       })
       .catch(() => {
-        if (!cancelled) router.replace("/admin/login");
+        if (!cancelled) {
+          const returnPath =
+            typeof window !== "undefined"
+              ? window.location.pathname + window.location.search
+              : pathname;
+          router.replace(adminLoginHref(returnPath));
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -92,7 +107,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, pathname]);
 
   useEffect(() => {
     if (
