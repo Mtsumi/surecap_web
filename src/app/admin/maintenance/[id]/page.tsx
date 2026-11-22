@@ -12,11 +12,13 @@ import {
   completeMaintenanceJob,
   getBrowserPunchGps,
   getMaintenanceTicket,
+  getMaintenanceTicketTenantContact,
   listMaintenanceWorkers,
   postMaintenanceOwnerDecision,
   proposeMaintenanceVisit,
   startMaintenanceJob,
   uploadMaintenanceTicketAttachment,
+  UnitTenantContact,
 } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
@@ -57,6 +59,10 @@ export default function MaintenanceDetailPage() {
   const [workerBusy, setWorkerBusy] = useState(false);
   const [canAssign, setCanAssign] = useState(false);
   const [canClose, setCanClose] = useState(false);
+  const [canViewContact, setCanViewContact] = useState(false);
+  const [tenantContact, setTenantContact] = useState<UnitTenantContact | null>(null);
+  const [contactMissing, setContactMissing] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
   const [visitVacant, setVisitVacant] = useState(false);
   const [visitEmail, setVisitEmail] = useState("");
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
@@ -93,15 +99,46 @@ export default function MaintenanceDetailPage() {
         setViewerId(user.id);
         setIsSuper(user.is_super_admin);
         const assign =
-          !user.is_super_admin && user.maintenance_role === "maintenance_manager";
+          user.is_super_admin || user.maintenance_role === "maintenance_manager";
         const close =
           user.is_super_admin || user.maintenance_role === "maintenance_manager";
+        const viewContact =
+          Boolean(data.unit_id) &&
+          (user.is_super_admin ||
+            user.maintenance_role === "maintenance_manager" ||
+            user.maintenance_role === "assistant_property_manager" ||
+            user.maintenance_role === "property_administrator" ||
+            user.maintenance_role === "janitor" ||
+            data.assigned_worker_id === user.id);
         setCanAssign(assign);
         setCanClose(close);
+        setCanViewContact(viewContact);
         if (assign) {
           listMaintenanceWorkers()
             .then(setWorkers)
             .catch(() => setWorkers([]));
+        }
+        if (viewContact) {
+          getMaintenanceTicketTenantContact(ticketId)
+            .then((c) => {
+              setTenantContact(c);
+              setContactMissing(false);
+              setContactError(null);
+            })
+            .catch((e) => {
+              setTenantContact(null);
+              const msg = e instanceof Error ? e.message : "";
+              const missing =
+                /no tenant contact/i.test(msg) || /has no unit/i.test(msg);
+              setContactMissing(missing);
+              setContactError(
+                missing ? null : t("maintenanceTenantContactLoadError")
+              );
+            });
+        } else {
+          setTenantContact(null);
+          setContactMissing(false);
+          setContactError(null);
         }
       })
       .catch((e) => {
@@ -269,6 +306,62 @@ export default function MaintenanceDetailPage() {
           </p>
         </div>
       </div>
+
+      {canViewContact ? (
+        <div className={`${adminUi.card} ${adminUi.cardPad} mt-6 space-y-2`}>
+          <h2 className={adminUi.sectionTitle}>{t("maintenanceTenantContactTitle")}</h2>
+          {tenantContact ? (
+            <>
+              {tenantContact.is_vacant ? (
+                <p className="text-sm font-medium text-[var(--ml-pine)]">
+                  {t("maintenanceTenantContactVacant")}
+                </p>
+              ) : null}
+              {tenantContact.tenant_name ? (
+                <p className="font-semibold text-[var(--ml-ink)]">{tenantContact.tenant_name}</p>
+              ) : null}
+              <p className="text-xs font-semibold uppercase text-[var(--ml-steel)]">
+                {t("maintenanceTenantContactPhones")}
+              </p>
+              {(tenantContact.phones || []).length ? (
+                <ul className="space-y-1 text-sm">
+                  {tenantContact.phones.map((phone) => (
+                    <li key={phone}>
+                      <a className="text-[var(--ml-brick)] underline" href={`tel:${phone}`}>
+                        {phone}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[var(--ml-steel)]">—</p>
+              )}
+              <p className="text-xs font-semibold uppercase text-[var(--ml-steel)]">
+                {t("maintenanceTenantContactEmails")}
+              </p>
+              {(tenantContact.emails || []).length ? (
+                <ul className="space-y-1 text-sm">
+                  {tenantContact.emails.map((email) => (
+                    <li key={email}>
+                      <a className="text-[var(--ml-brick)] underline" href={`mailto:${email}`}>
+                        {email}
+                      </a>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-[var(--ml-steel)]">—</p>
+              )}
+            </>
+          ) : contactMissing ? (
+            <p className="text-sm text-[var(--ml-steel)]">{t("maintenanceTenantContactNone")}</p>
+          ) : contactError ? (
+            <p className="text-sm text-[var(--ml-brick)]">{contactError}</p>
+          ) : (
+            <p className="text-sm text-[var(--ml-steel)]">{t("loading")}</p>
+          )}
+        </div>
+      ) : null}
 
       <div className={`${adminUi.card} ${adminUi.cardPad} mt-6`}>
         <h2 className={adminUi.sectionTitle}>{t("maintenanceIssuePhotos")}</h2>

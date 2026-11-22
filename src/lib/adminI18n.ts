@@ -440,6 +440,12 @@ export const adminMessages = {
     maintenanceAssignTitle: "Assigner un technicien",
     maintenanceAssignHint: "Choisissez un travailleur pour ce billet. Pas de date estimée — le technicien planifiera la visite.",
     maintenanceAssignSubmit: "Assigner",
+    maintenanceTenantContactTitle: "Coordonnées du locataire",
+    maintenanceTenantContactVacant: "Logement vacant",
+    maintenanceTenantContactNone: "Aucune coordonnée synchronisée pour ce logement.",
+    maintenanceTenantContactLoadError: "Impossible de charger les coordonnées.",
+    maintenanceTenantContactPhones: "Téléphones",
+    maintenanceTenantContactEmails: "Courriels",
     maintenanceProposeVisitTitle: "Proposer une visite",
     maintenanceProposeVisitHint:
       "Créneau max. 24 h. Logement vacant : pas d'avis locataire. Sinon, courriel Oui/Non.",
@@ -1047,6 +1053,12 @@ export const adminMessages = {
     maintenanceAssignHint:
       "Pick a worker for this ticket. No estimated date — the worker will schedule the visit.",
     maintenanceAssignSubmit: "Assign",
+    maintenanceTenantContactTitle: "Tenant contact",
+    maintenanceTenantContactVacant: "Vacant unit",
+    maintenanceTenantContactNone: "No synced contact for this unit.",
+    maintenanceTenantContactLoadError: "Could not load tenant contact.",
+    maintenanceTenantContactPhones: "Phones",
+    maintenanceTenantContactEmails: "Emails",
     maintenanceProposeVisitTitle: "Propose a visit",
     maintenanceProposeVisitHint:
       "Window max 24h. Vacant skips tenant notice; otherwise email Yes/No.",

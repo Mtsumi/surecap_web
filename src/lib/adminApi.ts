@@ -757,6 +757,25 @@ export function getMaintenanceTicket(ticketId: number) {
   return adminFetch<MaintenanceTicket>(`/maintenance/tickets/${ticketId}`);
 }
 
+export type UnitTenantContact = {
+  unit_id: number;
+  building_id: number;
+  building_name?: string | null;
+  unit_number?: string | null;
+  tenant_name?: string | null;
+  is_vacant: boolean;
+  phones: string[];
+  emails: string[];
+  synced_at?: string | null;
+  source?: string | null;
+};
+
+export function getMaintenanceTicketTenantContact(ticketId: number) {
+  return adminFetch<UnitTenantContact>(
+    `/maintenance/tickets/${ticketId}/tenant-contact`
+  );
+}
+
 export type MaintenanceTicketDraftInput = {
   building_id: number;
   unit_id?: number | null;
