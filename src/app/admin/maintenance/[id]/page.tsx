@@ -93,7 +93,7 @@ export default function MaintenanceDetailPage() {
         setViewerId(user.id);
         setIsSuper(user.is_super_admin);
         const assign =
-          !user.is_super_admin && user.maintenance_role === "maintenance_manager";
+          user.is_super_admin || user.maintenance_role === "maintenance_manager";
         const close =
           user.is_super_admin || user.maintenance_role === "maintenance_manager";
         setCanAssign(assign);
