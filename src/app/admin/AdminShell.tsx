@@ -5,7 +5,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AdminUser, adminMe } from "@/lib/adminApi";
 import { clearAdminToken, isAdminLoggedIn } from "@/lib/adminAuth";
-import { canAccessMaintenance, isMaintenanceOnlyUser, maintenanceRoleLabel } from "@/lib/maintenanceAdmin";
+import {
+  canAccessApplications,
+  canAccessMaintenance,
+  isApplicationsPlusMaintenanceNav,
+  isMaintenanceOnlyUser,
+  maintenanceRoleLabel,
+} from "@/lib/maintenanceAdmin";
 import { useAdminLocaleContext } from "./AdminLocaleContext";
 import LocaleToggle from "@/components/LocaleToggle";
 import NotificationBell from "./NotificationBell";
@@ -104,14 +110,28 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   }, [user, pathname, router]);
 
   useEffect(() => {
-    if (!user || !isMaintenanceOnlyUser(user)) return;
-    const allowed =
-      pathname.startsWith("/admin/maintenance") ||
-      pathname.startsWith("/admin/notifications") ||
-      pathname.startsWith("/admin/account") ||
-      pathname.startsWith("/admin/login");
-    if (!allowed) {
-      router.replace("/admin/maintenance");
+    if (!user) return;
+    if (isMaintenanceOnlyUser(user)) {
+      const allowed =
+        pathname.startsWith("/admin/maintenance") ||
+        pathname.startsWith("/admin/notifications") ||
+        pathname.startsWith("/admin/account") ||
+        pathname.startsWith("/admin/login");
+      if (!allowed) {
+        router.replace("/admin/maintenance");
+      }
+      return;
+    }
+    if (isApplicationsPlusMaintenanceNav(user)) {
+      const allowed =
+        pathname.startsWith("/admin/applications") ||
+        pathname.startsWith("/admin/maintenance") ||
+        pathname.startsWith("/admin/notifications") ||
+        pathname.startsWith("/admin/account") ||
+        pathname.startsWith("/admin/login");
+      if (!allowed) {
+        router.replace("/admin/applications");
+      }
     }
   }, [user, pathname, router]);
 
@@ -144,6 +164,7 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
   const passwordChangeRequired = user?.must_change_password ?? false;
 
   const maintenanceOnly = isMaintenanceOnlyUser(user);
+  const appsPlusMaintenance = isApplicationsPlusMaintenanceNav(user);
 
   const fullNav: {
     href: string;
@@ -154,21 +175,33 @@ export default function AdminShell({ children }: { children: React.ReactNode }) 
         { href: "/admin/maintenance", label: t("navMaintenance") },
         { href: "/admin/account", label: t("navAccount") },
       ]
-    : [
-    { href: "/admin/applications", label: t("navApplications") },
-    { href: "/admin/buildings", label: t("navBuildings") },
-    { href: "/admin/listings", label: t("navListingQr") },
-    ...(canAccessMaintenance(user)
-      ? [{ href: "/admin/maintenance", label: t("navMaintenance") }]
-      : []),
-    ...(user?.is_super_admin
+    : appsPlusMaintenance
       ? [
-          { href: "/admin/team", label: t("navTeam") },
-          { href: "/admin/insights", label: t("navRentalInsights") },
+          ...(canAccessApplications(user)
+            ? [{ href: "/admin/applications", label: t("navApplications") }]
+            : []),
+          ...(canAccessMaintenance(user)
+            ? [{ href: "/admin/maintenance", label: t("navMaintenance") }]
+            : []),
+          { href: "/admin/account", label: t("navAccount") },
         ]
-      : []),
-    { href: "/admin/account", label: t("navAccount") },
-  ];
+      : [
+          ...(canAccessApplications(user)
+            ? [{ href: "/admin/applications", label: t("navApplications") }]
+            : []),
+          { href: "/admin/buildings", label: t("navBuildings") },
+          { href: "/admin/listings", label: t("navListingQr") },
+          ...(canAccessMaintenance(user)
+            ? [{ href: "/admin/maintenance", label: t("navMaintenance") }]
+            : []),
+          ...(user?.is_super_admin
+            ? [
+                { href: "/admin/team", label: t("navTeam") },
+                { href: "/admin/insights", label: t("navRentalInsights") },
+              ]
+            : []),
+          { href: "/admin/account", label: t("navAccount") },
+        ];
 
   const nav = passwordChangeRequired
     ? [{ href: "/admin/account", label: t("navAccount") }]

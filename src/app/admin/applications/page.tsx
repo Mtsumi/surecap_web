@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  AdminUser,
   ApplicationListItem,
   BuildingAdmin,
+  adminMe,
   listApplications,
   listBuildingsAdmin,
 } from "@/lib/adminApi";
@@ -18,6 +20,7 @@ import {
 import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { formatAdminDateTime } from "@/lib/adminDateTime";
 import { applicationStatusTimestamp } from "@/lib/applicationTimestamps";
+import { buildingsForApplicationsUser } from "@/lib/maintenanceAdmin";
 
 /** Empty string = omit status (API hides drafts). */
 type StatusFilter = "" | ApplicationStatus;
@@ -45,14 +48,31 @@ export default function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [buildingId, setBuildingId] = useState<number | null>(null);
   const [buildings, setBuildings] = useState<BuildingAdmin[]>([]);
+  const [me, setMe] = useState<AdminUser | null>(null);
 
   useEffect(() => {
-    listBuildingsAdmin()
-      .then(setBuildings)
+    let cancelled = false;
+    Promise.all([adminMe(), listBuildingsAdmin()])
+      .then(([user, allBuildings]) => {
+        if (cancelled) return;
+        setMe(user);
+        setBuildings(buildingsForApplicationsUser(user, allBuildings));
+      })
       .catch(() => {
         /* Building filter is optional; list still works without it. */
       });
+    return () => {
+      cancelled = true;
+    };
   }, []);
+
+  // Drop a selected building if it falls outside PA scope after me loads.
+  useEffect(() => {
+    if (!me || buildingId == null) return;
+    if (!buildings.some((b) => b.id === buildingId)) {
+      setBuildingId(null);
+    }
+  }, [me, buildings, buildingId]);
 
   useEffect(() => {
     let cancelled = false;
