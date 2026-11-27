@@ -58,12 +58,10 @@ export default function ListingPhotoCarousel({
 
   const go = (direction: number) => {
     if (count < 2) return;
-    setIndex((currentIndex) => {
-      const base = Math.min(currentIndex, count - 1);
-      const next = (base + direction + count) % count;
-      setUpgraded((prev) => (prev[next] ? prev : { ...prev, [next]: true }));
-      return next;
-    });
+    const base = Math.min(index, count - 1);
+    const next = (base + direction + count) % count;
+    setUpgraded((prev) => (prev[next] ? prev : { ...prev, [next]: true }));
+    setIndex(next);
   };
 
   useEffect(() => {
@@ -120,6 +118,10 @@ export default function ListingPhotoCarousel({
           loading="lazy"
           decoding="async"
           draggable={false}
+          onError={() => {
+            if (!current.fullSrc || upgraded[safeIndex]) return;
+            setUpgraded((prev) => ({ ...prev, [safeIndex]: true }));
+          }}
         />
       )}
 
