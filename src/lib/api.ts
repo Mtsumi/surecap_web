@@ -40,6 +40,8 @@ export type ListingMedia = {
   url: string;
   kind: "image" | "video";
   content_type?: string;
+  /** Card-sized JPEG when available (prefer over ``url`` for grids). */
+  thumb_url?: string | null;
 };
 
 export type Listing = {

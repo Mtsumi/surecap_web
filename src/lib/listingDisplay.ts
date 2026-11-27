@@ -5,7 +5,10 @@ import { listingPhotosFor } from "./listingPhotos";
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
 
 export type ListingGalleryItem = {
+  /** Display source (thumb for images when available). */
   src: string;
+  /** Full-resolution source for active carousel slides. */
+  fullSrc?: string;
   kind: "image" | "video";
   contentType?: string;
 };
@@ -89,11 +92,20 @@ export function listingPhotoUrl(src: string): string {
 function listingMediaItemsFromApi(media: ListingMedia[]): ListingGalleryItem[] {
   return media
     .filter((item) => typeof item?.url === "string" && item.url.length > 0)
-    .map((item) => ({
-      src: listingPhotoUrl(item.url),
-      kind: item.kind === "video" ? "video" : "image",
-      contentType: item.content_type,
-    }));
+    .map((item) => {
+      const fullSrc = listingPhotoUrl(item.url);
+      const thumb =
+        typeof item.thumb_url === "string" && item.thumb_url.length > 0
+          ? listingPhotoUrl(item.thumb_url)
+          : null;
+      const kind = item.kind === "video" ? ("video" as const) : ("image" as const);
+      return {
+        src: kind === "image" && thumb ? thumb : fullSrc,
+        fullSrc: kind === "image" && thumb ? fullSrc : undefined,
+        kind,
+        contentType: item.content_type,
+      };
+    });
 }
 
 /** Full gallery (images + video). Falls back to Unsplash placeholders when empty. */
