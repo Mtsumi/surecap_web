@@ -66,6 +66,14 @@ describe("listingDisplay", () => {
       { src: "http://localhost:8000/listings/10/photos/a", kind: "image", contentType: "image/jpeg" },
       { src: "http://localhost:8000/listings/10/photos/b", kind: "video", contentType: "video/mp4" },
     ]);
+    expect(
+      listingGalleryItems(
+        listing({
+          media: [{ url: "", kind: "image" }],
+          photos: ["/listings/10/photos/real"],
+        })
+      )
+    ).toEqual([{ src: "http://localhost:8000/listings/10/photos/real", kind: "image" }]);
     expect(listingImageSrcs(listing()).length).toBeGreaterThan(0);
   });
 

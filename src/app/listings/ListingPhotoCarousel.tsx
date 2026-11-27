@@ -17,25 +17,58 @@ export default function ListingPhotoCarousel({
   nextLabel,
 }: ListingPhotoCarouselProps) {
   const [index, setIndex] = useState(0);
+  const [inView, setInView] = useState(false);
   const touchStartX = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const rootRef = useRef<HTMLDivElement | null>(null);
   const count = media.length;
-  const current = media[index] ?? media[0];
+  const safeIndex = count === 0 ? 0 : Math.min(index, count - 1);
+  const current = media[safeIndex] ?? media[0];
+
+  useEffect(() => {
+    if (count === 0) {
+      setIndex(0);
+      return;
+    }
+    setIndex((currentIndex) => Math.min(currentIndex, count - 1));
+  }, [count]);
+
+  useEffect(() => {
+    const node = rootRef.current;
+    if (!node || typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0];
+        setInView(Boolean(entry?.isIntersecting));
+      },
+      { threshold: 0.35 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
 
   const go = (direction: number) => {
     if (count < 2) return;
-    setIndex((currentIndex) => (currentIndex + direction + count) % count);
+    setIndex((currentIndex) => {
+      const base = Math.min(currentIndex, count - 1);
+      return (base + direction + count) % count;
+    });
   };
 
   useEffect(() => {
     const video = videoRef.current;
     if (!video) return;
-    if (current?.kind === "video") {
+    if (current?.kind === "video" && inView) {
       void video.play().catch(() => {
         /* autoplay may be blocked; controls remain */
       });
+      return;
     }
-  }, [current, index]);
+    video.pause();
+  }, [current, safeIndex, inView]);
 
   if (!current) {
     return <div className="aspect-[4/3] bg-[#ebe6dc]" />;
@@ -43,6 +76,7 @@ export default function ListingPhotoCarousel({
 
   return (
     <div
+      ref={rootRef}
       className="group relative aspect-[4/3] overflow-hidden bg-[#ebe6dc]"
       onTouchStart={(event) => {
         touchStartX.current = event.changedTouches[0]?.clientX ?? null;
@@ -103,7 +137,7 @@ export default function ListingPhotoCarousel({
               <span
                 key={`${item.src}-${photoIndex}`}
                 className={`h-1.5 rounded-full transition-all ${
-                  photoIndex === index ? "w-4 bg-white" : "w-1.5 bg-white/55"
+                  photoIndex === safeIndex ? "w-4 bg-white" : "w-1.5 bg-white/55"
                 }`}
               />
             ))}
