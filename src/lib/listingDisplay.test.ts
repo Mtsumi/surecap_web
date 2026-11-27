@@ -57,13 +57,23 @@ describe("listingDisplay", () => {
       listingGalleryItems(
         listing({
           media: [
-            { url: "/listings/10/photos/a", kind: "image", content_type: "image/jpeg" },
+            {
+              url: "/listings/10/photos/a",
+              kind: "image",
+              content_type: "image/jpeg",
+              thumb_url: "/listings/10/photos/a?variant=thumb",
+            },
             { url: "/listings/10/photos/b", kind: "video", content_type: "video/mp4" },
           ],
         })
       )
     ).toEqual([
-      { src: "http://localhost:8000/listings/10/photos/a", kind: "image", contentType: "image/jpeg" },
+      {
+        src: "http://localhost:8000/listings/10/photos/a?variant=thumb",
+        fullSrc: "http://localhost:8000/listings/10/photos/a",
+        kind: "image",
+        contentType: "image/jpeg",
+      },
       { src: "http://localhost:8000/listings/10/photos/b", kind: "video", contentType: "video/mp4" },
     ]);
     expect(

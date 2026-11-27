@@ -18,12 +18,18 @@ export default function ListingPhotoCarousel({
 }: ListingPhotoCarouselProps) {
   const [index, setIndex] = useState(0);
   const [inView, setInView] = useState(false);
+  const [upgraded, setUpgraded] = useState<Record<number, boolean>>({});
   const touchStartX = useRef<number | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const rootRef = useRef<HTMLDivElement | null>(null);
   const count = media.length;
   const safeIndex = count === 0 ? 0 : Math.min(index, count - 1);
   const current = media[safeIndex] ?? media[0];
+  // Covers stay on thumbs; full-res only after the user swipes/navigates to a slide.
+  const imageSrc =
+    current?.kind === "image" && upgraded[safeIndex] && current.fullSrc
+      ? current.fullSrc
+      : current?.src;
 
   useEffect(() => {
     if (count === 0) {
@@ -52,10 +58,10 @@ export default function ListingPhotoCarousel({
 
   const go = (direction: number) => {
     if (count < 2) return;
-    setIndex((currentIndex) => {
-      const base = Math.min(currentIndex, count - 1);
-      return (base + direction + count) % count;
-    });
+    const base = Math.min(index, count - 1);
+    const next = (base + direction + count) % count;
+    setUpgraded((prev) => (prev[next] ? prev : { ...prev, [next]: true }));
+    setIndex(next);
   };
 
   useEffect(() => {
@@ -106,11 +112,16 @@ export default function ListingPhotoCarousel({
       ) : (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={current.src}
+          src={imageSrc}
           alt=""
           className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
           loading="lazy"
+          decoding="async"
           draggable={false}
+          onError={() => {
+            if (!current.fullSrc || upgraded[safeIndex]) return;
+            setUpgraded((prev) => ({ ...prev, [safeIndex]: true }));
+          }}
         />
       )}
 
@@ -135,7 +146,7 @@ export default function ListingPhotoCarousel({
           <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
             {media.map((item, photoIndex) => (
               <span
-                key={`${item.src}-${photoIndex}`}
+                key={`${item.fullSrc ?? item.src}-${photoIndex}`}
                 className={`h-1.5 rounded-full transition-all ${
                   photoIndex === safeIndex ? "w-4 bg-white" : "w-1.5 bg-white/55"
                 }`}
