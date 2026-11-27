@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AdminUser } from "./adminApi";
 import {
+  adminHomePath,
   applicationsBuildingScope,
   buildingsForApplicationsUser,
   buildingsForMaintenanceUser,
@@ -76,6 +77,19 @@ describe("maintenanceAdmin access", () => {
       false
     );
     expect(isApplicationsPlusMaintenanceNav(baseUser({ is_super_admin: true }))).toBe(false);
+  });
+
+  it("adminHomePath routes by role", () => {
+    expect(adminHomePath(baseUser({}))).toBe("/admin/applications");
+    expect(
+      adminHomePath(baseUser({ maintenance_role: "property_administrator" }))
+    ).toBe("/admin/applications");
+    expect(adminHomePath(baseUser({ maintenance_role: "worker" }))).toBe(
+      "/admin/maintenance"
+    );
+    expect(adminHomePath(baseUser({ must_change_password: true }))).toBe(
+      "/admin/account?required=1"
+    );
   });
 
   it("filters janitor buildings for maintenance and applications", () => {

@@ -80,6 +80,15 @@ export function canAccessApplications(user: AdminUser | null | undefined): boole
   );
 }
 
+/** Post-login / index landing — never send staff/MM/worker to Applications. */
+export function adminHomePath(user: AdminUser | null | undefined): string {
+  if (!user?.active) return "/admin/login";
+  if (user.must_change_password) return "/admin/account?required=1";
+  if (canAccessApplications(user)) return "/admin/applications";
+  if (canAccessMaintenance(user)) return "/admin/maintenance";
+  return "/admin/account";
+}
+
 /** Staff / MM / worker — maintenance (+ account) only. */
 export function isMaintenanceOnlyUser(user: AdminUser | null | undefined): boolean {
   if (!user?.active) return false;

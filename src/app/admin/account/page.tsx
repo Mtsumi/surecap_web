@@ -2,10 +2,11 @@
 
 import { FormEvent, Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { changeAdminPassword } from "@/lib/adminApi";
+import { adminMe, changeAdminPassword } from "@/lib/adminApi";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import { adminUi } from "@/lib/adminUi";
 import { formatAdminFetchError } from "@/lib/adminFetchError";
+import { adminHomePath } from "@/lib/maintenanceAdmin";
 
 function AccountForm() {
   const router = useRouter();
@@ -35,7 +36,8 @@ function AccountForm() {
     setLoading(true);
     try {
       await changeAdminPassword(currentPassword, newPassword);
-      router.replace("/admin/applications");
+      const me = await adminMe();
+      router.replace(adminHomePath(me));
     } catch (err) {
       setError(formatAdminFetchError(err, locale, t("accountGenericError")));
     } finally {

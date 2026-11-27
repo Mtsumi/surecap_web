@@ -3,10 +3,11 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { adminLogin } from "@/lib/adminApi";
+import { adminLogin, adminMe } from "@/lib/adminApi";
 import { setAdminToken } from "@/lib/adminAuth";
 import { adminUi } from "@/lib/adminUi";
 import { formatAdminFetchError } from "@/lib/adminFetchError";
+import { adminHomePath } from "@/lib/maintenanceAdmin";
 import { clearCachedAdminUser } from "../AdminShell";
 import { useAdminLocaleContext } from "../AdminLocaleContext";
 import LocaleToggle from "@/components/LocaleToggle";
@@ -31,7 +32,8 @@ export default function AdminLoginPage() {
       if (res.must_change_password) {
         router.replace("/admin/account?required=1");
       } else {
-        router.replace("/admin/applications");
+        const me = await adminMe();
+        router.replace(adminHomePath(me));
       }
     } catch (err) {
       setError(formatAdminFetchError(err, locale, t("loginError")));

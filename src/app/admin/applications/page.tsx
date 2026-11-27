@@ -20,7 +20,10 @@ import {
 import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { formatAdminDateTime } from "@/lib/adminDateTime";
 import { applicationStatusTimestamp } from "@/lib/applicationTimestamps";
-import { buildingsForApplicationsUser } from "@/lib/maintenanceAdmin";
+import {
+  buildingsForApplicationsUser,
+  canAccessApplications,
+} from "@/lib/maintenanceAdmin";
 
 /** Empty string = omit status (API hides drafts). */
 type StatusFilter = "" | ApplicationStatus;
@@ -52,14 +55,21 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     let cancelled = false;
-    Promise.all([adminMe(), listBuildingsAdmin()])
-      .then(([user, allBuildings]) => {
+    adminMe()
+      .then(async (user) => {
         if (cancelled) return;
         setMe(user);
-        setBuildings(buildingsForApplicationsUser(user, allBuildings));
+        try {
+          const allBuildings = await listBuildingsAdmin();
+          if (!cancelled) {
+            setBuildings(buildingsForApplicationsUser(user, allBuildings));
+          }
+        } catch {
+          /* Building filter is optional; list still works without it. */
+        }
       })
       .catch(() => {
-        /* Building filter is optional; list still works without it. */
+        if (!cancelled) setMe(null);
       });
     return () => {
       cancelled = true;
@@ -76,6 +86,16 @@ export default function ApplicationsPage() {
 
   useEffect(() => {
     let cancelled = false;
+    // Wait for me so staff/MM/worker never flash a 403 before shell redirect.
+    if (!me) return;
+    if (!canAccessApplications(me)) {
+      setLoading(false);
+      setItems([]);
+      setTotal(0);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setItems([]);
@@ -104,7 +124,7 @@ export default function ApplicationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [statusFilter, buildingId, locale, t]);
+  }, [me, statusFilter, buildingId, locale, t]);
 
   const subtitleTemplate = statusFilter
     ? t("applicationsSubtitleFiltered")
