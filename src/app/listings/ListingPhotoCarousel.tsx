@@ -1,29 +1,41 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { ListingGalleryItem } from "@/lib/listingDisplay";
 
 type ListingPhotoCarouselProps = {
-  photos: string[];
+  media: ListingGalleryItem[];
   rentLabel: string | null;
   prevLabel: string;
   nextLabel: string;
 };
 
 export default function ListingPhotoCarousel({
-  photos,
+  media,
   rentLabel,
   prevLabel,
   nextLabel,
 }: ListingPhotoCarouselProps) {
   const [index, setIndex] = useState(0);
   const touchStartX = useRef<number | null>(null);
-  const count = photos.length;
-  const current = photos[index] ?? photos[0];
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const count = media.length;
+  const current = media[index] ?? media[0];
 
   const go = (direction: number) => {
     if (count < 2) return;
     setIndex((currentIndex) => (currentIndex + direction + count) % count);
   };
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (current?.kind === "video") {
+      void video.play().catch(() => {
+        /* autoplay may be blocked; controls remain */
+      });
+    }
+  }, [current, index]);
 
   if (!current) {
     return <div className="aspect-[4/3] bg-[#ebe6dc]" />;
@@ -45,14 +57,28 @@ export default function ListingPhotoCarousel({
         else if (delta < -40) go(1);
       }}
     >
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img
-        src={current}
-        alt=""
-        className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-        loading="lazy"
-        draggable={false}
-      />
+      {current.kind === "video" ? (
+        <video
+          key={current.src}
+          ref={videoRef}
+          src={current.src}
+          className="h-full w-full object-cover"
+          muted
+          playsInline
+          loop
+          controls
+          preload="metadata"
+        />
+      ) : (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={current.src}
+          alt=""
+          className="h-full w-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+          loading="lazy"
+          draggable={false}
+        />
+      )}
 
       {count > 1 && (
         <>
@@ -73,9 +99,9 @@ export default function ListingPhotoCarousel({
             <ChevronRightIcon />
           </button>
           <div className="pointer-events-none absolute inset-x-0 bottom-3 flex justify-center gap-1.5">
-            {photos.map((_, photoIndex) => (
+            {media.map((item, photoIndex) => (
               <span
-                key={photoIndex}
+                key={`${item.src}-${photoIndex}`}
                 className={`h-1.5 rounded-full transition-all ${
                   photoIndex === index ? "w-4 bg-white" : "w-1.5 bg-white/55"
                 }`}

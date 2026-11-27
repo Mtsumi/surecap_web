@@ -24,7 +24,7 @@ import {
   listingApplyHref,
   listingChips,
   listingFacts,
-  listingImageSrcs,
+  listingGalleryItems,
   listingAmenityIsPresent,
   listingAmenityLabel,
   listingsForBuilding,
@@ -411,7 +411,7 @@ export default function ListingsBrowser({ areaSlug }: Props) {
 
       <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3">
         {visible.map((listing) => {
-          const photos = listingImageSrcs(listing);
+          const media = listingGalleryItems(listing);
           const rentLabel = formatListingRent(listing.rent, locale);
           const facts = listingFacts(listing, locale);
           const chips = listingChips(listing.amenities, locale).slice(0, 6);
@@ -426,7 +426,7 @@ export default function ListingsBrowser({ areaSlug }: Props) {
                 }`}
               >
                 <ListingPhotoCarousel
-                  photos={photos}
+                  media={media}
                   rentLabel={rentLabel}
                   prevLabel={t(locale, "listingsPrevPhoto")}
                   nextLabel={t(locale, "listingsNextPhoto")}
