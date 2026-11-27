@@ -1,8 +1,14 @@
-import type { Building, Listing, UnitAmenityValue } from "./api";
+import type { Building, Listing, ListingMedia, UnitAmenityValue } from "./api";
 import type { Locale } from "./i18n";
 import { listingPhotosFor } from "./listingPhotos";
 
 const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+
+export type ListingGalleryItem = {
+  src: string;
+  kind: "image" | "video";
+  contentType?: string;
+};
 
 const BOOLEAN_CHIP_KEYS = [
   "fridge_stove",
@@ -80,10 +86,39 @@ export function listingPhotoUrl(src: string): string {
   return `${API_URL}${src.startsWith("/") ? src : `/${src}`}`;
 }
 
+function listingMediaItemsFromApi(media: ListingMedia[]): ListingGalleryItem[] {
+  return media
+    .filter((item) => typeof item?.url === "string" && item.url.length > 0)
+    .map((item) => ({
+      src: listingPhotoUrl(item.url),
+      kind: item.kind === "video" ? "video" : "image",
+      contentType: item.content_type,
+    }));
+}
+
+/** Full gallery (images + video). Falls back to Unsplash placeholders when empty. */
+export function listingGalleryItems(listing: Listing): ListingGalleryItem[] {
+  const fromMedia = listing.media?.length ? listingMediaItemsFromApi(listing.media) : [];
+  if (fromMedia.length > 0) return fromMedia;
+
+  const fromPhotos = listing.photos?.filter((src) => typeof src === "string" && src.length > 0);
+  if (fromPhotos && fromPhotos.length > 0) {
+    return fromPhotos.map((src) => ({ src: listingPhotoUrl(src), kind: "image" as const }));
+  }
+
+  return listingPhotosFor(listing.id).map((photo) => ({
+    src: photo.src,
+    kind: "image" as const,
+  }));
+}
+
+/** Image URLs for covers / legacy callers. Prefer ``listingGalleryItems``. */
 export function listingImageSrcs(listing: Listing): string[] {
-  const fromApi = listing.photos?.filter((src) => typeof src === "string" && src.length > 0);
-  if (fromApi && fromApi.length > 0) return fromApi.map(listingPhotoUrl);
-  return listingPhotosFor(listing.id).map((photo) => photo.src);
+  const gallery = listingGalleryItems(listing);
+  const images = gallery.filter((item) => item.kind === "image").map((item) => item.src);
+  if (images.length > 0) return images;
+  // Video-only unit: still return gallery srcs so the carousel can play them.
+  return gallery.map((item) => item.src);
 }
 
 export function formatListingRent(rent: number | null, locale: Locale): string | null {

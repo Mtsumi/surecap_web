@@ -36,6 +36,12 @@ export type Unit = {
     amenities?: Record<string, UnitAmenityValue> | null;
 };
 
+export type ListingMedia = {
+  url: string;
+  kind: "image" | "video";
+  content_type?: string;
+};
+
 export type Listing = {
   id: number;
   unit_number: string;
@@ -44,8 +50,10 @@ export type Listing = {
   available_date: string | null;
   earliest_move_in_date: string;
   amenities?: Record<string, UnitAmenityValue> | null;
-  /** Real unit photos when present; otherwise the UI uses placeholders. */
+  /** Image URLs only (covers). Prefer ``media`` for the full gallery. */
   photos?: string[] | null;
+  /** Images + video from Reviewed ads / admin uploads. */
+  media?: ListingMedia[] | null;
   building: Building;
 };
 

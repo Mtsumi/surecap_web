@@ -252,6 +252,7 @@ export type UnitPhotoAdmin = {
   id: string;
   filename: string;
   url: string;
+  kind?: "image" | "video";
 };
 
 export type UnitAdmin = {
