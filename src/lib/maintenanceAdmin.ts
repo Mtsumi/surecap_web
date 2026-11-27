@@ -57,11 +57,75 @@ export function canAccessMaintenance(user: AdminUser | null | undefined): boolea
   return Boolean(user.maintenance_role);
 }
 
-/** Maintenance-role users who are not super admin should not see screening/building nav. */
+/**
+ * Applications console (Steve Nov 2026):
+ * APM + PA (building-scoped) + classic/super admin — not staff / MM / worker.
+ */
+export function canAccessApplications(user: AdminUser | null | undefined): boolean {
+  if (!user?.active) return false;
+  if (user.is_super_admin) return true;
+  const role = user.maintenance_role;
+  if (!role) return true;
+  if (
+    role === "staff" ||
+    role === "maintenance_manager" ||
+    role === "worker"
+  ) {
+    return false;
+  }
+  return (
+    role === "assistant_property_manager" ||
+    role === "property_administrator" ||
+    role === "janitor"
+  );
+}
+
+/** Post-login / index landing — never send staff/MM/worker to Applications. */
+export function adminHomePath(user: AdminUser | null | undefined): string {
+  if (!user?.active) return "/admin/login";
+  if (user.must_change_password) return "/admin/account?required=1";
+  if (canAccessApplications(user)) return "/admin/applications";
+  if (canAccessMaintenance(user)) return "/admin/maintenance";
+  return "/admin/account";
+}
+
+/** Staff / MM / worker — maintenance (+ account) only. */
 export function isMaintenanceOnlyUser(user: AdminUser | null | undefined): boolean {
   if (!user?.active) return false;
   if (user.is_super_admin) return false;
-  return Boolean(user.maintenance_role);
+  if (!user.maintenance_role) return false;
+  return !canAccessApplications(user);
+}
+
+/**
+ * PA / APM with applications: Applications + Maintenance + Account
+ * (not Buildings / Listings / Team).
+ */
+export function isApplicationsPlusMaintenanceNav(
+  user: AdminUser | null | undefined
+): boolean {
+  if (!user?.active || user.is_super_admin) return false;
+  const role = user.maintenance_role;
+  return (
+    role === "assistant_property_manager" ||
+    role === "property_administrator" ||
+    role === "janitor"
+  );
+}
+
+/** ``null`` = unrestricted; otherwise PA building ids for Applications filters. */
+export function applicationsBuildingScope(
+  user: AdminUser | null | undefined
+): number[] | null {
+  if (!user || user.is_super_admin) return null;
+  const role = user.maintenance_role;
+  if (
+    role === "property_administrator" ||
+    role === "janitor"
+  ) {
+    return user.janitor_building_ids ?? [];
+  }
+  return null;
 }
 
 export function buildingsForMaintenanceUser<T extends { id: number }>(
@@ -75,6 +139,16 @@ export function buildingsForMaintenanceUser<T extends { id: number }>(
     return buildings;
   }
   const allowed = new Set(user.janitor_building_ids ?? []);
+  return buildings.filter((b) => allowed.has(b.id));
+}
+
+export function buildingsForApplicationsUser<T extends { id: number }>(
+  user: AdminUser | null | undefined,
+  buildings: T[]
+): T[] {
+  const scope = applicationsBuildingScope(user);
+  if (scope == null) return buildings;
+  const allowed = new Set(scope);
   return buildings.filter((b) => allowed.has(b.id));
 }
 

@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
+  AdminUser,
   ApplicationListItem,
   BuildingAdmin,
+  adminMe,
   listApplications,
   listBuildingsAdmin,
 } from "@/lib/adminApi";
@@ -18,6 +20,10 @@ import {
 import { formatAdminFetchError } from "@/lib/adminFetchError";
 import { formatAdminDateTime } from "@/lib/adminDateTime";
 import { applicationStatusTimestamp } from "@/lib/applicationTimestamps";
+import {
+  buildingsForApplicationsUser,
+  canAccessApplications,
+} from "@/lib/maintenanceAdmin";
 
 /** Empty string = omit status (API hides drafts). */
 type StatusFilter = "" | ApplicationStatus;
@@ -45,17 +51,51 @@ export default function ApplicationsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("");
   const [buildingId, setBuildingId] = useState<number | null>(null);
   const [buildings, setBuildings] = useState<BuildingAdmin[]>([]);
-
-  useEffect(() => {
-    listBuildingsAdmin()
-      .then(setBuildings)
-      .catch(() => {
-        /* Building filter is optional; list still works without it. */
-      });
-  }, []);
+  const [me, setMe] = useState<AdminUser | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    adminMe()
+      .then(async (user) => {
+        if (cancelled) return;
+        setMe(user);
+        try {
+          const allBuildings = await listBuildingsAdmin();
+          if (!cancelled) {
+            setBuildings(buildingsForApplicationsUser(user, allBuildings));
+          }
+        } catch {
+          /* Building filter is optional; list still works without it. */
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setMe(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Drop a selected building if it falls outside PA scope after me loads.
+  useEffect(() => {
+    if (!me || buildingId == null) return;
+    if (!buildings.some((b) => b.id === buildingId)) {
+      setBuildingId(null);
+    }
+  }, [me, buildings, buildingId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    // Wait for me so staff/MM/worker never flash a 403 before shell redirect.
+    if (!me) return;
+    if (!canAccessApplications(me)) {
+      setLoading(false);
+      setItems([]);
+      setTotal(0);
+      setError(null);
+      return;
+    }
+
     setLoading(true);
     setError(null);
     setItems([]);
@@ -84,7 +124,7 @@ export default function ApplicationsPage() {
     return () => {
       cancelled = true;
     };
-  }, [statusFilter, buildingId, locale, t]);
+  }, [me, statusFilter, buildingId, locale, t]);
 
   const subtitleTemplate = statusFilter
     ? t("applicationsSubtitleFiltered")
